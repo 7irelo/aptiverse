@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package aptiverse.wellbeing.v1;
+
+option go_package = "github.com/aptiverse/event-architecture/gen/proto/aptiverse/wellbeing/v1";
+
+import "google/protobuf/timestamp.proto";
+
+message MoodCheckInRecorded {
+  string checkin_id = 1;
+  string student_id = 2;
+  int32 mood_score = 3;
+  string mood_label = 4;
+  string note = 5;
+  google.protobuf.Timestamp recorded_at = 6;
+}
+
+message DiaryEntryCreated {
+  string entry_id = 1;
+  string student_id = 2;
+  string content_hash = 3;
+  repeated string tags = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message PsychologistReferralTriggered {
+  string referral_id = 1;
+  string student_id = 2;
+  string reason = 3;
+  string severity = 4;
+  string triggered_by = 5;
+  google.protobuf.Timestamp triggered_at = 6;
+}
+
+message StressAlertRaised {
+  string alert_id = 1;
+  string student_id = 2;
+  string severity = 3;
+  repeated string indicators = 4;
+  string recommended_action = 5;
+  google.protobuf.Timestamp raised_at = 6;
+}

@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package aptiverse.calendar.v1;
+
+option go_package = "github.com/aptiverse/event-architecture/gen/proto/aptiverse/calendar/v1";
+
+import "google/protobuf/timestamp.proto";
+
+message CalendarSyncRequested {
+  string sync_id = 1;
+  string user_id = 2;
+  string provider = 3;
+  string calendar_id = 4;
+  string direction = 5;
+}
+
+message ReminderScheduled {
+  string reminder_id = 1;
+  string user_id = 2;
+  string event_reference = 3;
+  string message = 4;
+  google.protobuf.Timestamp remind_at = 5;
+  string channel = 6;
+}
