@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package aptiverse.assessment.v1;
+
+option go_package = "github.com/aptiverse/event-architecture/gen/proto/aptiverse/assessment/v1";
+
+import "google/protobuf/timestamp.proto";
+
+message SBACreated {
+  string sba_id = 1;
+  string student_id = 2;
+  string subject = 3;
+  string term = 4;
+  string teacher_id = 5;
+  google.protobuf.Timestamp due_date = 6;
+}
+
+message SBAGoalSet {
+  string sba_id = 1;
+  string student_id = 2;
+  string subject = 3;
+  int32 target_percentage = 4;
+}
+
+message PracticeTestGenerated {
+  string test_id = 1;
+  string student_id = 2;
+  string subject = 3;
+  string topic = 4;
+  int32 question_count = 5;
+  string difficulty = 6;
+}
+
+message PracticeTestSubmitted {
+  string test_id = 1;
+  string student_id = 2;
+  int32 score = 3;
+  int32 total = 4;
+  int32 duration_seconds = 5;
+}
+
+message AssessmentGraded {
+  string assessment_id = 1;
+  string student_id = 2;
+  string subject = 3;
+  int32 score = 4;
+  int32 total = 5;
+  string graded_by = 6;
+  google.protobuf.Timestamp graded_at = 7;
+}

@@ -1,0 +1,153 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "ops" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Events Received (rate/s)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(events_received_total[5m])) by (event_type)",
+          "legendFormat": "{{event_type}}"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "ops" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "title": "Events Published (rate/s)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(events_published_total[5m])) by (broker)",
+          "legendFormat": "{{broker}}"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "s" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
+      "title": "Publish Latency (p99)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(event_publish_duration_seconds_bucket[5m])) by (le, broker))",
+          "legendFormat": "p99 {{broker}}"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "short" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 4,
+      "title": "Errors & Dead Letters",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(events_publish_errors_total[5m])) by (broker)",
+          "legendFormat": "errors {{broker}}"
+        },
+        {
+          "expr": "sum(rate(events_dead_lettered_total[5m])) by (broker)",
+          "legendFormat": "dlq {{broker}}"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "ops" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "id": 5,
+      "title": "Deduplicated Events (rate/s)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(events_deduplicated_total[5m])) by (source)",
+          "legendFormat": "{{source}}"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "thresholds": { "steps": [{ "color": "red", "value": 0 }, { "color": "green", "value": 1 }] } }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "id": 6,
+      "title": "Broker Health",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "broker_health_status",
+          "legendFormat": "{{broker}}"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "ops" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "id": 7,
+      "title": "HTTP Requests (rate/s)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total[5m])) by (method, path, status)",
+          "legendFormat": "{{method}} {{path}} {{status}}"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "s" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "id": 8,
+      "title": "HTTP Latency (p99)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, path))",
+          "legendFormat": "p99 {{path}}"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["aptiverse", "events"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Aptiverse Event Architecture",
+  "uid": "aptiverse-events",
+  "version": 1
+}

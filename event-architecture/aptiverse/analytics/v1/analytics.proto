@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package aptiverse.analytics.v1;
+
+option go_package = "github.com/aptiverse/event-architecture/gen/proto/aptiverse/analytics/v1";
+
+import "google/protobuf/timestamp.proto";
+
+message AIInferenceCompleted {
+  string inference_id = 1;
+  string model_id = 2;
+  string model_version = 3;
+  string input_type = 4;
+  string output_type = 5;
+  int32 latency_ms = 6;
+  double confidence = 7;
+  string correlation_id = 8;
+  google.protobuf.Timestamp completed_at = 9;
+}
+
+message AuditLogEntry {
+  string audit_id = 1;
+  string actor_id = 2;
+  string actor_role = 3;
+  string action = 4;
+  string resource_type = 5;
+  string resource_id = 6;
+  string tenant_id = 7;
+  string ip_address = 8;
+  string user_agent = 9;
+  google.protobuf.Timestamp occurred_at = 10;
+}

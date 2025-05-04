@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package aptiverse.payment.v1;
+
+option go_package = "github.com/aptiverse/event-architecture/gen/proto/aptiverse/payment/v1";
+
+import "google/protobuf/timestamp.proto";
+
+message PaymentInitiated {
+  string payment_id = 1;
+  string user_id = 2;
+  int64 amount_cents = 3;
+  string currency = 4;
+  string provider = 5;
+  string description = 6;
+}
+
+message PaymentCompleted {
+  string payment_id = 1;
+  string user_id = 2;
+  int64 amount_cents = 3;
+  string currency = 4;
+  string provider = 5;
+  string provider_reference = 6;
+  google.protobuf.Timestamp completed_at = 7;
+}
+
+message PaymentFailed {
+  string payment_id = 1;
+  string user_id = 2;
+  string reason = 3;
+  string error_code = 4;
+  google.protobuf.Timestamp failed_at = 5;
+}
+
+message SubscriptionChanged {
+  string subscription_id = 1;
+  string user_id = 2;
+  string plan = 3;
+  string previous_plan = 4;
+  string action = 5;
+  google.protobuf.Timestamp changed_at = 6;
+}

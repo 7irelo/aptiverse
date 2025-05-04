@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package aptiverse.notification.v1;
+
+option go_package = "github.com/aptiverse/event-architecture/gen/proto/aptiverse/notification/v1";
+
+message NotificationRequested {
+  string notification_id = 1;
+  string recipient_id = 2;
+  Channel channel = 3;
+  string template_id = 4;
+  string subject = 5;
+  string body = 6;
+  map<string, string> template_data = 7;
+  Priority priority = 8;
+}
+
+enum Channel {
+  CHANNEL_UNSPECIFIED = 0;
+  CHANNEL_PUSH = 1;
+  CHANNEL_EMAIL = 2;
+  CHANNEL_SMS = 3;
+  CHANNEL_IN_APP = 4;
+}
+
+enum Priority {
+  PRIORITY_UNSPECIFIED = 0;
+  PRIORITY_LOW = 1;
+  PRIORITY_NORMAL = 2;
+  PRIORITY_HIGH = 3;
+  PRIORITY_URGENT = 4;
+}

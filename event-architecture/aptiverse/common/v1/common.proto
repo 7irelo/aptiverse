@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package aptiverse.common.v1;
+
+option go_package = "github.com/aptiverse/event-architecture/gen/proto/aptiverse/common/v1";
+
+import "google/protobuf/timestamp.proto";
+
+// EventEnvelope is the top-level wrapper for all Aptiverse events.
+message EventEnvelope {
+  // UUIDv7, client-generated, used for deduplication.
+  string event_id = 1;
+
+  // Dot-notation event type, e.g. "assessment.sba_created".
+  string event_type = 2;
+
+  // Originating service, e.g. "student-service".
+  string source = 3;
+
+  // When the event occurred (client timestamp).
+  google.protobuf.Timestamp occurred_at = 4;
+
+  // Trace/correlation ID across services.
+  string correlation_id = 5;
+
+  // User who triggered the event.
+  string actor_id = 6;
+
+  // Role of the actor: student, teacher, parent, admin.
+  string actor_role = 7;
+
+  // School ID (tenant).
+  string tenant_id = 8;
+
+  // First-class partition/routing key for broker placement.
+  string partition_key = 9;
+
+  // Domain-specific protobuf-encoded payload bytes.
+  bytes payload = 10;
+
+  // Arbitrary string metadata (IP, user-agent, etc.).
+  map<string, string> metadata = 11;
+}
+
+// BatchRequest wraps multiple envelopes for the batch endpoint.
+message BatchRequest {
+  repeated EventEnvelope events = 1;
+}

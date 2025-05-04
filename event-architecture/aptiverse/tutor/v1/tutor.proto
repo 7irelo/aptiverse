@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package aptiverse.tutor.v1;
+
+option go_package = "github.com/aptiverse/event-architecture/gen/proto/aptiverse/tutor/v1";
+
+import "google/protobuf/timestamp.proto";
+
+message TutorMatchRequested {
+  string request_id = 1;
+  string student_id = 2;
+  string subject = 3;
+  repeated string preferred_languages = 4;
+  string availability = 5;
+}
+
+message SessionBooked {
+  string session_id = 1;
+  string student_id = 2;
+  string tutor_id = 3;
+  string subject = 4;
+  google.protobuf.Timestamp scheduled_at = 5;
+  int32 duration_minutes = 6;
+}
+
+message CoursePublished {
+  string course_id = 1;
+  string tutor_id = 2;
+  string title = 3;
+  string subject = 4;
+  string grade = 5;
+  google.protobuf.Timestamp published_at = 6;
+}
+
+message SessionCompleted {
+  string session_id = 1;
+  string student_id = 2;
+  string tutor_id = 3;
+  int32 duration_minutes = 4;
+  int32 rating = 5;
+  google.protobuf.Timestamp completed_at = 6;
+}
