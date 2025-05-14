@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/Aptiverse.Marketplace.Application/Aptiverse.Marketplace.Application.csproj" />
+  <Project Path="src/Aptiverse.Marketplace.Core/Aptiverse.Marketplace.Core.csproj" />
+  <Project Path="src/Aptiverse.Marketplace.Domain/Aptiverse.Marketplace.Domain.csproj" />
+  <Project Path="src/Aptiverse.Marketplace.Infrastructure/Aptiverse.Marketplace.Infrastructure.csproj" />
+  <Project Path="src/Aptiverse.Marketplace/Aptiverse.Marketplace.csproj" />
+</Solution>
