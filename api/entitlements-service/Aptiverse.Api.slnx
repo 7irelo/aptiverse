@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/Aptiverse.Entitlements.Application/Aptiverse.Api.Application.csproj" />
+  <Project Path="src/Aptiverse.Entitlements.Core/Aptiverse.Api.Core.csproj" />
+  <Project Path="src/Aptiverse.Entitlements.Domain/Aptiverse.Api.Domain.csproj" />
+  <Project Path="src/Aptiverse.Entitlements.Infrastructure/Aptiverse.Api.Infrastructure.csproj" />
+  <Project Path="src/Aptiverse.Entitlements/Aptiverse.Api.csproj" />
+</Solution>
