@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/Aptiverse.Practice.Application/Aptiverse.Practice.Application.csproj" />
+  <Project Path="src/Aptiverse.Practice.Core/Aptiverse.Practice.Core.csproj" />
+  <Project Path="src/Aptiverse.Practice.Domain/Aptiverse.Practice.Domain.csproj" />
+  <Project Path="src/Aptiverse.Practice.Infrastructure/Aptiverse.Practice.Infrastructure.csproj" />
+  <Project Path="src/Aptiverse.Practice/Aptiverse.Practice.csproj" />
+</Solution>
