@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/Aptiverse.Insights.Application/Aptiverse.Insights.Application.csproj" />
+  <Project Path="src/Aptiverse.Insights.Core/Aptiverse.Insights.Core.csproj" />
+  <Project Path="src/Aptiverse.Insights.Domain/Aptiverse.Insights.Domain.csproj" />
+  <Project Path="src/Aptiverse.Insights.Infrastructure/Aptiverse.Insights.Infrastructure.csproj" />
+  <Project Path="src/Aptiverse.Insights/Aptiverse.Insights.csproj" />
+</Solution>
