@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 3.9%;
+  --font-sans: var(--font-frygia), var(--font-geist-sans), sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+@theme {
+  --color-primary-accent: #406A80
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  margin: 0;
+  padding: 0;
+}
+
+.layout-container {
+  display: flex;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Content area should start right after the navbar */
+.content-area {
+  flex: 1;
+  margin-left: 280px; /* Same as navbar width */
+  transition: margin-left 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1; /* Lower than dropdown z-index to allow overlay */
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  position: relative;
+  z-index: 1; /* Ensure content stays below dropdown */
+}
+
+/* When navbar is collapsed - use direct sibling selector */
+.dashboard-nav.collapsed + .content-area {
+  margin-left: 70px; /* Same as collapsed navbar width */
+}
+
+/* Ensure dropdowns can extend over content area */
+.dashboard-nav {
+  z-index: 40; /* Base z-index for navbar */
+}
+
+/* High z-index for dropdown overlay */
+.dropdown-overlay {
+  z-index: 9998 !important;
+}
+
+/* Highest z-index for dropdown menu */
+.subjects-dropdown {
+  z-index: 9999 !important;
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+  .layout-container {
+    flex-direction: column;
+  }
+  
+  .content-area {
+    margin-left: 0 !important;
+    width: 100%;
+    z-index: 1;
+  }
+  
+  .main-content {
+    padding: 1rem;
+    z-index: 1;
+  }
+  
+  /* On mobile, navbar becomes overlay */
+  .dashboard-nav:not(.collapsed) {
+    position: fixed;
+    z-index: 50;
+  }
+  
+  .dashboard-nav.collapsed {
+    transform: translateX(-100%);
+  }
+  
+  .dashboard-nav.collapsed + .content-area {
+    margin-left: 0 !important;
+  }
+
+  /* Mobile dropdown positioning */
+  .subjects-dropdown {
+    z-index: 9999 !important;
+  }
+}
+
+/* Ensure no clipping for dropdown menus */
+.dashboard-nav,
+.nav-content,
+.nav-list,
+.nav-item {
+  overflow: visible !important;
+}
+
+/* Only allow vertical scrolling for nav content, not horizontal clipping */
+.nav-content {
+  overflow-y: auto;
+  overflow-x: visible;
+}
+
+/* Prevent any parent from clipping dropdowns */
+* {
+  box-sizing: border-box;
+}
+
+/* Specific fix for dropdown positioning */
+.dropdown-container {
+  position: relative;
+}
+
+.subjects-dropdown {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  margin-left: 4px;
+}
