@@ -1,0 +1,35 @@
+/* [project]/aptiverse-ui/src/app/frygia_5c43ea83.module.css [app-client] (css) */
+@font-face {
+  font-family: frygia;
+  src: url("../media/Frygia_Regular-s.p.404bb862.woff") format("woff");
+  font-display: swap;
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: frygia;
+  src: url("../media/Frygia_Regular-s.p.6f5cccad.ttf") format("truetype");
+  font-display: swap;
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: frygia Fallback;
+  src: local(Arial);
+  ascent-override: 76.24%;
+  descent-override: 25.41%;
+  line-gap-override: 20.35%;
+  size-adjust: 98.38%;
+}
+
+.frygia_5c43ea83-module__x7WVWa__className {
+  font-family: frygia, frygia Fallback;
+}
+
+.frygia_5c43ea83-module__x7WVWa__variable {
+  --font-frygia: "frygia", "frygia Fallback";
+}
+
+/*# sourceMappingURL=aptiverse-ui_src_app_frygia_5c43ea83_module_css_bad6b30c._.single.css.map*/

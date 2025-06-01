@@ -1,0 +1,1 @@
+{"version":3,"sources":["turbopack:///[project]/aptiverse-ui/src/app/(dashboard)/diary/page.tsx"],"sourcesContent":["import React from 'react'\r\n\r\nconst page = () => {\r\n  return (\r\n    <div>page</div>\r\n  )\r\n}\r\n\r\nexport default page"],"names":[],"mappings":"mTAEa,IAET,CAAA,EAAA,EAAA,GAAA,EAAC,MAAA,UAAI,CAIM"}

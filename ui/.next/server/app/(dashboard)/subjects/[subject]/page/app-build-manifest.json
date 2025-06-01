@@ -1,0 +1,28 @@
+{
+  "pages": {
+    "/(dashboard)/subjects/[subject]/page": [
+      "static/chunks/fc185_next_dist_09f01d22._.js",
+      "static/chunks/aptiverse_aptiverse-ui_src_app_favicon_ico_mjs_0bff2180._.js",
+      "static/chunks/fc185_74519d3b._.js",
+      "static/chunks/aptiverse_aptiverse-ui_src_providers_a975d0e0._.js",
+      "static/chunks/[root-of-the-server]__94905b55._.css",
+      "static/chunks/aptiverse_aptiverse-ui_src_app_layout_tsx_762b6d2a._.js",
+      "static/chunks/fc185_next_dist_client_components_builtin_global-error_b4000989.js",
+      "static/chunks/aptiverse_aptiverse-ui_src_89a70c9b._.js",
+      "static/chunks/fc185_26e6cea1._.js",
+      "static/chunks/aptiverse_aptiverse-ui_src_app_(dashboard)_layout_tsx_b4000989._.js",
+      "static/chunks/aptiverse_aptiverse-ui_src_app_(dashboard)_subjects_[subject]_page_tsx_ac2f4e37._.js",
+      "static/chunks/fc185_be9579e1._.js",
+      "static/chunks/aptiverse_aptiverse-ui_src_app_(dashboard)_subjects_[subject]_page_tsx_e8caa06f._.js",
+      "static/chunks/[turbopack]_browser_dev_hmr-client_hmr-client_ts_df731875._.js",
+      "static/chunks/fc185_next_dist_compiled_react-dom_196bd446._.js",
+      "static/chunks/fc185_next_dist_compiled_next-devtools_index_1b3a675b.js",
+      "static/chunks/fc185_next_dist_compiled_1e93588c._.js",
+      "static/chunks/fc185_next_dist_client_7fd0891b._.js",
+      "static/chunks/fc185_next_dist_0df9a018._.js",
+      "static/chunks/fc185_@swc_helpers_cjs_743d9f50._.js",
+      "static/chunks/aptiverse_aptiverse-ui_a0ff3932._.js",
+      "static/chunks/turbopack-aptiverse_aptiverse-ui_3b486180._.js"
+    ]
+  }
+}

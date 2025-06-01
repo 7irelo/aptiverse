@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 using Aptiverse.Marketplace;
 using Aptiverse.Marketplace.Utilities;
+=======
+using Aptiverse.Api.Utilities;
+using Aptiverse.Marketplace;
+>>>>>>> ba78b85b (fix: resolve build errors)
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Scalar.AspNetCore;

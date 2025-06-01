@@ -1,6 +1,10 @@
+<<<<<<< HEAD
 ﻿using Aptiverse.Marketplace.Application;
 using Aptiverse.Marketplace.Infrastructure;
 using Microsoft.AspNetCore.Authentication.Cookies;
+=======
+﻿using Microsoft.AspNetCore.Authentication.Cookies;
+>>>>>>> ba78b85b (fix: resolve build errors)
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +12,11 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+<<<<<<< HEAD
+=======
+using Aptiverse.Api.Application;
+using Aptiverse.Api.Infrastructure;
+>>>>>>> ba78b85b (fix: resolve build errors)
 
 namespace Aptiverse.Marketplace
 {
