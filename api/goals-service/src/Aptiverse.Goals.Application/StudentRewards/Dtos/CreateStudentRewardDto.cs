@@ -1,0 +1,14 @@
+﻿namespace Aptiverse.Goals.Application.StudentRewards.Dtos
+{
+    public record CreateStudentRewardDto
+    {
+        public long StudentId { get; init; }
+        public long RewardId { get; init; }
+        public long? GoalId { get; init; }
+        public DateTime EarnedAt { get; init; }
+        public DateTime? ExpiresAt { get; init; }
+        public string Status { get; init; }
+        public int PointsEarned { get; init; }
+        public string AchievementContext { get; init; }
+    }
+}
