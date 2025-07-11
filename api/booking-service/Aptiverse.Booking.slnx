@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/Aptiverse.Booking.Application/Aptiverse.Booking.Application.csproj" />
+  <Project Path="src/Aptiverse.Booking.Core/Aptiverse.Booking.Core.csproj" />
+  <Project Path="src/Aptiverse.Booking.Domain/Aptiverse.Booking.Domain.csproj" />
+  <Project Path="src/Aptiverse.Booking.Infrastructure/Aptiverse.Booking.Infrastructure.csproj" />
+  <Project Path="src/Aptiverse.Booking/Aptiverse.Booking.csproj" />
+</Solution>
