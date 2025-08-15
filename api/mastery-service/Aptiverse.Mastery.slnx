@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/Aptiverse.Mastery.Application/Aptiverse.Mastery.Application.csproj" />
+  <Project Path="src/Aptiverse.Mastery.Core/Aptiverse.Mastery.Core.csproj" />
+  <Project Path="src/Aptiverse.Mastery.Domain/Aptiverse.Mastery.Domain.csproj" />
+  <Project Path="src/Aptiverse.Mastery.Infrastructure/Aptiverse.Mastery.Infrastructure.csproj" />
+  <Project Path="src/Aptiverse.Mastery/Aptiverse.Mastery.csproj" />
+</Solution>
