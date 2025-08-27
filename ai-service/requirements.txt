@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+pydantic
+transformers
+torch
+scikit-learn
+pandas
+matplotlib
+opencv-python
+pytesseract
+numpy
+faiss-cpu
