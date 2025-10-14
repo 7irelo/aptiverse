@@ -1,0 +1,110 @@
+name: Payment Gateway CI
+
+on:
+  pull_request:
+    paths:
+      - "payment-gateway/**"
+      - ".github/workflows/payment-gateway-ci.yml"
+  push:
+    branches: [ main ]
+    paths:
+      - "payment-gateway/**"
+      - ".github/workflows/payment-gateway-ci.yml"
+
+jobs:
+  scan_ruby:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: payment-gateway
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4.4"
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Scan for common Rails security vulnerabilities
+        run: bin/brakeman --no-pager
+
+  scan_js:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: payment-gateway
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4.4"
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Scan JavaScript dependencies
+        run: bin/importmap audit
+
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: payment-gateway
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4.4"
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Lint code for consistent style
+        run: bin/rubocop -f github
+
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: payment-gateway
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install packages
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential git libyaml-dev pkg-config google-chrome-stable
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4.4"
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Run tests
+        env:
+          RAILS_ENV: test
+        run: bin/rails db:test:prepare test test:system
+
+      - name: Keep screenshots from failed system tests
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: payment-gateway-screenshots
+          path: payment-gateway/tmp/screenshots
+          if-no-files-found: ignore
