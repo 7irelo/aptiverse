@@ -1,0 +1,18 @@
+{
+  "/(auth)/forgot-password/page": "/forgot-password",
+  "/(auth)/login/page": "/login",
+  "/(auth)/register/page": "/register",
+  "/(dashboard)/analytics/page": "/analytics",
+  "/(dashboard)/dashboard/page": "/dashboard",
+  "/(dashboard)/diary/page": "/diary",
+  "/(dashboard)/goals/[id]/page": "/goals/[id]",
+  "/(dashboard)/goals/page": "/goals",
+  "/(dashboard)/rewards/page": "/rewards",
+  "/(dashboard)/subjects/[subject]/page": "/subjects/[subject]",
+  "/(dashboard)/subjects/page": "/subjects",
+  "/(root)/about/page": "/about",
+  "/(root)/page": "/",
+  "/_not-found/page": "/_not-found",
+  "/api/auth/[...nextauth]/route": "/api/auth/[...nextauth]",
+  "/favicon.ico/route": "/favicon.ico"
+}

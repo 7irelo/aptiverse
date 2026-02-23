@@ -1,0 +1,37 @@
+name: CI / Build Insights Service
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Build Docker image
+      run: |
+        docker build -t insights-service .
+        docker save insights-service | gzip > insights-service-image.tar.gz
+
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: insights-service-image
+        path: insights-service-image.tar.gz
+        retention-days: 1
+
+    - name: List image info
+      run: |
+        echo "Docker image built successfully:"
+        docker images insights-service
+        echo "Artifact created: insights-service-image.tar.gz"

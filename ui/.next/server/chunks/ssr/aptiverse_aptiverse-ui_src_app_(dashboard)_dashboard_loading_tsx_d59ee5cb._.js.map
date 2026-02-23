@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///C:/Dev/aptiverse/aptiverse-ui/src/app/%28dashboard%29/dashboard/loading.tsx"],"sourcesContent":["// app/dashboard/loading.tsx\r\nconst Loading = () => {\r\n  return (\r\n    <div className=\"bg-amber-300 flex items-center justify-center min-h-screen\">\r\n      <div className=\"animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900\"></div>\r\n    </div>\r\n  )\r\n}\r\n\r\nexport default Loading;"],"names":[],"mappings":"AAAA,4BAA4B;;;;;;;AAC5B,MAAM,UAAU;IACd,qBACE,8QAAC;QAAI,WAAU;kBACb,cAAA,8QAAC;YAAI,WAAU;;;;;;;;;;;AAGrB;uCAEe","debugId":null}}]
+}

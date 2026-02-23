@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/aptiverse-ui/src/app/frygia_5c43ea83.module.css"],"sourcesContent":["@font-face {\n    font-family: 'frygia';\n    src: url('@vercel/turbopack-next/internal/font/local/font?{%22path%22:%22./fonts/Frygia/Frygia-Regular.woff%22,%22preload%22:true,%22has_size_adjust%22:true}') format('woff');\n    font-display: swap;\n    font-weight: 400;font-style: normal;\n}\n@font-face {\n    font-family: 'frygia';\n    src: url('@vercel/turbopack-next/internal/font/local/font?{%22path%22:%22./fonts/Frygia/Frygia-Regular.ttf%22,%22preload%22:true,%22has_size_adjust%22:true}') format('truetype');\n    font-display: swap;\n    font-weight: 400;font-style: normal;\n}\n\n@font-face {\n    font-family: 'frygia Fallback';\n    src: local(\"Arial\");\n    ascent-override: 76.24%;\ndescent-override: 25.41%;\nline-gap-override: 20.35%;\nsize-adjust: 98.38%;\n\n}\n\n.className {\n    font-family: 'frygia', 'frygia Fallback';\n    \n}\n.variable {\n    --font-frygia: 'frygia', 'frygia Fallback';\n}\n\n"],"names":[],"mappings":"AAAA;;;;;;;;AAMA;;;;;;;;AAOA;;;;;;;;;AAUA;;;;AAIA"}}]
+}

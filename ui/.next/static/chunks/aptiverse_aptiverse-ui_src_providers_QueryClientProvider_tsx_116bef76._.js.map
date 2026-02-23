@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///C:/Dev/aptiverse/aptiverse-ui/src/providers/QueryClientProvider.tsx"],"sourcesContent":["'use client'\r\n\r\nimport { QueryClient, QueryClientProvider as TanStackQueryClientProvider } from '@tanstack/react-query'\r\nimport { useState } from 'react'\r\n\r\nexport default function QueryClientProvider({\r\n  children,\r\n}: {\r\n  children: React.ReactNode\r\n}) {\r\n  const [queryClient] = useState(\r\n    () =>\r\n      new QueryClient({\r\n        defaultOptions: {\r\n          queries: {\r\n            staleTime: 60 * 1000,\r\n          },\r\n        },\r\n      })\r\n  )\r\n\r\n  return (\r\n    <TanStackQueryClientProvider client={queryClient}>\r\n      {children}\r\n    </TanStackQueryClientProvider>\r\n  )\r\n}"],"names":[],"mappings":";;;;;AAEA;AAAA;AACA;;;AAHA;;;AAKe,SAAS,oBAAoB,KAI3C;QAJ2C,EAC1C,QAAQ,EAGT,GAJ2C;;IAK1C,MAAM,CAAC,YAAY,GAAG,IAAA,yMAAQ;wCAC5B,IACE,IAAI,+NAAW,CAAC;gBACd,gBAAgB;oBACd,SAAS;wBACP,WAAW,KAAK;oBAClB;gBACF;YACF;;IAGJ,qBACE,6NAAC,gPAA2B;QAAC,QAAQ;kBAClC;;;;;;AAGP;GArBwB;KAAA","debugId":null}}]
+}

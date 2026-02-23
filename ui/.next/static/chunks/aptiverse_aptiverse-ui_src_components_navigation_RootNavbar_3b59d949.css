@@ -1,0 +1,238 @@
+/* [project]/aptiverse/aptiverse-ui/src/components/navigation/RootNavbar.css [app-client] (css) */
+.root-navbar {
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  background: rgba(255, 255, 255, .95);
+  border-bottom: 1px solid #e5e7eb;
+  transition: all .3s;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.navbar-container {
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  height: 70px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+}
+
+.navbar-brand {
+  color: #1f2937;
+  font-size: 1.5rem;
+  font-weight: bold;
+  font-family: var(--font-frygia);
+  align-items: center;
+  gap: .75rem;
+  text-decoration: none;
+  display: flex;
+}
+
+.logo-icon {
+  color: #4f46e5;
+}
+
+.brand-text {
+  -webkit-text-fill-color: transparent;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.desktop-nav {
+  align-items: center;
+  gap: 2rem;
+  display: none;
+}
+
+.nav-link {
+  color: #4b5563;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color .2s;
+  position: relative;
+}
+
+.nav-link:hover {
+  color: #1f2937;
+}
+
+.nav-link:after {
+  content: "";
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  width: 0;
+  height: 2px;
+  transition: width .3s;
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+}
+
+.nav-link:hover:after {
+  width: 100%;
+}
+
+.auth-section {
+  align-items: center;
+  gap: 1rem;
+  display: none;
+}
+
+.auth-link {
+  border-radius: 8px;
+  align-items: center;
+  gap: .5rem;
+  padding: .5rem 1rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all .2s;
+  display: flex;
+}
+
+.login-link {
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+}
+
+.login-link:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.signup-link {
+  color: #fff;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+}
+
+.signup-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, .3);
+}
+
+.mobile-menu-button {
+  color: #4b5563;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  justify-content: center;
+  align-items: center;
+  padding: .5rem;
+  transition: background-color .2s;
+  display: flex;
+}
+
+.mobile-menu-button:hover {
+  background: #f3f4f6;
+}
+
+.mobile-nav {
+  opacity: 0;
+  visibility: hidden;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  transition: all .3s;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  transform: translateY(-100%);
+}
+
+.mobile-nav.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.mobile-nav-content {
+  flex-direction: column;
+  gap: .5rem;
+  padding: 1rem;
+  display: flex;
+}
+
+.mobile-nav-link {
+  color: #4b5563;
+  border-radius: 8px;
+  padding: 1rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color .2s;
+}
+
+.mobile-nav-link:hover {
+  color: #1f2937;
+  background: #f9fafb;
+}
+
+.mobile-auth-section {
+  border-top: 1px solid #e5e7eb;
+  flex-direction: column;
+  gap: .5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  display: flex;
+}
+
+.mobile-auth-link {
+  border-radius: 8px;
+  justify-content: center;
+  align-items: center;
+  gap: .75rem;
+  padding: 1rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all .2s;
+  display: flex;
+}
+
+.mobile-auth-link.login {
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+}
+
+.mobile-auth-link.login:hover {
+  background: #f9fafb;
+}
+
+.mobile-auth-link.signup {
+  color: #fff;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+}
+
+.mobile-auth-link.signup:hover {
+  transform: translateY(-1px);
+}
+
+.mobile-menu-backdrop {
+  z-index: 999;
+  background: rgba(0, 0, 0, .5);
+  position: fixed;
+  top: 70px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+@media (min-width: 768px) {
+  .desktop-nav, .auth-section {
+    display: flex;
+  }
+
+  .mobile-menu-button, .mobile-nav, .mobile-menu-backdrop {
+    display: none;
+  }
+}
+
+.root-navbar.scrolled {
+  background: rgba(255, 255, 255, .98);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, .1);
+}
+
+/*# sourceMappingURL=aptiverse_aptiverse-ui_src_components_navigation_RootNavbar_3b59d949.css.map*/

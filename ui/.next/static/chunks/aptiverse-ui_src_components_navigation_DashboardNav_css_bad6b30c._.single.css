@@ -1,0 +1,454 @@
+/* [project]/aptiverse-ui/src/components/navigation/DashboardNav.css [app-client] (css) */
+.dashboard-nav {
+  z-index: 40;
+  background: linear-gradient(#fff, #f8fafc);
+  border-right: 1px solid #e5e7eb;
+  flex-direction: column;
+  width: 280px;
+  height: 100vh;
+  transition: all .3s cubic-bezier(.4, 0, .2, 1);
+  display: flex;
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, .1);
+}
+
+.dashboard-nav.collapsed {
+  width: 70px;
+}
+
+.nav-header {
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 1rem;
+  padding: 1.5rem 1rem 1rem;
+  position: relative;
+}
+
+.nav-toggle-btn {
+  cursor: pointer;
+  background: #f8fafc;
+  border: none;
+  border-radius: 6px;
+  justify-content: center;
+  align-items: center;
+  padding: .5rem;
+  transition: all .2s;
+  display: flex;
+}
+
+.nav-toggle-btn:hover {
+  background: #f1f5f9;
+}
+
+.collapsed-toggle-btn {
+  cursor: pointer;
+  background: #f8fafc;
+  border: none;
+  border-radius: 8px;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin-top: .5rem;
+  padding: .75rem;
+  transition: all .2s;
+  display: flex;
+}
+
+.collapsed-toggle-btn:hover {
+  background: #f1f5f9;
+}
+
+.nav-content {
+  flex-direction: column;
+  flex: 1;
+  padding: 0 1rem 1rem;
+  display: flex;
+  overflow-y: auto;
+}
+
+.section-title {
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: #64748b;
+  margin-bottom: .75rem;
+  padding-left: .5rem;
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.nav-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav-item {
+  margin-bottom: .25rem;
+  position: relative;
+}
+
+.nav-link {
+  color: #475569;
+  white-space: nowrap;
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  align-items: center;
+  width: 100%;
+  padding: .75rem 1rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all .3s cubic-bezier(.4, 0, .2, 1);
+  display: flex;
+  position: relative;
+}
+
+.dashboard-nav.collapsed .nav-link {
+  justify-content: center;
+  padding: .75rem;
+}
+
+.nav-link:hover {
+  color: #1e293b;
+  background: #f1f5f9;
+  transform: translateX(4px);
+}
+
+.dashboard-nav.collapsed .nav-link:hover {
+  transform: scale(1.05);
+}
+
+.nav-link.active {
+  color: #2563eb;
+  background: #eff6ff;
+  border-left: 3px solid #2563eb;
+}
+
+.link-text {
+  margin-left: .75rem;
+  font-size: .9rem;
+  transition: all .3s cubic-bezier(.4, 0, .2, 1);
+}
+
+.dashboard-nav.collapsed .link-text {
+  opacity: 0;
+  width: 0;
+  margin-left: 0;
+  overflow: hidden;
+}
+
+.nav-tooltip {
+  color: #fff;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 60;
+  background: #1f2937;
+  border-radius: 6px;
+  padding: .5rem .75rem;
+  font-size: .75rem;
+  font-weight: 500;
+  transition: all .2s cubic-bezier(.4, 0, .2, 1);
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 8px);
+  transform: translateY(-50%)scale(.95);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .15);
+}
+
+.nav-tooltip:before {
+  content: "";
+  border: 6px solid rgba(0, 0, 0, 0);
+  border-right-color: #1f2937;
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  transform: translateY(-50%);
+}
+
+.nav-link:hover .nav-tooltip {
+  opacity: 1;
+  transform: translateY(-50%)scale(1);
+}
+
+.dropdown-container {
+  position: relative;
+}
+
+.subjects-dropdown {
+  z-index: 50;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  width: 320px;
+  margin-left: 4px;
+  animation: .2s ease-out dropdownSlide;
+  position: absolute;
+  top: 0;
+  left: 100%;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, .15);
+}
+
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.dropdown-header {
+  background: #fafafa;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 1.25rem 1.5rem 1rem;
+}
+
+.dropdown-title {
+  color: #1e293b;
+  margin-bottom: .25rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.dropdown-subtitle {
+  color: #64748b;
+  font-size: .8rem;
+}
+
+.dropdown-content {
+  max-height: 360px;
+  padding: .5rem 0;
+  overflow-y: auto;
+}
+
+.dropdown-item {
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: none;
+  align-items: center;
+  gap: .75rem;
+  width: 100%;
+  padding: .75rem 1.5rem;
+  text-decoration: none;
+  transition: all .15s;
+  display: flex;
+}
+
+.dropdown-item:hover {
+  background: #f8fafc;
+}
+
+.dropdown-item:active {
+  background: #f1f5f9;
+}
+
+.dropdown-item-icon {
+  border-radius: 8px;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  display: flex;
+}
+
+.dropdown-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.dropdown-item-name {
+  color: #374151;
+  margin-bottom: .125rem;
+  font-size: .9rem;
+  font-weight: 500;
+  display: block;
+}
+
+.dropdown-item-code {
+  color: #64748b;
+  font-size: .75rem;
+  font-weight: 500;
+}
+
+.dropdown-item-progress {
+  flex-shrink: 0;
+  align-items: center;
+  gap: .5rem;
+  display: flex;
+}
+
+.dropdown-item-progress .progress-bar {
+  background: #e5e7eb;
+  border-radius: 2px;
+  width: 40px;
+  height: 4px;
+  overflow: hidden;
+}
+
+.dropdown-item-progress .progress-fill {
+  border-radius: 2px;
+  height: 100%;
+  transition: width .3s;
+}
+
+.dropdown-item-progress .progress-text {
+  color: #374151;
+  text-align: right;
+  min-width: 25px;
+  font-size: .7rem;
+  font-weight: 600;
+}
+
+.dropdown-footer {
+  background: #fafafa;
+  border-top: 1px solid #f1f5f9;
+  padding: .75rem 1.5rem;
+}
+
+.view-all-link {
+  text-align: center;
+  color: #3b82f6;
+  border-radius: 6px;
+  padding: .5rem;
+  font-size: .85rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all .2s;
+  display: block;
+}
+
+.view-all-link:hover {
+  background: #eff6ff;
+}
+
+.dropdown-overlay {
+  z-index: 45;
+  background: none;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.dashboard-nav.collapsed .subjects-dropdown {
+  display: none;
+}
+
+.nav-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.nav-content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 2px;
+}
+
+.nav-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+.nav-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dropdown-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dropdown-content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 2px;
+}
+
+.dropdown-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+.dropdown-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+@media (max-width: 1024px) {
+  .subjects-dropdown {
+    width: 300px;
+    max-height: calc(100vh - 100px);
+    margin-left: 0;
+    position: fixed;
+    top: 80px;
+    left: 280px;
+  }
+
+  .dashboard-nav.collapsed ~ .dropdown-overlay + .subjects-dropdown {
+    left: 70px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-nav {
+    width: 240px;
+  }
+
+  .dashboard-nav.collapsed {
+    width: 60px;
+  }
+
+  .nav-header {
+    padding: 1rem .75rem;
+  }
+
+  .nav-content {
+    padding: 0 .75rem .75rem;
+  }
+
+  .dashboard-nav.collapsed .nav-link {
+    padding: .675rem;
+  }
+
+  .subjects-dropdown {
+    width: 280px;
+    left: 240px;
+  }
+
+  .dashboard-nav.collapsed ~ .dropdown-overlay + .subjects-dropdown {
+    left: 60px;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-nav:not(.collapsed) {
+    width: 100%;
+    max-width: 300px;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, .15);
+  }
+
+  .dashboard-nav.collapsed {
+    transform: translateX(-100%);
+  }
+
+  .subjects-dropdown {
+    width: 90vw;
+    max-width: 320px;
+    margin-left: 0;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+}
+
+/*# sourceMappingURL=aptiverse-ui_src_components_navigation_DashboardNav_css_bad6b30c._.single.css.map*/
