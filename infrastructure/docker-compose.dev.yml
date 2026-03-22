@@ -367,7 +367,7 @@ services:
   # Event Architecture (Go)
   # ---------------------------------------------------------------------------
   event-architecture:
-    image: 7irelo/aptiverse-event-architecture:latest
+    image: 7irelo/aptiverse-event-server:latest
     container_name: aptiverse-event-architecture
     restart: unless-stopped
     ports:
@@ -422,7 +422,7 @@ services:
   # UI (Next.js)
   # ---------------------------------------------------------------------------
   ui:
-    image: 7irelo/aptiverse-ui:latest
+    image: 7irelo/aptiverse-frontend:latest
     container_name: aptiverse-ui
     restart: unless-stopped
     ports:
