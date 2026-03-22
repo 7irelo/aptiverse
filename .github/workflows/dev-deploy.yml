@@ -6,7 +6,7 @@ on:
       services:
         description: "Services to deploy (comma-separated, or 'all')"
         required: false
-        default: "all"
+        default: "postgres,redis,auth-provider,ui"
 
 jobs:
   deploy:
