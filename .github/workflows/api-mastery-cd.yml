@@ -4,16 +4,38 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download latest artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: mastery-service-image
-          path: .
+      - name: Checkout code
+        uses: actions/checkout@v4
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: api/mastery-service
+          push: true
+          tags: |
+            7irelo/aptiverse-mastery-service:latest
+            7irelo/aptiverse-mastery-service:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.8.0
         with:
@@ -21,12 +43,10 @@ jobs:
 
       - name: Deploy to EC2
         run: |
-          scp -o StrictHostKeyChecking=no mastery-service-image.tar.gz ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/tmp/
-
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} '
             set -e
-            echo "Loading Docker image..."
-            docker load < /tmp/mastery-service-image.tar.gz
+            echo "Pulling image from Docker Hub..."
+            docker pull 7irelo/aptiverse-mastery-service:${{ github.sha }}
 
             echo "Stopping existing container..."
             docker stop aptiverse-mastery 2>/dev/null || true
@@ -45,10 +65,9 @@ jobs:
               -e Jwt__Audience="${{ secrets.JWT_AUDIENCE }}" \
               -e ConnectionStrings__DefaultConnection="${{ secrets.DB_CONNECTION_STRING }}" \
               -e ConnectionStrings__Redis="redis-stack:6379,abortConnect=false" \
-              mastery-service
+              7irelo/aptiverse-mastery-service:${{ github.sha }}
 
-            echo "Cleaning up..."
-            rm /tmp/mastery-service-image.tar.gz
+            echo "Cleaning up old images..."
             docker image prune -f
 
             echo "Mastery Service deployment completed successfully!"

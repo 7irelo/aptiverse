@@ -3,66 +3,39 @@ name: CD / Deploy Frontend to EC2
 on:
   workflow_dispatch:
 
-env:
-  EC2_HOST: ${{ secrets.EC2_HOST }}
-  EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
-
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ui
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
-          node-version: "18"
-          cache: "npm"
-          cache-dependency-path: ui/package-lock.json
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Create production environment file
-        run: |
-          cat > .env.production << EOF
-          NEXT_PUBLIC_API_URL=https://api.aptiverse.co.za/api
-          ALLOW_SELF_SIGNED=true
-          NEXTAUTH_URL=https://aptiverse.co.za
-          NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
-          EOF
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build application
-        run: npm run build
-
-      - name: Create Docker image
-        run: |
-          docker build --no-cache -t aptiverse-frontend .
-          docker save aptiverse-frontend | gzip > frontend-image.tar.gz
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
         with:
-          name: frontend-image
-          path: ui/frontend-image.tar.gz
-          retention-days: 1
+          context: ui
+          push: true
+          tags: |
+            7irelo/aptiverse-frontend:latest
+            7irelo/aptiverse-frontend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy:
-    needs: build
+    needs: build-and-push
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-image
-          path: .
-
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.8.0
         with:
@@ -70,22 +43,27 @@ jobs:
 
       - name: Deploy to EC2
         run: |
-          scp -o StrictHostKeyChecking=no frontend-image.tar.gz ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/tmp/
-
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} '
             set -e
-            echo "Loading Docker image..."
-            docker load < /tmp/frontend-image.tar.gz
+            echo "Pulling image from Docker Hub..."
+            docker pull 7irelo/aptiverse-frontend:${{ github.sha }}
 
             echo "Stopping existing container..."
             docker stop aptiverse-frontend 2>/dev/null || true
             docker rm aptiverse-frontend 2>/dev/null || true
 
-            echo "Starting new container..."
-            docker run -d               --name aptiverse-frontend               --network aptiverse-net               -p 3000:3000               -e NODE_ENV=production               -e NEXT_PUBLIC_API_URL=https://api.aptiverse.co.za/api               -e NEXTAUTH_URL=https://aptiverse.co.za               -e NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}               aptiverse-frontend
+            echo "Starting container..."
+            docker run -d \
+              --name aptiverse-frontend \
+              --network aptiverse-net \
+              -p 3000:3000 \
+              -e NODE_ENV=production \
+              -e NEXT_PUBLIC_API_URL=https://api.aptiverse.co.za/api \
+              -e NEXTAUTH_URL=https://aptiverse.co.za \
+              -e NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" \
+              7irelo/aptiverse-frontend:${{ github.sha }}
 
-            echo "Cleaning up..."
-            rm /tmp/frontend-image.tar.gz
+            echo "Cleaning up old images..."
             docker image prune -f
 
             echo "Frontend deployment completed successfully!"
