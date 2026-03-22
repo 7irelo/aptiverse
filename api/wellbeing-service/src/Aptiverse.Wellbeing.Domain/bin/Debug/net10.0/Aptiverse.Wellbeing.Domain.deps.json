@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "Aptiverse.Wellbeing.Domain/1.0.0": {
+        "dependencies": {
+          "Aptiverse.Wellbeing.Core": "1.0.0"
+        },
+        "runtime": {
+          "Aptiverse.Wellbeing.Domain.dll": {}
+        }
+      },
+      "Aptiverse.Wellbeing.Core/1.0.0": {
+        "runtime": {
+          "Aptiverse.Wellbeing.Core.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Aptiverse.Wellbeing.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Aptiverse.Wellbeing.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

@@ -1,0 +1,12 @@
+C:\Dev\aptiverse\api\calendar-service\src\Aptiverse.Calendar.Core\bin\Debug\net10.0\Aptiverse.Calendar.Core.deps.json
+C:\Dev\aptiverse\api\calendar-service\src\Aptiverse.Calendar.Core\bin\Debug\net10.0\Aptiverse.Calendar.Core.dll
+C:\Dev\aptiverse\api\calendar-service\src\Aptiverse.Calendar.Core\bin\Debug\net10.0\Aptiverse.Calendar.Core.pdb
+C:\Dev\aptiverse\api\calendar-service\src\Aptiverse.Calendar.Core\obj\Debug\net10.0\Aptiverse.Calendar.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Dev\aptiverse\api\calendar-service\src\Aptiverse.Calendar.Core\obj\Debug\net10.0\Aptiverse.Calendar.Core.AssemblyInfoInputs.cache
+C:\Dev\aptiverse\api\calendar-service\src\Aptiverse.Calendar.Core\obj\Debug\net10.0\Aptiverse.Calendar.Core.AssemblyInfo.cs
+C:\Dev\aptiverse\api\calendar-service\src\Aptiverse.Calendar.Core\obj\Debug\net10.0\Aptiverse.Calendar.Core.csproj.CoreCompileInputs.cache
+C:\Dev\aptiverse\api\calendar-service\src\Aptiverse.Calendar.Core\obj\Debug\net10.0\Aptiverse.Calendar.Core.sourcelink.json
+C:\Dev\aptiverse\api\calendar-service\src\Aptiverse.Calendar.Core\obj\Debug\net10.0\Aptiverse.Calendar.Core.dll
+C:\Dev\aptiverse\api\calendar-service\src\Aptiverse.Calendar.Core\obj\Debug\net10.0\refint\Aptiverse.Calendar.Core.dll
+C:\Dev\aptiverse\api\calendar-service\src\Aptiverse.Calendar.Core\obj\Debug\net10.0\Aptiverse.Calendar.Core.pdb
+C:\Dev\aptiverse\api\calendar-service\src\Aptiverse.Calendar.Core\obj\Debug\net10.0\ref\Aptiverse.Calendar.Core.dll

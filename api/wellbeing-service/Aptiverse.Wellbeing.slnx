@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/Aptiverse.Wellbeing.Application/Aptiverse.Wellbeing.Application.csproj" />
+  <Project Path="src/Aptiverse.Wellbeing.Core/Aptiverse.Wellbeing.Core.csproj" />
+  <Project Path="src/Aptiverse.Wellbeing.Domain/Aptiverse.Wellbeing.Domain.csproj" />
+  <Project Path="src/Aptiverse.Wellbeing.Infrastructure/Aptiverse.Wellbeing.Infrastructure.csproj" />
+  <Project Path="src/Aptiverse.Wellbeing/Aptiverse.Wellbeing.csproj" />
+</Solution>

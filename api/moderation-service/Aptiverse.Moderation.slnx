@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/Aptiverse.Moderation.Application/Aptiverse.Moderation.Application.csproj" />
+  <Project Path="src/Aptiverse.Moderation.Core/Aptiverse.Moderation.Core.csproj" />
+  <Project Path="src/Aptiverse.Moderation.Domain/Aptiverse.Moderation.Domain.csproj" />
+  <Project Path="src/Aptiverse.Moderation.Infrastructure/Aptiverse.Moderation.Infrastructure.csproj" />
+  <Project Path="src/Aptiverse.Moderation/Aptiverse.Moderation.csproj" />
+</Solution>

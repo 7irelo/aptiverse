@@ -1,0 +1,12 @@
+C:\Dev\aptiverse\api\audit-service\src\Aptiverse.Audit.Core\bin\Debug\net10.0\Aptiverse.Audit.Core.deps.json
+C:\Dev\aptiverse\api\audit-service\src\Aptiverse.Audit.Core\bin\Debug\net10.0\Aptiverse.Audit.Core.dll
+C:\Dev\aptiverse\api\audit-service\src\Aptiverse.Audit.Core\bin\Debug\net10.0\Aptiverse.Audit.Core.pdb
+C:\Dev\aptiverse\api\audit-service\src\Aptiverse.Audit.Core\obj\Debug\net10.0\Aptiverse.Audit.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Dev\aptiverse\api\audit-service\src\Aptiverse.Audit.Core\obj\Debug\net10.0\Aptiverse.Audit.Core.AssemblyInfoInputs.cache
+C:\Dev\aptiverse\api\audit-service\src\Aptiverse.Audit.Core\obj\Debug\net10.0\Aptiverse.Audit.Core.AssemblyInfo.cs
+C:\Dev\aptiverse\api\audit-service\src\Aptiverse.Audit.Core\obj\Debug\net10.0\Aptiverse.Audit.Core.csproj.CoreCompileInputs.cache
+C:\Dev\aptiverse\api\audit-service\src\Aptiverse.Audit.Core\obj\Debug\net10.0\Aptiverse.Audit.Core.sourcelink.json
+C:\Dev\aptiverse\api\audit-service\src\Aptiverse.Audit.Core\obj\Debug\net10.0\Aptiverse.Audit.Core.dll
+C:\Dev\aptiverse\api\audit-service\src\Aptiverse.Audit.Core\obj\Debug\net10.0\refint\Aptiverse.Audit.Core.dll
+C:\Dev\aptiverse\api\audit-service\src\Aptiverse.Audit.Core\obj\Debug\net10.0\Aptiverse.Audit.Core.pdb
+C:\Dev\aptiverse\api\audit-service\src\Aptiverse.Audit.Core\obj\Debug\net10.0\ref\Aptiverse.Audit.Core.dll

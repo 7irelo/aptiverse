@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/Aptiverse.Audit.Application/Aptiverse.Audit.Application.csproj" />
+  <Project Path="src/Aptiverse.Audit.Core/Aptiverse.Audit.Core.csproj" />
+  <Project Path="src/Aptiverse.Audit.Domain/Aptiverse.Audit.Domain.csproj" />
+  <Project Path="src/Aptiverse.Audit.Infrastructure/Aptiverse.Audit.Infrastructure.csproj" />
+  <Project Path="src/Aptiverse.Audit/Aptiverse.Audit.csproj" />
+</Solution>

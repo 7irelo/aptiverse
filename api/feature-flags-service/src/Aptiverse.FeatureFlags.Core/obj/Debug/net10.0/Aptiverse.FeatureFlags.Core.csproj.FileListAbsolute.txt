@@ -1,0 +1,12 @@
+C:\Dev\aptiverse\api\feature-flags-service\src\Aptiverse.FeatureFlags.Core\bin\Debug\net10.0\Aptiverse.FeatureFlags.Core.deps.json
+C:\Dev\aptiverse\api\feature-flags-service\src\Aptiverse.FeatureFlags.Core\bin\Debug\net10.0\Aptiverse.FeatureFlags.Core.dll
+C:\Dev\aptiverse\api\feature-flags-service\src\Aptiverse.FeatureFlags.Core\bin\Debug\net10.0\Aptiverse.FeatureFlags.Core.pdb
+C:\Dev\aptiverse\api\feature-flags-service\src\Aptiverse.FeatureFlags.Core\obj\Debug\net10.0\Aptiverse.FeatureFlags.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Dev\aptiverse\api\feature-flags-service\src\Aptiverse.FeatureFlags.Core\obj\Debug\net10.0\Aptiverse.FeatureFlags.Core.AssemblyInfoInputs.cache
+C:\Dev\aptiverse\api\feature-flags-service\src\Aptiverse.FeatureFlags.Core\obj\Debug\net10.0\Aptiverse.FeatureFlags.Core.AssemblyInfo.cs
+C:\Dev\aptiverse\api\feature-flags-service\src\Aptiverse.FeatureFlags.Core\obj\Debug\net10.0\Aptiverse.FeatureFlags.Core.csproj.CoreCompileInputs.cache
+C:\Dev\aptiverse\api\feature-flags-service\src\Aptiverse.FeatureFlags.Core\obj\Debug\net10.0\Aptiverse.FeatureFlags.Core.sourcelink.json
+C:\Dev\aptiverse\api\feature-flags-service\src\Aptiverse.FeatureFlags.Core\obj\Debug\net10.0\Aptiverse.FeatureFlags.Core.dll
+C:\Dev\aptiverse\api\feature-flags-service\src\Aptiverse.FeatureFlags.Core\obj\Debug\net10.0\refint\Aptiverse.FeatureFlags.Core.dll
+C:\Dev\aptiverse\api\feature-flags-service\src\Aptiverse.FeatureFlags.Core\obj\Debug\net10.0\Aptiverse.FeatureFlags.Core.pdb
+C:\Dev\aptiverse\api\feature-flags-service\src\Aptiverse.FeatureFlags.Core\obj\Debug\net10.0\ref\Aptiverse.FeatureFlags.Core.dll

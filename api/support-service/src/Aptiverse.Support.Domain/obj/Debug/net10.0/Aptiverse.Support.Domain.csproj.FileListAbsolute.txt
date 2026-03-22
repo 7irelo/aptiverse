@@ -1,0 +1,16 @@
+C:\Dev\aptiverse\api\support-service\src\Aptiverse.Support.Domain\bin\Debug\net10.0\Aptiverse.Support.Domain.deps.json
+C:\Dev\aptiverse\api\support-service\src\Aptiverse.Support.Domain\bin\Debug\net10.0\Aptiverse.Support.Domain.dll
+C:\Dev\aptiverse\api\support-service\src\Aptiverse.Support.Domain\bin\Debug\net10.0\Aptiverse.Support.Domain.pdb
+C:\Dev\aptiverse\api\support-service\src\Aptiverse.Support.Domain\bin\Debug\net10.0\Aptiverse.Support.Core.dll
+C:\Dev\aptiverse\api\support-service\src\Aptiverse.Support.Domain\bin\Debug\net10.0\Aptiverse.Support.Core.pdb
+C:\Dev\aptiverse\api\support-service\src\Aptiverse.Support.Domain\obj\Debug\net10.0\Aptiverse.Support.Domain.csproj.AssemblyReference.cache
+C:\Dev\aptiverse\api\support-service\src\Aptiverse.Support.Domain\obj\Debug\net10.0\Aptiverse.Support.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Dev\aptiverse\api\support-service\src\Aptiverse.Support.Domain\obj\Debug\net10.0\Aptiverse.Support.Domain.AssemblyInfoInputs.cache
+C:\Dev\aptiverse\api\support-service\src\Aptiverse.Support.Domain\obj\Debug\net10.0\Aptiverse.Support.Domain.AssemblyInfo.cs
+C:\Dev\aptiverse\api\support-service\src\Aptiverse.Support.Domain\obj\Debug\net10.0\Aptiverse.Support.Domain.csproj.CoreCompileInputs.cache
+C:\Dev\aptiverse\api\support-service\src\Aptiverse.Support.Domain\obj\Debug\net10.0\Aptiverse.Support.Domain.sourcelink.json
+C:\Dev\aptiverse\api\support-service\src\Aptiverse.Support.Domain\obj\Debug\net10.0\Aptivers.9AA56D93.Up2Date
+C:\Dev\aptiverse\api\support-service\src\Aptiverse.Support.Domain\obj\Debug\net10.0\Aptiverse.Support.Domain.dll
+C:\Dev\aptiverse\api\support-service\src\Aptiverse.Support.Domain\obj\Debug\net10.0\refint\Aptiverse.Support.Domain.dll
+C:\Dev\aptiverse\api\support-service\src\Aptiverse.Support.Domain\obj\Debug\net10.0\Aptiverse.Support.Domain.pdb
+C:\Dev\aptiverse\api\support-service\src\Aptiverse.Support.Domain\obj\Debug\net10.0\ref\Aptiverse.Support.Domain.dll

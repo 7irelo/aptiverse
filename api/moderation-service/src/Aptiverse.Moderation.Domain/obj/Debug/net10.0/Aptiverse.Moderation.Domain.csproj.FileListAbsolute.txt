@@ -1,0 +1,16 @@
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Domain\bin\Debug\net10.0\Aptiverse.Moderation.Domain.deps.json
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Domain\bin\Debug\net10.0\Aptiverse.Moderation.Domain.dll
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Domain\bin\Debug\net10.0\Aptiverse.Moderation.Domain.pdb
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Domain\bin\Debug\net10.0\Aptiverse.Moderation.Core.dll
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Domain\bin\Debug\net10.0\Aptiverse.Moderation.Core.pdb
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Domain\obj\Debug\net10.0\Aptiverse.Moderation.Domain.csproj.AssemblyReference.cache
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Domain\obj\Debug\net10.0\Aptiverse.Moderation.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Domain\obj\Debug\net10.0\Aptiverse.Moderation.Domain.AssemblyInfoInputs.cache
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Domain\obj\Debug\net10.0\Aptiverse.Moderation.Domain.AssemblyInfo.cs
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Domain\obj\Debug\net10.0\Aptiverse.Moderation.Domain.csproj.CoreCompileInputs.cache
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Domain\obj\Debug\net10.0\Aptiverse.Moderation.Domain.sourcelink.json
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Domain\obj\Debug\net10.0\Aptivers.A61235AA.Up2Date
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Domain\obj\Debug\net10.0\Aptiverse.Moderation.Domain.dll
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Domain\obj\Debug\net10.0\refint\Aptiverse.Moderation.Domain.dll
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Domain\obj\Debug\net10.0\Aptiverse.Moderation.Domain.pdb
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Domain\obj\Debug\net10.0\ref\Aptiverse.Moderation.Domain.dll

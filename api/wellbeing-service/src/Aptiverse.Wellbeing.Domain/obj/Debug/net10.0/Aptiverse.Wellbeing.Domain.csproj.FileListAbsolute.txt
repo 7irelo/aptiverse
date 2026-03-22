@@ -1,0 +1,16 @@
+C:\Dev\aptiverse\api\wellbeing-service\src\Aptiverse.Wellbeing.Domain\bin\Debug\net10.0\Aptiverse.Wellbeing.Domain.deps.json
+C:\Dev\aptiverse\api\wellbeing-service\src\Aptiverse.Wellbeing.Domain\bin\Debug\net10.0\Aptiverse.Wellbeing.Domain.dll
+C:\Dev\aptiverse\api\wellbeing-service\src\Aptiverse.Wellbeing.Domain\bin\Debug\net10.0\Aptiverse.Wellbeing.Domain.pdb
+C:\Dev\aptiverse\api\wellbeing-service\src\Aptiverse.Wellbeing.Domain\bin\Debug\net10.0\Aptiverse.Wellbeing.Core.dll
+C:\Dev\aptiverse\api\wellbeing-service\src\Aptiverse.Wellbeing.Domain\bin\Debug\net10.0\Aptiverse.Wellbeing.Core.pdb
+C:\Dev\aptiverse\api\wellbeing-service\src\Aptiverse.Wellbeing.Domain\obj\Debug\net10.0\Aptiverse.Wellbeing.Domain.csproj.AssemblyReference.cache
+C:\Dev\aptiverse\api\wellbeing-service\src\Aptiverse.Wellbeing.Domain\obj\Debug\net10.0\Aptiverse.Wellbeing.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Dev\aptiverse\api\wellbeing-service\src\Aptiverse.Wellbeing.Domain\obj\Debug\net10.0\Aptiverse.Wellbeing.Domain.AssemblyInfoInputs.cache
+C:\Dev\aptiverse\api\wellbeing-service\src\Aptiverse.Wellbeing.Domain\obj\Debug\net10.0\Aptiverse.Wellbeing.Domain.AssemblyInfo.cs
+C:\Dev\aptiverse\api\wellbeing-service\src\Aptiverse.Wellbeing.Domain\obj\Debug\net10.0\Aptiverse.Wellbeing.Domain.csproj.CoreCompileInputs.cache
+C:\Dev\aptiverse\api\wellbeing-service\src\Aptiverse.Wellbeing.Domain\obj\Debug\net10.0\Aptiverse.Wellbeing.Domain.sourcelink.json
+C:\Dev\aptiverse\api\wellbeing-service\src\Aptiverse.Wellbeing.Domain\obj\Debug\net10.0\Aptivers.49D0BA7C.Up2Date
+C:\Dev\aptiverse\api\wellbeing-service\src\Aptiverse.Wellbeing.Domain\obj\Debug\net10.0\Aptiverse.Wellbeing.Domain.dll
+C:\Dev\aptiverse\api\wellbeing-service\src\Aptiverse.Wellbeing.Domain\obj\Debug\net10.0\refint\Aptiverse.Wellbeing.Domain.dll
+C:\Dev\aptiverse\api\wellbeing-service\src\Aptiverse.Wellbeing.Domain\obj\Debug\net10.0\Aptiverse.Wellbeing.Domain.pdb
+C:\Dev\aptiverse\api\wellbeing-service\src\Aptiverse.Wellbeing.Domain\obj\Debug\net10.0\ref\Aptiverse.Wellbeing.Domain.dll

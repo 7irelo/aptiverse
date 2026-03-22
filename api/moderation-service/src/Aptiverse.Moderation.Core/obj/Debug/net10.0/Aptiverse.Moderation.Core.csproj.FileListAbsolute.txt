@@ -1,0 +1,12 @@
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Core\bin\Debug\net10.0\Aptiverse.Moderation.Core.deps.json
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Core\bin\Debug\net10.0\Aptiverse.Moderation.Core.dll
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Core\bin\Debug\net10.0\Aptiverse.Moderation.Core.pdb
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Core\obj\Debug\net10.0\Aptiverse.Moderation.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Core\obj\Debug\net10.0\Aptiverse.Moderation.Core.AssemblyInfoInputs.cache
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Core\obj\Debug\net10.0\Aptiverse.Moderation.Core.AssemblyInfo.cs
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Core\obj\Debug\net10.0\Aptiverse.Moderation.Core.csproj.CoreCompileInputs.cache
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Core\obj\Debug\net10.0\Aptiverse.Moderation.Core.sourcelink.json
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Core\obj\Debug\net10.0\Aptiverse.Moderation.Core.dll
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Core\obj\Debug\net10.0\refint\Aptiverse.Moderation.Core.dll
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Core\obj\Debug\net10.0\Aptiverse.Moderation.Core.pdb
+C:\Dev\aptiverse\api\moderation-service\src\Aptiverse.Moderation.Core\obj\Debug\net10.0\ref\Aptiverse.Moderation.Core.dll

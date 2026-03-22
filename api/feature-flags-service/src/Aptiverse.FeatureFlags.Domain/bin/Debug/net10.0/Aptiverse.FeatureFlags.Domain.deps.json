@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "Aptiverse.FeatureFlags.Domain/1.0.0": {
+        "dependencies": {
+          "Aptiverse.FeatureFlags.Core": "1.0.0"
+        },
+        "runtime": {
+          "Aptiverse.FeatureFlags.Domain.dll": {}
+        }
+      },
+      "Aptiverse.FeatureFlags.Core/1.0.0": {
+        "runtime": {
+          "Aptiverse.FeatureFlags.Core.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Aptiverse.FeatureFlags.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Aptiverse.FeatureFlags.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
