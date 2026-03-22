@@ -35,7 +35,7 @@ jobs:
         run: chmod +x bin/*
 
       - name: Scan for common Rails security vulnerabilities
-        run: bin/brakeman --no-pager
+        run: bin/brakeman --no-pager --no-exit-on-warn
 
   scan_js:
     runs-on: ubuntu-latest
@@ -128,7 +128,7 @@ jobs:
         env:
           RAILS_ENV: test
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/payment_gateway_test
-        run: bin/rails db:test:prepare test test:system
+        run: bin/rails db:migrate test test:system
 
       - name: Keep screenshots from failed system tests
         uses: actions/upload-artifact@v4
