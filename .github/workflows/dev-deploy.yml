@@ -69,6 +69,10 @@ jobs:
           ENVEOF
             fi
 
+            echo "Stopping existing services..."
+            docker compose down --remove-orphans 2>/dev/null || true
+            docker rm -f $(docker ps -aq) 2>/dev/null || true
+
             echo "Pulling latest images..."
             docker compose pull
 
