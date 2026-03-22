@@ -1,23 +1,53 @@
-resource "azurerm_resource_group" "state" {
-  name     = var.resource_group_name
-  location = var.location
-  tags     = var.tags
+resource "aws_s3_bucket" "terraform_state" {
+  bucket = var.state_bucket_name
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  tags = {
+    Name = var.state_bucket_name
+  }
 }
 
-resource "azurerm_storage_account" "state" {
-  name                     = var.storage_account_name
-  resource_group_name      = azurerm_resource_group.state.name
-  location                 = azurerm_resource_group.state.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
+resource "aws_s3_bucket_versioning" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
 
-  allow_nested_items_to_be_public = false
-  min_tls_version                 = "TLS1_2"
-  tags                            = var.tags
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
-resource "azurerm_storage_container" "state" {
-  name                  = var.container_name
-  storage_account_name  = azurerm_storage_account.state.name
-  container_access_type = "private"
+resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "aws:kms"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_dynamodb_table" "terraform_locks" {
+  name         = var.dynamodb_table_name
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
+
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+
+  tags = {
+    Name = var.dynamodb_table_name
+  }
 }

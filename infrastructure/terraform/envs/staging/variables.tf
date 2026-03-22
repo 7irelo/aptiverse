@@ -28,15 +28,16 @@ variable "private_subnet_cidrs" {
   type        = list(string)
 }
 
-variable "ec2_instance_type" {
-  description = "EC2 instance type for dev"
-  type        = string
-  default     = "t4g.micro"
+variable "eks_node_instance_types" {
+  description = "EKS node instance types"
+  type        = list(string)
+  default     = ["t3.large"]
 }
 
-variable "ec2_key_name" {
-  description = "SSH key pair name for the EC2 instance"
-  type        = string
+variable "eks_node_desired_size" {
+  description = "Desired number of EKS nodes"
+  type        = number
+  default     = 2
 }
 
 variable "db_username" {
@@ -54,18 +55,24 @@ variable "db_password" {
 variable "db_instance_class" {
   description = "RDS instance class"
   type        = string
-  default     = "db.t3.micro"
+  default     = "db.t3.small"
 }
 
 variable "redis_node_type" {
   description = "ElastiCache node type"
   type        = string
-  default     = "cache.t3.micro"
+  default     = "cache.t3.small"
 }
 
 variable "domain_name" {
   description = "Root domain name"
   type        = string
+}
+
+variable "certificate_arn" {
+  description = "ACM certificate ARN for HTTPS"
+  type        = string
+  default     = ""
 }
 
 variable "tags" {

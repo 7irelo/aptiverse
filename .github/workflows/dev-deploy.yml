@@ -1,0 +1,74 @@
+name: CD / Deploy Dev Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      services:
+        description: "Services to deploy (comma-separated, or 'all')"
+        required: false
+        default: "all"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Copy docker-compose and env to EC2
+        run: |
+          scp -o StrictHostKeyChecking=no \
+            infrastructure/docker-compose.dev.yml \
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/opt/aptiverse/docker-compose.yml
+
+      - name: Deploy services
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} '
+            set -e
+            cd /opt/aptiverse
+
+            # Create .env if it does not exist
+            if [ ! -f .env ]; then
+              echo "No .env file found — creating from secrets..."
+              cat > .env <<ENVEOF
+          POSTGRES_USER=${{ secrets.DB_USERNAME }}
+          POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_CONNECTION_STRING=Host=postgres;Port=5432;Database=aptiverse;Username=${{ secrets.DB_USERNAME }};Password=${{ secrets.DB_PASSWORD }}
+          JWT_KEY=${{ secrets.JWT_KEY }}
+          JWT_ISSUER=aptiverse
+          JWT_AUDIENCE=aptiverse
+          EMAIL_SMTP_HOST=${{ secrets.EMAIL_SMTP_HOST }}
+          EMAIL_SMTP_PORT=${{ secrets.EMAIL_SMTP_PORT }}
+          EMAIL_SMTP_USER=${{ secrets.EMAIL_SMTP_USER }}
+          EMAIL_SMTP_PASSWORD=${{ secrets.EMAIL_SMTP_PASSWORD }}
+          EMAIL_FROM_ADDRESS=${{ secrets.EMAIL_FROM_ADDRESS }}
+          NEXT_PUBLIC_API_URL=http://${{ secrets.EC2_HOST }}:5000
+          NEXTAUTH_URL=http://${{ secrets.EC2_HOST }}:3000
+          NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+          ENVEOF
+            fi
+
+            echo "Pulling latest images..."
+            docker compose pull
+
+            SERVICES="${{ inputs.services }}"
+            if [ "$SERVICES" = "all" ]; then
+              echo "Starting all services..."
+              docker compose up -d
+            else
+              echo "Starting selected services: $SERVICES"
+              docker compose up -d $(echo "$SERVICES" | tr "," " ")
+            fi
+
+            echo "Cleaning up old images..."
+            docker image prune -f
+
+            echo "Running containers:"
+            docker compose ps
+          '
