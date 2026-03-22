@@ -1,6 +1,6 @@
 # Aptiverse
 
-An AI-powered student success platform built for South African high school learners. Twelve services handle academic planning, goal tracking, mastery analytics, practice generation, AI-driven insights, tutor marketplace, booking, payments, authentication, notifications, and event routing — all wired together with Kafka, RabbitMQ, Redis, and PostgreSQL.
+An AI-powered student success platform built for South African high school learners. Twenty microservices handle academic planning, goal tracking, mastery analytics, practice generation, AI-driven insights, tutor marketplace, booking, payments, authentication, notifications, event routing, content moderation, wellbeing, calendars, feature flags, support, and audit logging — wired together with Kafka, RabbitMQ, Redis, and PostgreSQL.
 
 The platform is purpose-built for Grades 11 and 12, targeting SBA preparation, university readiness, bursary access, and mental wellbeing. Everything is framed around growth, mastery, and empowerment — never toxic comparison or ranking.
 
@@ -11,31 +11,39 @@ The platform is purpose-built for Grades 11 and 12, targeting SBA preparation, u
 | Service | Port | Technology | Description |
 |---------|------|------------|-------------|
 | `ui` | 3000 | Next.js 15, React 19, TypeScript | Web client (marketing + dashboard) |
-| `auth-provider` | 5006 | .NET 10, ASP.NET Core | Authentication, JWT tokens, OAuth (Google, Microsoft) |
-| `academic-planning-service` | 5196 | .NET 10, ASP.NET Core | Course and subject planning, SBA scheduling |
-| `goals-service` | 5196 | .NET 10, ASP.NET Core | Student goal tracking, verification, rewards |
-| `mastery-service` | 5196 | .NET 10, ASP.NET Core | Strength tracking, term-over-term progress |
-| `practice-service` | 5196 | .NET 10, ASP.NET Core | Practice test generation and rubric-based assessment |
-| `insights-service` | 5196 | .NET 10, ASP.NET Core | Predictive analytics, pattern analysis |
-| `marketplace-service` | 5196 | .NET 10, ASP.NET Core | Tutor marketplace, course listings |
-| `booking-service` | 5196 | .NET 10, ASP.NET Core | Tutor session booking and availability |
-| `entitlements-service` | 5196 | .NET 10, ASP.NET Core | Subscription access control, feature gating |
+| `auth-provider` | 5000 | .NET 10, ASP.NET Core | Authentication, JWT tokens, OAuth (Google, Microsoft) |
+| `academic-planning-service` | 5001 | .NET 10, ASP.NET Core | Course and subject planning, SBA scheduling |
+| `audit-service` | 5002 | .NET 10, ASP.NET Core | Audit logging and compliance tracking |
+| `booking-service` | 5003 | .NET 10, ASP.NET Core | Tutor session booking and availability |
+| `calendar-service` | 5004 | .NET 10, ASP.NET Core | Calendar integration (Google, Outlook) |
+| `entitlements-service` | 5005 | .NET 10, ASP.NET Core | Subscription access control, feature gating |
+| `feature-flags-service` | 5006 | .NET 10, ASP.NET Core | Feature flag management and rollout |
+| `goals-service` | 5007 | .NET 10, ASP.NET Core | Student goal tracking, verification, rewards |
+| `insights-service` | 5008 | .NET 10, ASP.NET Core | Predictive analytics, pattern analysis |
+| `marketplace-service` | 5009 | .NET 10, ASP.NET Core | Tutor marketplace, course listings |
+| `mastery-service` | 5010 | .NET 10, ASP.NET Core | Strength tracking, term-over-term progress |
+| `moderation-service` | 5011 | .NET 10, ASP.NET Core | Content moderation and review |
+| `practice-service` | 5012 | .NET 10, ASP.NET Core | Practice test generation and rubric-based assessment |
+| `support-service` | 5013 | .NET 10, ASP.NET Core | Help desk and support ticketing |
+| `wellbeing-service` | 5014 | .NET 10, ASP.NET Core | Mental wellbeing check-ins and resources |
 | `ai-service` | 8000 | Python 3.11, FastAPI | ML models for analysis, generation, OCR |
-| `payment-gateway` | 80 | Rails 8, Ruby 3.4 | Stripe payment processing, webhooks |
-| `notification-service` | 8080 | Go 1.21 | Event-driven email delivery via RabbitMQ |
 | `event-architecture` | 8080 | Go 1.22 | Event ingestion, routing, deduplication (Kafka + RabbitMQ) |
+| `notification-service` | 8081 | Go 1.21 | Event-driven email delivery via RabbitMQ |
+| `payment-gateway` | 3001 | Rails 8, Ruby 3.4 | Stripe payment processing, webhooks |
 
 ### Infrastructure
 
-| Component | Technology | Port |
-|-----------|------------|------|
-| Database | PostgreSQL (Azure Flexible Server) | 5432 |
-| Cache | Redis (Azure Cache / redis-stack) | 6379 |
-| Message Broker | Apache Kafka (Confluent 7.6.0) | 9092 |
-| Message Queue | RabbitMQ 3.13 | 5672, 15672 (management) |
-| Coordination | Zookeeper (Confluent 7.6.0) | 2181 |
-| Metrics | Prometheus v2.50.0 | 9090 |
-| Dashboards | Grafana 10.3.1 | 3000 |
+| Component | Technology |
+|-----------|------------|
+| Database | PostgreSQL 16 (RDS in AWS) |
+| Cache | Redis 7 (ElastiCache in AWS) |
+| Message Broker | Apache Kafka (Confluent 7.6.0) |
+| Message Queue | RabbitMQ 3.13 |
+| Container Registry | Docker Hub (`7irelo/aptiverse-*`) |
+| DNS | Route 53 (domain registered at GoDaddy) |
+| Compute | EC2 (dev), EKS (staging/prod) |
+| IaC | Terraform |
+| CI/CD | GitHub Actions |
 
 ### Tech Stack
 
@@ -43,7 +51,7 @@ The platform is purpose-built for Grades 11 and 12, targeting SBA preparation, u
 
 **Frontend:** Next.js 15 (Turbopack), React 19, TypeScript 5, Tailwind CSS 4, Radix UI, React Hook Form, Zod 4, TanStack Query 5, NextAuth.js
 
-**AI/ML:** Python 3.11, FastAPI, PyTorch, HuggingFace Transformers, scikit-learn, FAISS (vector search), OpenCV, Tesseract OCR, pandas, NumPy
+**AI/ML:** Python 3.11, FastAPI, PyTorch (CPU), HuggingFace Transformers, scikit-learn, FAISS (vector search), OpenCV, Tesseract OCR, pandas, NumPy
 
 **Payments:** Ruby on Rails 8, Stripe (checkout sessions, webhooks, refunds)
 
@@ -51,7 +59,7 @@ The platform is purpose-built for Grades 11 and 12, targeting SBA preparation, u
 
 **Notifications:** Go 1.21, RabbitMQ consumer, SMTP (Gmail), exponential backoff retry
 
-**Infrastructure:** Terraform (Azure — AKS, PostgreSQL Flexible Server, Redis Cache, Container Registry, Key Vault, Front Door, API Management, Log Analytics), Docker, GitHub Actions
+**Infrastructure:** Terraform (AWS — VPC, EKS, EC2, RDS PostgreSQL, ElastiCache Redis, ALB, Route 53), Docker, GitHub Actions, Docker Hub
 
 ## What the Platform Does
 
@@ -141,68 +149,55 @@ Bursary partnerships planned to surface student progress and university readines
 
 ## Quick Start
 
-### Docker Compose (event infrastructure)
+### Docker Compose (all services — dev environment)
 
 ```bash
-cd event-architecture/deployments
-docker compose up    # starts Kafka, RabbitMQ, Zookeeper, Prometheus, Grafana
+cd infrastructure
+cp .env.example .env    # fill in secrets
+docker compose -f docker-compose.dev.yml up
 ```
 
-| Endpoint | URL |
-|----------|-----|
-| RabbitMQ Management | http://localhost:15672 (guest/guest) |
-| Prometheus | http://localhost:9090 |
-| Grafana | http://localhost:3000 (admin/admin) |
-| Event Server | http://localhost:8080 |
+This starts all 20 services plus PostgreSQL and Redis on a single machine.
 
-### AI Service
+### Individual Services
 
-```bash
-cd ai-service
-docker compose up --build    # FastAPI at http://localhost:8000
-```
-
-### Frontend
-
+**Frontend:**
 ```bash
 cd ui
-cp .env.example .env.local    # configure API URLs
-npm install
-npm run dev                   # http://localhost:3000 (Turbopack)
+cp .env.example .env.local
+npm install && npm run dev    # http://localhost:3000
 ```
 
-### Auth Provider
-
+**Auth Provider:**
 ```bash
 cd auth-provider
-cp .env.example .env          # configure DB, Redis, JWT, OAuth credentials
-dotnet run --project src/Aptiverse.Auth/Aptiverse.Auth.csproj    # http://localhost:5006
+dotnet run --project src/Aptiverse.Auth/Aptiverse.Auth.csproj    # http://localhost:5000
 ```
 
-### API Microservices (example: booking-service)
-
+**API Microservice (example: booking-service):**
 ```bash
 cd api/booking-service
-dotnet run --project src/Aptiverse.Booking/Aptiverse.Booking.csproj    # http://localhost:5196
+dotnet run --project src/Aptiverse.Booking/Aptiverse.Booking.csproj
 ```
 
-### Payment Gateway
-
+**Payment Gateway:**
 ```bash
 cd payment-gateway
-cp .env.example .env          # configure Stripe keys and DB
-bundle install
-bin/rails db:prepare
-bin/rails server              # http://localhost:3000
+bundle install && bin/rails db:prepare && bin/rails server    # http://localhost:3001
 ```
 
-### Notification Service
-
+**AI Service:**
 ```bash
-cd notification-service
-cp .env.example .env          # configure RabbitMQ and SMTP
-go build -o bin/email-service ./cmd/email-service
-./bin/email-service           # http://localhost:8080
+cd ai-service
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install -r requirements.txt
+uvicorn app.main:app --port 8000    # http://localhost:8000
+```
+
+**Event Architecture:**
+```bash
+cd event-architecture/deployments
+docker compose up    # Kafka, RabbitMQ, Zookeeper, Prometheus, Grafana
 ```
 
 ## API Reference
@@ -211,32 +206,22 @@ go build -o bin/email-service ./cmd/email-service
 
 ```bash
 # Register
-curl -s -X POST http://localhost:5006/api/auth/register \
+curl -s -X POST http://localhost:5000/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"student@example.com","password":"SecurePass123!","firstName":"Thabo","lastName":"Mokoena"}'
 
 # Login
-curl -s -X POST http://localhost:5006/api/auth/login \
+curl -s -X POST http://localhost:5000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"student@example.com","password":"SecurePass123!"}'
 
 export TOKEN="<accessToken from response>"
-
-# Get current user
-curl -s http://localhost:5006/api/auth/me \
-  -H "Authorization: Bearer $TOKEN"
-
-# Validate token
-curl -s -X POST http://localhost:5006/api/auth/validate-token \
-  -H "Content-Type: application/json" \
-  -d '{"token":"'$TOKEN'"}'
 ```
 
 ### Payments (Stripe)
 
 ```bash
-# Create checkout session
-curl -s -X POST http://localhost:3000/payments/checkout_sessions \
+curl -s -X POST http://localhost:3001/payments/checkout_sessions \
   -H "Content-Type: application/json" \
   -d '{
     "student_id": 1,
@@ -246,13 +231,11 @@ curl -s -X POST http://localhost:3000/payments/checkout_sessions \
     "cancel_url": "https://aptiverse.co.za/payment/cancel",
     "metadata": {"plan": "student_monthly"}
   }'
-# Returns: { "id": "cs_...", "url": "https://checkout.stripe.com/..." }
 ```
 
 ### Event Publishing
 
 ```bash
-# Publish single event
 curl -s -X POST http://localhost:8080/api/v1/events \
   -H "Content-Type: application/json" \
   -d '{
@@ -264,27 +247,9 @@ curl -s -X POST http://localhost:8080/api/v1/events \
     "tenant_id": "school-101",
     "payload": {"goal_id": "g-123", "subject": "Mathematics"}
   }'
-
-# Publish batch (max 100)
-curl -s -X POST http://localhost:8080/api/v1/events/batch \
-  -H "Content-Type: application/json" \
-  -d '{"events": [...]}'
 ```
 
-### Booking
-
-```bash
-# Create tutor availability
-curl -s -X POST http://localhost:5196/api/tutor-availabilities \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"tutorId": 1, "dayOfWeek": "Monday", "startTime": "14:00", "endTime": "16:00", "isAvailable": true}'
-
-# List tutor-student relationships
-curl -s "http://localhost:5196/api/tutor-students?tutorId=1&isActive=true&page=1&pageSize=10" \
-  -H "Authorization: Bearer $TOKEN"
-```
-
-Each .NET service exposes OpenAPI docs at `http://localhost:<port>/swagger` (Scalar UI) and `http://localhost:<port>/redoc` (ReDoc).
+Each .NET service exposes OpenAPI docs at `http://localhost:<port>/swagger` (Scalar UI).
 
 ### Auth Endpoints
 
@@ -321,54 +286,68 @@ Each .NET service exposes OpenAPI docs at `http://localhost:<port>/swagger` (Sca
 
 ### Environments
 
-| Environment | Infrastructure | Trigger |
-|-------------|---------------|---------|
-| Local | Docker Compose (Kafka, RabbitMQ, Redis, PostgreSQL) | `docker compose up` |
-| Dev | Azure AKS + in-cluster infra via Terraform | Push to `main` |
-| Production | Azure AKS + managed services (PostgreSQL Flexible Server, Redis Cache, ACR) | Manual workflow |
+| Environment | Infrastructure | Deploy Method |
+|-------------|---------------|---------------|
+| Dev | Single EC2 (t3.2xlarge) + Docker Compose | Manual / workflow_dispatch |
+| Staging | EKS (spot instances) + RDS + ElastiCache + ALB | workflow_dispatch |
+| Production | EKS (on-demand) + RDS (multi-AZ) + ElastiCache + ALB | workflow_dispatch with canary (Argo Rollouts) |
 
-### Azure Infrastructure (Terraform)
+### AWS Infrastructure (Terraform)
 
 ```
 infrastructure/terraform/
+  bootstrap/              # S3 state bucket + DynamoDB lock table
   modules/
-    aks/          # Azure Kubernetes Service (SystemAssigned identity, Azure CNI)
-    postgres/     # PostgreSQL Flexible Server (v14, 7-day backup retention)
-    redis/        # Azure Cache for Redis
-    acr/          # Azure Container Registry
-    keyvault/     # Key Vault for secrets
-    storage/      # Storage account
-    network/      # VNet, AKS subnet, private endpoints subnet
-    monitor/      # Log Analytics workspace
-    apim/         # API Management
-    frontdoor/    # Azure Front Door
-    naming/       # Resource naming convention
+    vpc/                  # VPC, subnets, NAT gateway, internet gateway
+    ec2/                  # EC2 instance with Docker + Compose (dev)
+    eks/                  # EKS cluster, managed node groups, OIDC
+    rds/                  # PostgreSQL RDS
+    elasticache/          # Redis ElastiCache
+    route53/              # DNS hosted zone and records
+    alb/                  # Application Load Balancer
+    security/             # Security groups, IAM roles
   envs/
-    dev/          # Dev environment configuration
-    staging/      # Staging configuration
-    prod/         # Production configuration
+    dev/                  # Single EC2 + Docker Compose
+    staging/              # EKS (spot) + managed services
+    prod/                 # EKS (on-demand, canary) + managed services
 ```
 
 ```bash
+# Bootstrap (one-time)
+cd infrastructure/terraform/bootstrap
+terraform init && terraform apply
+
+# Deploy an environment
 cd infrastructure/terraform/envs/dev
-cp terraform.tfvars.example terraform.tfvars
-terraform init && terraform plan
+terraform init -backend-config=backend.hcl
+terraform plan
+terraform apply
 ```
 
 ### CI/CD Pipeline
 
-**CI** runs on every PR and push to `main`:
+**CI** (runs on push/PR to `main`, path-filtered per service):
+- Builds Docker image
+- Pushes to Docker Hub (`7irelo/aptiverse-*:latest` + `:<commit-sha>`) on main branch pushes
+- PRs only build (no push)
 
-| Workflow | Trigger | Steps |
-|----------|---------|-------|
-| Auth Provider Build | Push/PR to `main` | Docker build, artifact storage (1-day retention) |
-| Auth Provider Deploy | Manual dispatch | SSH deploy to EC2, Redis stack, aptiverse-net network |
-| Payment Gateway CI | PR/push (payment-gateway/**) | Brakeman security scan, importmap audit, RuboCop lint, Rails test suite |
-| Event Architecture Build | PR/push (event-architecture/**) | `go vet`, staticcheck, `go test -race -cover`, buf lint/generate, Docker build, push to GHCR |
-| UI Deploy | Push to `main`, manual | `npm run build`, Docker build, deploy to EC2 |
-| Terraform Plan | PR (infrastructure/**) | `terraform fmt -check`, `terraform plan`, PR comment |
-| Terraform Apply | Push to `main` (infrastructure/**) | `terraform apply -auto-approve` |
-| API Service Builds | Push to `main`, manual | .NET build, Docker image, artifact storage |
+**CD** (manual trigger via `workflow_dispatch`):
+- Pulls image from Docker Hub (selectable tag, defaults to `latest`)
+- Deploys to EC2 via SSH (dev) or EKS via kubectl (staging/prod)
+
+GitHub Actions authenticates to AWS via OIDC (no stored credentials).
+
+### Docker Hub Images
+
+| Service | Image |
+|---------|-------|
+| 14 .NET API services | `7irelo/aptiverse-{name}-service` |
+| Auth Provider | `7irelo/aptiverse-auth-provider` |
+| AI Service | `7irelo/aptiverse-ai-service` |
+| Event Architecture | `7irelo/aptiverse-event-server` |
+| Notification Service | `7irelo/aptiverse-notification-service` |
+| Payment Gateway | `7irelo/aptiverse-payment-gateway` |
+| Frontend | `7irelo/aptiverse-frontend` |
 
 ## Testing
 
@@ -376,69 +355,57 @@ terraform init && terraform plan
 
 ```bash
 cd payment-gateway
-bundle install
-bin/brakeman --no-pager              # security scan
-bin/importmap audit                  # JS dependency audit
-bin/rubocop -f github                # linting
-bin/rails db:test:prepare test       # unit + integration tests
-bin/rails test:system                # system tests (requires Chrome)
+bin/brakeman --no-pager       # security scan
+bin/importmap audit            # JS dependency audit
+bin/rubocop -f github          # linting
+bin/rails db:migrate test      # unit + integration tests
+bin/rails test:system          # system tests (requires Chrome)
 ```
 
 ### Event Architecture
 
 ```bash
 cd event-architecture
-buf lint                             # protobuf linting
-buf generate                         # code generation
-go vet ./...                         # vet
-staticcheck ./...                    # static analysis
-go test -race -cover ./...           # tests with race detection
+buf lint && buf generate
+go vet ./...
+staticcheck ./...
+go test -race -cover ./...
 ```
 
 ### Frontend
 
 ```bash
 cd ui
-npm run lint                         # ESLint
-npm run build                        # type-check + build
+npm run lint
+npm run build
 ```
 
 ### .NET Microservices
 
 ```bash
 cd api/booking-service
-dotnet build
-dotnet test
+dotnet build && dotnet test
 ```
 
 ## Design Decisions
 
 **Event Envelope with Deduplication** — All domain events flow through the event-architecture service using a standardised envelope (event_id, event_type, source, actor, correlation_id, payload). A deduplication layer (window: 100,000 events, TTL: 10 minutes) prevents duplicate processing. Events route to Kafka for ordered delivery and RabbitMQ for guaranteed consumption.
 
-**Clean Architecture per Service** — Every .NET microservice follows Controllers → Application (DTOs, Services, Mapping) → Domain (business logic) → Infrastructure (persistence, external integrations) → Core (shared entities). This keeps business logic independent of frameworks and data access.
+**Clean Architecture per Service** — Every .NET microservice follows Controllers → Application (DTOs, Services, Mapping) → Domain (business logic) → Infrastructure (persistence, external integrations). This keeps business logic independent of frameworks and data access.
 
-**Stripe Webhook Verification** — Payment webhooks validate the `Stripe-Signature` header against a stored secret before processing. Payment records track the full lifecycle: created → paid/failed → refunded. The checkout session ID and payment intent ID are both stored for traceability.
+**CPU-Only PyTorch** — The AI service uses CPU-only PyTorch to keep the Docker image under 1GB (vs ~9GB with CUDA). GPU acceleration is not needed for the inference workloads (text generation, OCR, classification).
+
+**Stripe Webhook Verification** — Payment webhooks validate the `Stripe-Signature` header against a stored secret before processing. Payment records track the full lifecycle: created → paid/failed → refunded.
 
 **JWT Gateway Pattern** — The auth-provider issues JWTs (configurable expiry, issuer: `aptiverse-api`, audience: `aptiverse-users`). Downstream services validate tokens and trust forwarded identity headers. OAuth2 flows support Google and Microsoft accounts.
 
-**Shared PostgreSQL with Service Isolation** — Services share a PostgreSQL instance (Azure Flexible Server in production) but maintain logical separation through Entity Framework Core migrations per service.
+**Shared PostgreSQL with Service Isolation** — Services share a PostgreSQL instance (RDS in production) but maintain logical separation through Entity Framework Core migrations per service.
 
-**Multi-Protocol Event Routing** — Kafka handles high-throughput ordered event streams (assessment submissions, analytics). RabbitMQ handles guaranteed delivery patterns (email notifications, webhook retries). The event-architecture service bridges both with rate limiting (1,000 events/source) and health-checked broker availability.
+**Multi-Protocol Event Routing** — Kafka handles high-throughput ordered event streams. RabbitMQ handles guaranteed delivery patterns (email notifications, webhook retries). The event-architecture service bridges both with rate limiting and health-checked broker availability.
 
-**Protocol Buffers for Event Schema** — Events are defined in `.proto` files and generated with `buf`, ensuring schema consistency across Go, .NET, and Python consumers.
+**Canary Deployments (Production)** — Argo Rollouts gradually shifts traffic (10% → 30% → 60% → 100%) to new versions in production, with automatic rollback on error rate spikes.
 
-**Offline-First for South African Context** — The frontend is built data-light. Practice tests, diary entries, and goal-setting modules are designed to work offline, acknowledging that a large portion of the target market has limited or expensive data.
-
-## Roles
-
-| Role | Access |
-|------|--------|
-| Student | Own profile, goals, practice tests, diary, chatbot, tutor booking, career tools |
-| Teacher | Assigned students, assessments, class analytics, gap analysis, goal verification |
-| Parent/Guardian | Child's progress, actionable support dashboard, celebration alerts |
-| School Admin | Whole-school analytics, university readiness reporting, teacher oversight |
-| Tutor | Course management, session scheduling, student relationships, earnings |
-| Admin/Superuser | Full platform access, user management |
+**OIDC for GitHub Actions** — GitHub Actions authenticates to AWS via OpenID Connect federation, eliminating long-lived AWS access keys in CI/CD secrets.
 
 ## Repository Structure
 
@@ -447,25 +414,34 @@ aptiverse/
 ├── ui/                              # Next.js 15 frontend
 ├── api/
 │   ├── academic-planning-service/   # SBA and subject planning
+│   ├── audit-service/               # Audit logging
 │   ├── booking-service/             # Tutor session booking
+│   ├── calendar-service/            # Calendar integration
 │   ├── entitlements-service/        # Subscription and feature access
+│   ├── feature-flags-service/       # Feature flag management
 │   ├── goals-service/               # Goal tracking and rewards
 │   ├── insights-service/            # Predictive analytics
 │   ├── marketplace-service/         # Tutor marketplace
 │   ├── mastery-service/             # Strength and progress tracking
-│   └── practice-service/            # Practice test generation
+│   ├── moderation-service/          # Content moderation
+│   ├── practice-service/            # Practice test generation
+│   ├── support-service/             # Help desk and support
+│   └── wellbeing-service/           # Mental wellbeing
 ├── ai-service/                      # FastAPI AI engine (ML, OCR, generation)
 ├── auth-provider/                   # .NET auth (JWT, OAuth2)
 ├── payment-gateway/                 # Rails + Stripe payments
 ├── notification-service/            # Go email service (RabbitMQ consumer)
 ├── event-architecture/              # Go event bus (Kafka + RabbitMQ)
-├── infrastructure/                  # Terraform (Azure AKS, PostgreSQL, Redis)
-└── .github/workflows/               # CI/CD pipelines
+├── infrastructure/
+│   ├── terraform/                   # AWS infrastructure (VPC, EKS, RDS, etc.)
+│   ├── docker-compose.dev.yml       # All services for local/dev
+│   └── .env.example                 # Environment variable template
+└── .github/workflows/               # CI/CD pipelines (40 workflows)
 ```
 
 ## Status
 
-Active development. Services are independently deployable and evolving across academic planning, AI assessment, marketplace, and wellbeing domains.
+Active development. Twenty independently deployable microservices across academic planning, AI assessment, marketplace, payments, and wellbeing domains. Infrastructure migrating from single EC2 to EKS with canary deployments.
 
 ## Licence
 
