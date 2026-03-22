@@ -553,7 +553,7 @@ launchSettings.json
 **/obj/
 
 # Docker
-Dockerfile*
+# Dockerfile* (removed - Dockerfile needed for CI/CD)
 docker-compose*
 .dockerignore
 

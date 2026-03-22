@@ -1,21 +1,21 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY ["Aptiverse.Marketplace.slnx", "./"]
-COPY ["src/Aptiverse.Marketplace/Aptiverse.Marketplace.csproj", "src/Aptiverse.Marketplace/"]
-COPY ["src/Aptiverse.Marketplace.Application/Aptiverse.Marketplace.Application.csproj", "src/Aptiverse.Marketplace.Application/"]
-COPY ["src/Aptiverse.Marketplace.Core/Aptiverse.Marketplace.Core.csproj", "src/Aptiverse.Marketplace.Core/"]
-COPY ["src/Aptiverse.Marketplace.Domain/Aptiverse.Marketplace.Domain.csproj", "src/Aptiverse.Marketplace.Domain/"]
-COPY ["src/Aptiverse.Marketplace.Infrastructure/Aptiverse.Marketplace.Infrastructure.csproj", "src/Aptiverse.Marketplace.Infrastructure/"]
+COPY ["Aptiverse.Api.slnx", "./"]
+COPY ["src/Aptiverse.Entitlements/Aptiverse.Api.csproj", "src/Aptiverse.Entitlements/"]
+COPY ["src/Aptiverse.Entitlements.Application/Aptiverse.Api.Application.csproj", "src/Aptiverse.Entitlements.Application/"]
+COPY ["src/Aptiverse.Entitlements.Core/Aptiverse.Api.Core.csproj", "src/Aptiverse.Entitlements.Core/"]
+COPY ["src/Aptiverse.Entitlements.Domain/Aptiverse.Api.Domain.csproj", "src/Aptiverse.Entitlements.Domain/"]
+COPY ["src/Aptiverse.Entitlements.Infrastructure/Aptiverse.Api.Infrastructure.csproj", "src/Aptiverse.Entitlements.Infrastructure/"]
 
-RUN dotnet restore "Aptiverse.Marketplace.slnx"
+RUN dotnet restore "Aptiverse.Api.slnx"
 
 COPY . .
-WORKDIR "/src/src/Aptiverse.Marketplace"
-RUN dotnet build "Aptiverse.Marketplace.csproj" -c Release -o /app/build
+WORKDIR "/src/src/Aptiverse.Entitlements"
+RUN dotnet build "Aptiverse.Api.csproj" -c Release -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "Aptiverse.Marketplace.csproj" -c Release -o /app/publish
+RUN dotnet publish "Aptiverse.Api.csproj" -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 EXPOSE 5196
@@ -24,4 +24,4 @@ RUN useradd --create-home --home-dir /app --shell /bin/bash appuser && chown -R 
 USER appuser
 
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Aptiverse.Marketplace.dll", "--urls", "http://0.0.0.0:5196"]
+ENTRYPOINT ["dotnet", "Aptiverse.Api.dll", "--urls", "http://0.0.0.0:5196"]

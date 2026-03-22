@@ -32,7 +32,7 @@ jobs:
         run: bundle install
 
       - name: Scan for common Rails security vulnerabilities
-        run: bin/brakeman --no-pager
+        run: bundle exec brakeman --no-pager
 
   scan_js:
     runs-on: ubuntu-latest
@@ -53,7 +53,7 @@ jobs:
         run: bundle install
 
       - name: Scan JavaScript dependencies
-        run: bin/importmap audit
+        run: bundle exec importmap audit
 
   lint:
     runs-on: ubuntu-latest
@@ -74,7 +74,7 @@ jobs:
         run: bundle install
 
       - name: Lint code for consistent style
-        run: bin/rubocop -f github
+        run: bundle exec rubocop -f github
 
   test:
     runs-on: ubuntu-latest
@@ -100,7 +100,7 @@ jobs:
       - name: Run tests
         env:
           RAILS_ENV: test
-        run: bin/rails db:test:prepare test test:system
+        run: bundle exec rails db:test:prepare test test:system
 
       - name: Keep screenshots from failed system tests
         uses: actions/upload-artifact@v4
