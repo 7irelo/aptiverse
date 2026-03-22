@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Aptiverse.Api.Domain\Aptiverse.Api.Domain.csproj" />
+    <ProjectReference Include="..\Aptiverse.Entitlements.Domain\Aptiverse.Api.Domain.csproj" />
   </ItemGroup>
 
 </Project>

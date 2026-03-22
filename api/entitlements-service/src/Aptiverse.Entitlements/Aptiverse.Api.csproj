@@ -21,8 +21,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Aptiverse.Api.Application\Aptiverse.Api.Application.csproj" />
-    <ProjectReference Include="..\Aptiverse.Api.Infrastructure\Aptiverse.Api.Infrastructure.csproj" />
+    <ProjectReference Include="..\Aptiverse.Entitlements.Application\Aptiverse.Api.Application.csproj" />
+    <ProjectReference Include="..\Aptiverse.Entitlements.Infrastructure\Aptiverse.Api.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

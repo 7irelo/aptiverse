@@ -1,5 +1,5 @@
-using Aptiverse.Marketplace;
-using Aptiverse.Marketplace.Utilities;
+using Aptiverse.Api;
+using Aptiverse.Api.Utilities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Scalar.AspNetCore;

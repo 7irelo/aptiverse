@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Aptiverse.Api.Core\Aptiverse.Api.Core.csproj" />
+    <ProjectReference Include="..\Aptiverse.Entitlements.Core\Aptiverse.Api.Core.csproj" />
   </ItemGroup>
 
 </Project>

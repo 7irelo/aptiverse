@@ -1,5 +1,5 @@
-﻿using Aptiverse.Marketplace.Application;
-using Aptiverse.Marketplace.Infrastructure;
+﻿using Aptiverse.Api.Application;
+using Aptiverse.Api.Infrastructure;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -9,7 +9,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
-namespace Aptiverse.Marketplace
+namespace Aptiverse.Api
 {
     public static class Registrations
     {

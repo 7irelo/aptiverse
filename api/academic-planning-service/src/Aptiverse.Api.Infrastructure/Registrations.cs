@@ -1,7 +1,7 @@
 ﻿using Aptiverse.AcademicPlanning.Infrastructure.Caching;
 using Aptiverse.AcademicPlanning.Infrastructure.Data;
 using Aptiverse.AcademicPlanning.Infrastructure.Repositories;
-using Aptiverse.Api.Domain.Repositories;
+using Aptiverse.AcademicPlanning.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
