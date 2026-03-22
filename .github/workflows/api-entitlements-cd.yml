@@ -2,37 +2,14 @@ name: CD / Deploy Entitlements Service to EC2
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Docker image tag to deploy (default: latest)"
+        required: false
+        default: "latest"
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: api/entitlements-service
-          push: true
-          tags: |
-            7irelo/aptiverse-entitlements-service:latest
-            7irelo/aptiverse-entitlements-service:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   deploy:
-    needs: build-and-push
     runs-on: ubuntu-latest
 
     steps:
@@ -46,7 +23,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} '
             set -e
             echo "Pulling image from Docker Hub..."
-            docker pull 7irelo/aptiverse-entitlements-service:${{ github.sha }}
+            docker pull 7irelo/aptiverse-entitlements-service:${{ inputs.tag }}
 
             echo "Stopping existing container..."
             docker stop aptiverse-entitlements 2>/dev/null || true
@@ -65,7 +42,7 @@ jobs:
               -e Jwt__Audience="${{ secrets.JWT_AUDIENCE }}" \
               -e ConnectionStrings__DefaultConnection="${{ secrets.DB_CONNECTION_STRING }}" \
               -e ConnectionStrings__Redis="redis-stack:6379,abortConnect=false" \
-              7irelo/aptiverse-entitlements-service:${{ github.sha }}
+              7irelo/aptiverse-entitlements-service:${{ inputs.tag }}
 
             echo "Cleaning up old images..."
             docker image prune -f
