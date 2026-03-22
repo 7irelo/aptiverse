@@ -1,11 +1,12 @@
-name: Payment Gateway CI
+name: CI / Payment Gateway
 
 on:
-  pull_request:
+  push:
+    branches: [ main ]
     paths:
       - "payment-gateway/**"
       - ".github/workflows/payment-gateway-ci.yml"
-  push:
+  pull_request:
     branches: [ main ]
     paths:
       - "payment-gateway/**"

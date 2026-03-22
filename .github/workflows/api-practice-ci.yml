@@ -5,7 +5,12 @@ on:
     branches: [ main ]
     paths:
       - "api/practice-service/**"
-      - ".github/workflows/api-practice-build.yml"
+      - ".github/workflows/api-practice-ci.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "api/practice-service/**"
+      - ".github/workflows/api-practice-ci.yml"
   workflow_dispatch:
 
 jobs:

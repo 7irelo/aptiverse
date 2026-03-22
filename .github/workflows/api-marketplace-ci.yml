@@ -5,7 +5,12 @@ on:
     branches: [ main ]
     paths:
       - "api/marketplace-service/**"
-      - ".github/workflows/api-marketplace-build.yml"
+      - ".github/workflows/api-marketplace-ci.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "api/marketplace-service/**"
+      - ".github/workflows/api-marketplace-ci.yml"
   workflow_dispatch:
 
 jobs:

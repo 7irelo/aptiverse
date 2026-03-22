@@ -1,16 +1,16 @@
-name: Build & Test Event Architecture
+name: CI / Build & Test Event Architecture
 
 on:
   push:
     branches: [ main ]
     paths:
       - "event-architecture/**"
-      - ".github/workflows/event-architecture-build.yml"
+      - ".github/workflows/event-architecture-ci.yml"
   pull_request:
     branches: [ main ]
     paths:
       - "event-architecture/**"
-      - ".github/workflows/event-architecture-build.yml"
+      - ".github/workflows/event-architecture-ci.yml"
 
 permissions:
   contents: read
@@ -61,10 +61,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -f deployments/docker/Dockerfile \
-            -t ghcr.io/${{ github.repository }}/event-server:${{ github.sha }} \
-            -t ghcr.io/${{ github.repository }}/event-server:latest \
-            .
+          docker build -f deployments/docker/Dockerfile             -t ghcr.io/${{ github.repository }}/event-server:${{ github.sha }}             -t ghcr.io/${{ github.repository }}/event-server:latest             .
 
       - name: Login to GHCR
         if: github.ref == 'refs/heads/main'

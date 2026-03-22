@@ -1,0 +1,37 @@
+name: CD / Deploy Event Architecture to EC2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} '
+            set -e
+            echo "Logging into GHCR..."
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            echo "Pulling latest event-server image..."
+            docker pull ghcr.io/${{ github.repository }}/event-server:latest
+
+            echo "Stopping existing container..."
+            docker stop aptiverse-event-server 2>/dev/null || true
+            docker rm aptiverse-event-server 2>/dev/null || true
+
+            echo "Starting container..."
+            docker run -d               --name aptiverse-event-server               --network aptiverse-net               -p 8080:8080               ghcr.io/${{ github.repository }}/event-server:latest
+
+            echo "Cleaning up..."
+            docker image prune -f
+
+            echo "Event Architecture deployment completed successfully!"
+          '

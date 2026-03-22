@@ -1,0 +1,66 @@
+name: CD / Deploy Payment Gateway to EC2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: payment-gateway
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t payment-gateway .
+          docker save payment-gateway | gzip > payment-gateway-image.tar.gz
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: payment-gateway-image
+          path: payment-gateway/payment-gateway-image.tar.gz
+          retention-days: 1
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: payment-gateway-image
+          path: .
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to EC2
+        run: |
+          scp -o StrictHostKeyChecking=no payment-gateway-image.tar.gz ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/tmp/
+
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} '
+            set -e
+            echo "Loading Docker image..."
+            docker load < /tmp/payment-gateway-image.tar.gz
+
+            echo "Stopping existing container..."
+            docker stop aptiverse-payment-gateway 2>/dev/null || true
+            docker rm aptiverse-payment-gateway 2>/dev/null || true
+
+            echo "Starting container..."
+            docker run -d               --name aptiverse-payment-gateway               --network aptiverse-net               -p 3001:80               -e RAILS_ENV=production               -e SECRET_KEY_BASE="${{ secrets.RAILS_SECRET_KEY_BASE }}"               -e STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}"               -e STRIPE_PUBLISHABLE_KEY="${{ secrets.STRIPE_PUBLISHABLE_KEY }}"               -e STRIPE_WEBHOOK_SECRET="${{ secrets.STRIPE_WEBHOOK_SECRET }}"               -e DATABASE_URL="${{ secrets.PAYMENT_DB_URL }}"               payment-gateway
+
+            echo "Cleaning up..."
+            rm /tmp/payment-gateway-image.tar.gz
+            docker image prune -f
+
+            echo "Payment Gateway deployment completed successfully!"
+          '

@@ -5,7 +5,12 @@ on:
     branches: [ main ]
     paths:
       - "api/entitlements-service/**"
-      - ".github/workflows/api-entitlements-build.yml"
+      - ".github/workflows/api-entitlements-ci.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "api/entitlements-service/**"
+      - ".github/workflows/api-entitlements-ci.yml"
   workflow_dispatch:
 
 jobs:

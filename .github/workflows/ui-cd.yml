@@ -1,11 +1,6 @@
-name: Deploy Frontend to EC2
+name: CD / Deploy Frontend to EC2
 
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - "ui/**"
-      - ".github/workflows/ui-deploy.yml"
   workflow_dispatch:
 
 env:
@@ -87,15 +82,7 @@ jobs:
             docker rm aptiverse-frontend 2>/dev/null || true
 
             echo "Starting new container..."
-            docker run -d \
-              --name aptiverse-frontend \
-              --network aptiverse-net \
-              -p 3000:3000 \
-              -e NODE_ENV=production \
-              -e NEXT_PUBLIC_API_URL=https://api.aptiverse.co.za/api \
-              -e NEXTAUTH_URL=https://aptiverse.co.za \
-              -e NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }} \
-              aptiverse-frontend
+            docker run -d               --name aptiverse-frontend               --network aptiverse-net               -p 3000:3000               -e NODE_ENV=production               -e NEXT_PUBLIC_API_URL=https://api.aptiverse.co.za/api               -e NEXTAUTH_URL=https://aptiverse.co.za               -e NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}               aptiverse-frontend
 
             echo "Cleaning up..."
             rm /tmp/frontend-image.tar.gz

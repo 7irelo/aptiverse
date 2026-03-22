@@ -1,0 +1,55 @@
+name: CD / Deploy Insights Service to EC2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download latest artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: insights-service-image
+          path: .
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to EC2
+        run: |
+          scp -o StrictHostKeyChecking=no insights-service-image.tar.gz ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/tmp/
+
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} '
+            set -e
+            echo "Loading Docker image..."
+            docker load < /tmp/insights-service-image.tar.gz
+
+            echo "Stopping existing container..."
+            docker stop aptiverse-insights 2>/dev/null || true
+            docker rm aptiverse-insights 2>/dev/null || true
+
+            echo "Starting container..."
+            docker run -d \
+              --name aptiverse-insights \
+              --network aptiverse-net \
+              -e ASPNETCORE_ENVIRONMENT=Production \
+              -e ASPNETCORE_URLS=http://0.0.0.0:5196 \
+              -e Authentication__Google__ClientId="${{ secrets.GOOGLE_CLIENT_ID }}" \
+              -e Authentication__Google__ClientSecret="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+              -e Jwt__Key="${{ secrets.JWT_KEY }}" \
+              -e Jwt__Issuer="${{ secrets.JWT_ISSUER }}" \
+              -e Jwt__Audience="${{ secrets.JWT_AUDIENCE }}" \
+              -e ConnectionStrings__DefaultConnection="${{ secrets.DB_CONNECTION_STRING }}" \
+              -e ConnectionStrings__Redis="redis-stack:6379,abortConnect=false" \
+              insights-service
+
+            echo "Cleaning up..."
+            rm /tmp/insights-service-image.tar.gz
+            docker image prune -f
+
+            echo "Insights Service deployment completed successfully!"
+          '

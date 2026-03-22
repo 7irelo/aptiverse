@@ -1,16 +1,16 @@
-name: Build Notification Service Image
+name: CI / Build Notification Service
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
     paths:
       - "notification-service/**"
-      - ".github/workflows/notification-service-build.yml"
+      - ".github/workflows/notification-service-ci.yml"
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
     paths:
       - "notification-service/**"
-      - ".github/workflows/notification-service-build.yml"
+      - ".github/workflows/notification-service-ci.yml"
   workflow_dispatch:
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image (no push)
+      - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./notification-service
@@ -35,7 +35,18 @@ jobs:
           cache-to: type=gha,mode=max
           load: true
 
+      - name: Upload build artifact
+        run: |
+          docker save notification-service | gzip > notification-service-image.tar.gz
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: notification-service-image
+          path: notification-service-image.tar.gz
+          retention-days: 1
+
       - name: Verify image was built
         run: |
-          docker images
+          docker images notification-service
           echo "Docker image built successfully!"

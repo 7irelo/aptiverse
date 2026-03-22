@@ -1,0 +1,48 @@
+name: CI / Build Audit Service
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "api/audit-service/**"
+      - ".github/workflows/api-audit-ci.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "api/audit-service/**"
+      - ".github/workflows/api-audit-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api/audit-service
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build Docker image
+        run: |
+          docker build -t audit-service .
+          docker save audit-service | gzip > audit-service-image.tar.gz
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-service-image
+          path: api/audit-service/audit-service-image.tar.gz
+          retention-days: 1
+
+      - name: List image info
+        run: |
+          echo "Docker image built successfully:"
+          docker images audit-service
+          echo "Artifact created: audit-service-image.tar.gz"

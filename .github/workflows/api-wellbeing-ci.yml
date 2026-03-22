@@ -1,0 +1,48 @@
+name: CI / Build Wellbeing Service
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "api/wellbeing-service/**"
+      - ".github/workflows/api-wellbeing-ci.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "api/wellbeing-service/**"
+      - ".github/workflows/api-wellbeing-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api/wellbeing-service
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build Docker image
+        run: |
+          docker build -t wellbeing-service .
+          docker save wellbeing-service | gzip > wellbeing-service-image.tar.gz
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wellbeing-service-image
+          path: api/wellbeing-service/wellbeing-service-image.tar.gz
+          retention-days: 1
+
+      - name: List image info
+        run: |
+          echo "Docker image built successfully:"
+          docker images wellbeing-service
+          echo "Artifact created: wellbeing-service-image.tar.gz"

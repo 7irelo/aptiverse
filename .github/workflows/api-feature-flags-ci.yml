@@ -1,0 +1,48 @@
+name: CI / Build Feature Flags Service
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "api/feature-flags-service/**"
+      - ".github/workflows/api-feature-flags-ci.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "api/feature-flags-service/**"
+      - ".github/workflows/api-feature-flags-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api/feature-flags-service
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build Docker image
+        run: |
+          docker build -t feature-flags-service .
+          docker save feature-flags-service | gzip > feature-flags-service-image.tar.gz
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: feature-flags-service-image
+          path: api/feature-flags-service/feature-flags-service-image.tar.gz
+          retention-days: 1
+
+      - name: List image info
+        run: |
+          echo "Docker image built successfully:"
+          docker images feature-flags-service
+          echo "Artifact created: feature-flags-service-image.tar.gz"

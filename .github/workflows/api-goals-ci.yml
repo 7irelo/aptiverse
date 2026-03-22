@@ -5,7 +5,12 @@ on:
     branches: [ main ]
     paths:
       - "api/goals-service/**"
-      - ".github/workflows/api-goals-build.yml"
+      - ".github/workflows/api-goals-ci.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "api/goals-service/**"
+      - ".github/workflows/api-goals-ci.yml"
   workflow_dispatch:
 
 jobs:

@@ -5,7 +5,12 @@ on:
     branches: [ main ]
     paths:
       - "api/booking-service/**"
-      - ".github/workflows/api-booking-build.yml"
+      - ".github/workflows/api-booking-ci.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "api/booking-service/**"
+      - ".github/workflows/api-booking-ci.yml"
   workflow_dispatch:
 
 jobs:

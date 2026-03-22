@@ -1,0 +1,43 @@
+name: CD / Deploy Notification Service to EC2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download latest artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: notification-service-image
+          path: .
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to EC2
+        run: |
+          scp -o StrictHostKeyChecking=no notification-service-image.tar.gz ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/tmp/
+
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} '
+            set -e
+            echo "Loading Docker image..."
+            docker load < /tmp/notification-service-image.tar.gz
+
+            echo "Stopping existing container..."
+            docker stop aptiverse-notification-service 2>/dev/null || true
+            docker rm aptiverse-notification-service 2>/dev/null || true
+
+            echo "Starting container..."
+            docker run -d               --name aptiverse-notification-service               --network aptiverse-net               -p 8081:8080               -e RABBITMQ_URL="${{ secrets.RABBITMQ_URL }}"               -e SMTP_HOST="${{ secrets.EMAIL_SERVER }}"               -e SMTP_PORT="${{ secrets.EMAIL_PORT }}"               -e SMTP_USERNAME="${{ secrets.EMAIL_USERNAME }}"               -e SMTP_PASSWORD="${{ secrets.EMAIL_PASSWORD }}"               notification-service
+
+            echo "Cleaning up..."
+            rm /tmp/notification-service-image.tar.gz
+            docker image prune -f
+
+            echo "Notification Service deployment completed successfully!"
+          '

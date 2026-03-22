@@ -5,7 +5,12 @@ on:
     branches: [ main ]
     paths:
       - "api/insights-service/**"
-      - ".github/workflows/api-insights-build.yml"
+      - ".github/workflows/api-insights-ci.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "api/insights-service/**"
+      - ".github/workflows/api-insights-ci.yml"
   workflow_dispatch:
 
 jobs:

@@ -2,15 +2,15 @@ name: CI / Build Auth Provider
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
     paths:
       - "auth-provider/**"
-      - ".github/workflows/auth-provider-build.yml"
+      - ".github/workflows/auth-provider-ci.yml"
   pull_request:
-    branches: [main]
+    branches: [ main ]
     paths:
       - "auth-provider/**"
-      - ".github/workflows/auth-provider-build.yml"
+      - ".github/workflows/auth-provider-ci.yml"
   workflow_dispatch:
 
 jobs:

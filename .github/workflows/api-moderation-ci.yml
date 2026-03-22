@@ -1,0 +1,48 @@
+name: CI / Build Moderation Service
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "api/moderation-service/**"
+      - ".github/workflows/api-moderation-ci.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "api/moderation-service/**"
+      - ".github/workflows/api-moderation-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api/moderation-service
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build Docker image
+        run: |
+          docker build -t moderation-service .
+          docker save moderation-service | gzip > moderation-service-image.tar.gz
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: moderation-service-image
+          path: api/moderation-service/moderation-service-image.tar.gz
+          retention-days: 1
+
+      - name: List image info
+        run: |
+          echo "Docker image built successfully:"
+          docker images moderation-service
+          echo "Artifact created: moderation-service-image.tar.gz"

@@ -1,0 +1,43 @@
+name: CD / Deploy AI Service to EC2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download latest artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ai-service-image
+          path: .
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to EC2
+        run: |
+          scp -o StrictHostKeyChecking=no ai-service-image.tar.gz ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/tmp/
+
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} '
+            set -e
+            echo "Loading Docker image..."
+            docker load < /tmp/ai-service-image.tar.gz
+
+            echo "Stopping existing container..."
+            docker stop aptiverse-ai-service 2>/dev/null || true
+            docker rm aptiverse-ai-service 2>/dev/null || true
+
+            echo "Starting container..."
+            docker run -d               --name aptiverse-ai-service               --network aptiverse-net               -p 8000:8000               -e DATABASE_URL="${{ secrets.AI_DB_URL }}"               ai-service
+
+            echo "Cleaning up..."
+            rm /tmp/ai-service-image.tar.gz
+            docker image prune -f
+
+            echo "AI Service deployment completed successfully!"
+          '

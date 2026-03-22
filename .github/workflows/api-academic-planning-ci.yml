@@ -1,0 +1,48 @@
+name: CI / Build Academic Planning Service
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "api/academic-planning-service/**"
+      - ".github/workflows/api-academic-planning-ci.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "api/academic-planning-service/**"
+      - ".github/workflows/api-academic-planning-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api/academic-planning-service
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build Docker image
+        run: |
+          docker build -t academic-planning-service .
+          docker save academic-planning-service | gzip > academic-planning-service-image.tar.gz
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: academic-planning-service-image
+          path: api/academic-planning-service/academic-planning-service-image.tar.gz
+          retention-days: 1
+
+      - name: List image info
+        run: |
+          echo "Docker image built successfully:"
+          docker images academic-planning-service
+          echo "Artifact created: academic-planning-service-image.tar.gz"
