@@ -1,0 +1,62 @@
+# .NET
+**/bin/
+**/obj/
+*.dll
+*.pdb
+*.exe
+*.user
+*.suo
+**/.vs/
+**/Properties/launchSettings.json
+
+# Node
+**/node_modules/
+**/.next/
+**/dist/
+**/build/
+*.tsbuildinfo
+
+# Python
+**/__pycache__/
+**/*.pyc
+**/.venv/
+**/venv/
+**/.pytest_cache/
+
+# Go
+**/vendor/
+
+# Ruby
+**/.bundle/
+**/log/
+**/tmp/
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
+*.p8
+*.pem
+*.key
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
