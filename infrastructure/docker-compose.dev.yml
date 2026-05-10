@@ -31,17 +31,25 @@ services:
       retries: 5
 
   # ---------------------------------------------------------------------------
-  # Auth Provider (.NET)
+  # Consolidated API host (modular monolith: auth + 14 .NET domain modules in
+  # a single process). Default — runs without a profile flag.
+  #
+  # The legacy per-service containers (auth-provider + 14 services) are
+  # tagged `profiles: ["legacy"]`. To run them instead of the consolidated
+  # host, use:  docker compose --profile legacy up
   # ---------------------------------------------------------------------------
-  auth-provider:
-    image: 7irelo/aptiverse-auth-provider:latest
-    container_name: aptiverse-auth-provider
+  aptiverse-api:
+    build:
+      context: ..
+      dockerfile: api/Aptiverse.Api/Dockerfile
+    image: 7irelo/aptiverse-api:latest
+    container_name: aptiverse-api
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "5100:5100"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://0.0.0.0:5000
+      ASPNETCORE_URLS: http://0.0.0.0:5100
       ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
       ConnectionStrings__Redis: redis:6379,abortConnect=false
       Jwt__Key: ${JWT_KEY}
@@ -59,289 +67,6 @@ services:
         condition: service_healthy
 
   # ---------------------------------------------------------------------------
-  # .NET API Services (ports 5001-5014)
-  # ---------------------------------------------------------------------------
-  academic-planning-service:
-    image: 7irelo/aptiverse-academic-planning-service:latest
-    container_name: aptiverse-academic-planning-service
-    restart: unless-stopped
-    ports:
-      - "5001:5001"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://0.0.0.0:5001
-      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
-      ConnectionStrings__Redis: redis:6379,abortConnect=false
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  audit-service:
-    image: 7irelo/aptiverse-audit-service:latest
-    container_name: aptiverse-audit-service
-    restart: unless-stopped
-    ports:
-      - "5002:5002"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://0.0.0.0:5002
-      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
-      ConnectionStrings__Redis: redis:6379,abortConnect=false
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  booking-service:
-    image: 7irelo/aptiverse-booking-service:latest
-    container_name: aptiverse-booking-service
-    restart: unless-stopped
-    ports:
-      - "5003:5003"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://0.0.0.0:5003
-      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
-      ConnectionStrings__Redis: redis:6379,abortConnect=false
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  calendar-service:
-    image: 7irelo/aptiverse-calendar-service:latest
-    container_name: aptiverse-calendar-service
-    restart: unless-stopped
-    ports:
-      - "5004:5004"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://0.0.0.0:5004
-      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
-      ConnectionStrings__Redis: redis:6379,abortConnect=false
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  entitlements-service:
-    image: 7irelo/aptiverse-entitlements-service:latest
-    container_name: aptiverse-entitlements-service
-    restart: unless-stopped
-    ports:
-      - "5005:5005"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://0.0.0.0:5005
-      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
-      ConnectionStrings__Redis: redis:6379,abortConnect=false
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  feature-flags-service:
-    image: 7irelo/aptiverse-feature-flags-service:latest
-    container_name: aptiverse-feature-flags-service
-    restart: unless-stopped
-    ports:
-      - "5006:5006"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://0.0.0.0:5006
-      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
-      ConnectionStrings__Redis: redis:6379,abortConnect=false
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  goals-service:
-    image: 7irelo/aptiverse-goals-service:latest
-    container_name: aptiverse-goals-service
-    restart: unless-stopped
-    ports:
-      - "5007:5007"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://0.0.0.0:5196
-      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
-      ConnectionStrings__Redis: redis:6379,abortConnect=false
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  insights-service:
-    image: 7irelo/aptiverse-insights-service:latest
-    container_name: aptiverse-insights-service
-    restart: unless-stopped
-    ports:
-      - "5008:5008"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://0.0.0.0:5008
-      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
-      ConnectionStrings__Redis: redis:6379,abortConnect=false
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  marketplace-service:
-    image: 7irelo/aptiverse-marketplace-service:latest
-    container_name: aptiverse-marketplace-service
-    restart: unless-stopped
-    ports:
-      - "5009:5009"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://0.0.0.0:5009
-      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
-      ConnectionStrings__Redis: redis:6379,abortConnect=false
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  mastery-service:
-    image: 7irelo/aptiverse-mastery-service:latest
-    container_name: aptiverse-mastery-service
-    restart: unless-stopped
-    ports:
-      - "5010:5010"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://0.0.0.0:5010
-      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
-      ConnectionStrings__Redis: redis:6379,abortConnect=false
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  moderation-service:
-    image: 7irelo/aptiverse-moderation-service:latest
-    container_name: aptiverse-moderation-service
-    restart: unless-stopped
-    ports:
-      - "5011:5011"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://0.0.0.0:5011
-      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
-      ConnectionStrings__Redis: redis:6379,abortConnect=false
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  practice-service:
-    image: 7irelo/aptiverse-practice-service:latest
-    container_name: aptiverse-practice-service
-    restart: unless-stopped
-    ports:
-      - "5012:5012"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://0.0.0.0:5012
-      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
-      ConnectionStrings__Redis: redis:6379,abortConnect=false
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  support-service:
-    image: 7irelo/aptiverse-support-service:latest
-    container_name: aptiverse-support-service
-    restart: unless-stopped
-    ports:
-      - "5013:5013"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://0.0.0.0:5013
-      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
-      ConnectionStrings__Redis: redis:6379,abortConnect=false
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  wellbeing-service:
-    image: 7irelo/aptiverse-wellbeing-service:latest
-    container_name: aptiverse-wellbeing-service
-    restart: unless-stopped
-    ports:
-      - "5014:5014"
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://0.0.0.0:5014
-      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
-      ConnectionStrings__Redis: redis:6379,abortConnect=false
-      Jwt__Key: ${JWT_KEY}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  # ---------------------------------------------------------------------------
   # AI Service (Python/FastAPI)
   # ---------------------------------------------------------------------------
   ai-service:
@@ -350,42 +75,6 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
-    environment:
-      DATABASE_URL: ${DB_CONNECTION_STRING}
-      REDIS_URL: redis://redis:6379
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  # ---------------------------------------------------------------------------
-  # Event Architecture (Go)
-  # ---------------------------------------------------------------------------
-  event-architecture:
-    image: 7irelo/aptiverse-event-server:latest
-    container_name: aptiverse-event-architecture
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    environment:
-      DATABASE_URL: ${DB_CONNECTION_STRING}
-      REDIS_URL: redis://redis:6379
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  # ---------------------------------------------------------------------------
-  # Notification Service (Node.js)
-  # ---------------------------------------------------------------------------
-  notification-service:
-    image: 7irelo/aptiverse-notification-service:latest
-    container_name: aptiverse-notification-service
-    restart: unless-stopped
-    ports:
-      - "8081:8081"
     environment:
       DATABASE_URL: ${DB_CONNECTION_STRING}
       REDIS_URL: redis://redis:6379
@@ -428,7 +117,7 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
     depends_on:
-      - auth-provider
+      - aptiverse-api
 
 volumes:
   postgres_data:

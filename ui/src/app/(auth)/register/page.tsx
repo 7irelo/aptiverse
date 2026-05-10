@@ -1,308 +1,218 @@
-// app/register/page.tsx
-'use client'
+"use client";
 
-import { useForm } from 'react-hook-form'
-import { useMutation } from '@tanstack/react-query'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import Link from 'next/link'
-import { Eye, EyeOff, Mail, Lock, User, UserPlus, BookOpen, UserCircle, Phone } from 'lucide-react'
-import { useState } from 'react'
-import { authApi } from '@/lib/services/api-client'
-import { useRouter } from 'next/navigation'
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import Box from "@mui/material/Box";
+import Alert from "@mui/material/Alert";
+import LinearProgress from "@mui/material/LinearProgress";
+import Card from "@mui/material/Card";
+import CardActionArea from "@mui/material/CardActionArea";
+import CardContent from "@mui/material/CardContent";
+import Grid from "@mui/material/Grid";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import SchoolIcon from "@mui/icons-material/School";
+import FavoriteIcon from "@mui/icons-material/FavoriteBorder";
+import GroupsIcon from "@mui/icons-material/GroupsOutlined";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
+import StorefrontIcon from "@mui/icons-material/StorefrontOutlined";
+import { OAuthButtons } from "@/components/auth/OAuthButtons";
+import { useRoleStore, type Role } from "@/providers/RoleProvider";
+import { registerStep2Schema, type RegisterValues } from "@/lib/schemas";
+import { api } from "@/lib/api/client";
 
-const registerSchema = z.object({
-  firstName: z.string().min(2, 'First name must be at least 2 characters'),
-  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email address'),
-  username: z.string().min(3, 'Username must be at least 3 characters'),
-  password: z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain at least one uppercase letter, one lowercase letter, and one number'),
-  confirmPassword: z.string(),
-  userType: z.enum(['Superuser', 'Admin', 'Student', 'Parent']),
-  phoneNumber: z.string().optional(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-})
+const ROLE_OPTIONS: { value: Role; label: string; description: string; icon: React.ReactNode }[] = [
+  { value: "student", label: "Student", description: "I'm in Grade 11 or 12", icon: <SchoolIcon /> },
+  { value: "parent", label: "Parent", description: "Supporting my child", icon: <FavoriteIcon /> },
+  { value: "teacher", label: "Teacher", description: "I teach in a school", icon: <GroupsIcon /> },
+  { value: "school_admin", label: "School Admin", description: "School leadership", icon: <AdminPanelSettingsIcon /> },
+  { value: "tutor", label: "Tutor", description: "Independent educator", icon: <StorefrontIcon /> },
+];
 
-type RegisterFormData = z.infer<typeof registerSchema>
+const STEPS = ["Choose role", "Your details", "Confirm"];
 
 export default function RegisterPage() {
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const router = useRouter()
-  
+  const [step, setStep] = useState(0);
+  const setRole = useRoleStore((s) => s.setRole);
+  const role = useRoleStore((s) => s.role);
+  const router = useRouter();
+
   const {
     register,
     handleSubmit,
-    formState: { errors },
-  } = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
-  })
+    getValues,
+    formState: { errors, isValid },
+    trigger,
+  } = useForm<RegisterValues>({
+    resolver: zodResolver(registerStep2Schema),
+    mode: "onTouched",
+    defaultValues: { firstName: "", lastName: "", email: "", password: "", school: "", grade: "" },
+  });
 
-  const registerMutation = useMutation({
-    mutationFn: authApi.register,
-    onSuccess: (data) => {
-      console.log('Registration successful:', data)
-      router.push('/login?message=Registration successful. Please sign in.')
-    },
-    onError: (error: any) => {
-      console.error('Registration failed:', error)
-    },
-  })
-
-  const onSubmit = (data: RegisterFormData) => {
-    registerMutation.mutate(data)
-  }
+  const mutation = useMutation({
+    mutationFn: api.register,
+    onSuccess: () => setTimeout(() => router.push("/dashboard"), 800),
+  });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="max-w-2xl w-full"> {/* Changed from max-w-md to max-w-2xl */}
-        {/* Header */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-3 mb-6">
-            <BookOpen className="text-blue-600" size={32} />
-            <span className="text-3xl font-bold font-frygia bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Aptiverse
-            </span>
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Create your account</h1>
-          <p className="text-gray-600">Join thousands of learners on Aptiverse</p>
-        </div>
+    <Stack spacing={3}>
+      <Box>
+        <Typography variant="overline" color="primary.main">
+          Create account · Step {step + 1} of {STEPS.length}
+        </Typography>
+        <Typography variant="h3" sx={{ fontWeight: 700, mt: 0.5 }}>
+          {STEPS[step]}
+        </Typography>
+      </Box>
+      <LinearProgress variant="determinate" value={((step + 1) / STEPS.length) * 100} />
 
-        {/* Register Form */}
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* First Row: Name Fields */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                  <input
-                    {...register('firstName')}
-                    type="text"
-                    id="firstName"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="First name"
-                  />
-                </div>
-                {errors.firstName && (
-                  <p className="mt-1 text-sm text-red-600">{errors.firstName.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name
-                </label>
-                <input
-                  {...register('lastName')}
-                  type="text"
-                  id="lastName"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="Last name"
-                />
-                {errors.lastName && (
-                  <p className="mt-1 text-sm text-red-600">{errors.lastName.message}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Second Row: Email and Username */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                  <input
-                    {...register('email')}
-                    type="email"
-                    id="email"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Enter your email"
-                  />
-                </div>
-                {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                  Username
-                </label>
-                <div className="relative">
-                  <UserCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                  <input
-                    {...register('username')}
-                    type="text"
-                    id="username"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Choose a username"
-                  />
-                </div>
-                {errors.username && (
-                  <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Third Row: User Type and Phone Number */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="userType" className="block text-sm font-medium text-gray-700 mb-2">
-                  I am a
-                </label>
-                <select
-                  {...register('userType')}
-                  id="userType"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                >
-                  <option value="Student">Student</option>
-                  <option value="Parent">Parent</option>
-                  <option value="Admin">Admin</option>
-                  <option value="Superuser">Superuser</option>
-                </select>
-                {errors.userType && (
-                  <p className="mt-1 text-sm text-red-600">{errors.userType.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number <span className="text-gray-500 text-sm">(Optional)</span>
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                  <input
-                    {...register('phoneNumber')}
-                    type="tel"
-                    id="phoneNumber"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Your phone number"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Fourth Row: Password Fields */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                  <input
-                    {...register('password')}
-                    type={showPassword ? 'text' : 'password'}
-                    id="password"
-                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Create a password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+      {step === 0 && (
+        <>
+          <Grid container spacing={2}>
+            {ROLE_OPTIONS.map((r) => (
+              <Grid key={r.value} size={{ xs: 12, sm: 6 }}>
+                <Card sx={{ borderColor: role === r.value ? "primary.main" : "divider", borderWidth: role === r.value ? 2 : 1 }}>
+                  <CardActionArea
+                    onClick={() => {
+                      setRole(r.value);
+                      setStep(1);
+                    }}
                   >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-                )}
-              </div>
+                    <CardContent>
+                      <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Box sx={{ width: 36, height: 36, borderRadius: 1.5, display: "grid", placeItems: "center", bgcolor: "action.hover", color: "primary.main" }}>
+                          {r.icon}
+                        </Box>
+                        <Box>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                            {r.label}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {r.description}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </CardContent>
+                  </CardActionArea>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
+            Already on Aptiverse?{" "}
+            <Link href="/login" style={{ color: "inherit", fontWeight: 600 }}>
+              Sign in
+            </Link>
+          </Typography>
+        </>
+      )}
 
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                  <input
-                    {...register('confirmPassword')}
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    id="confirmPassword"
-                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Confirm your password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-                {errors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Terms Agreement */}
-            <div className="pt-2"> {/* Added padding top to separate from password fields */}
-              <label className="flex items-start space-x-3">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1"
-                  required
-                />
-                <span className="text-sm text-gray-600">
-                  I agree to the{' '}
-                  <Link href="/terms" className="text-blue-600 hover:text-blue-500">
-                    Terms of Service
-                  </Link>{' '}
-                  and{' '}
-                  <Link href="/privacy" className="text-blue-600 hover:text-blue-500">
-                    Privacy Policy
-                  </Link>
-                </span>
-              </label>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={registerMutation.isPending}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {registerMutation.isPending ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <UserPlus size={20} />
+      {step === 1 && (
+        <>
+          <OAuthButtons />
+          <Box
+            component="form"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const ok = await trigger();
+              if (ok) setStep(2);
+            }}
+          >
+            <Stack spacing={2}>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <TextField fullWidth required label="First name" {...register("firstName")} error={!!errors.firstName} helperText={errors.firstName?.message} />
+                <TextField fullWidth required label="Last name" {...register("lastName")} error={!!errors.lastName} helperText={errors.lastName?.message} />
+              </Stack>
+              <TextField required fullWidth label="Email" type="email" autoComplete="email" {...register("email")} error={!!errors.email} helperText={errors.email?.message} />
+              <TextField
+                required
+                fullWidth
+                label="Password"
+                type="password"
+                {...register("password")}
+                error={!!errors.password}
+                helperText={errors.password?.message ?? "At least 8 chars, one uppercase, one number"}
+              />
+              {role === "student" && (
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                  <TextField fullWidth label="School" {...register("school")} />
+                  <TextField fullWidth label="Grade" placeholder="11 or 12" {...register("grade")} />
+                </Stack>
               )}
-              {registerMutation.isPending ? 'Creating account...' : 'Create account'}
-            </button>
+              <Stack direction="row" spacing={1.5} justifyContent="space-between">
+                <Button onClick={() => setStep(0)} variant="text">
+                  Back
+                </Button>
+                <Button type="submit" variant="contained" size="large" disabled={!isValid}>
+                  Continue
+                </Button>
+              </Stack>
+            </Stack>
+          </Box>
+        </>
+      )}
 
-            {/* Error Message */}
-            {registerMutation.isError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-600 text-center">
-                  {registerMutation.error?.response?.data?.message || 'Registration failed. Please try again.'}
-                </p>
-              </div>
-            )}
-          </form>
-
-          {/* Login Link */}
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              Already have an account?{' '}
-              <Link href="/login" className="text-blue-600 font-semibold hover:text-blue-500">
-                Sign in
-              </Link>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+      {step === 2 && (
+        <>
+          {mutation.isSuccess ? (
+            <Alert severity="success">Account created. Redirecting…</Alert>
+          ) : (
+            <Stack spacing={2}>
+              {mutation.isError && <Alert severity="error">{(mutation.error as Error).message}</Alert>}
+              <Card variant="outlined">
+                <CardContent>
+                  <Stack spacing={1.5}>
+                    <Typography variant="overline" color="text.secondary">
+                      Review
+                    </Typography>
+                    <Typography>
+                      <strong>Role:</strong> {ROLE_OPTIONS.find((r) => r.value === role)?.label}
+                    </Typography>
+                    <Typography>
+                      <strong>Name:</strong> {getValues("firstName")} {getValues("lastName")}
+                    </Typography>
+                    <Typography>
+                      <strong>Email:</strong> {getValues("email")}
+                    </Typography>
+                    {role === "student" && (
+                      <>
+                        <Typography>
+                          <strong>School:</strong> {getValues("school") || "—"}
+                        </Typography>
+                        <Typography>
+                          <strong>Grade:</strong> {getValues("grade") || "—"}
+                        </Typography>
+                      </>
+                    )}
+                  </Stack>
+                </CardContent>
+              </Card>
+              <Typography variant="caption" color="text.secondary">
+                By continuing you agree to our Terms and Privacy Policy. We'll send a verification email to your address.
+              </Typography>
+              <Stack direction="row" spacing={1.5} justifyContent="space-between">
+                <Button onClick={() => setStep(1)} variant="text">
+                  Back
+                </Button>
+                <Button
+                  variant="contained"
+                  size="large"
+                  disabled={mutation.isPending}
+                  onClick={handleSubmit((v) => mutation.mutate({ ...v, role }))}
+                >
+                  {mutation.isPending ? "Creating…" : "Create account"}
+                </Button>
+              </Stack>
+            </Stack>
+          )}
+        </>
+      )}
+    </Stack>
+  );
 }

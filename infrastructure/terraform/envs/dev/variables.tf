@@ -28,15 +28,16 @@ variable "private_subnet_cidrs" {
   type        = list(string)
 }
 
-variable "ec2_instance_type" {
-  description = "EC2 instance type for dev"
-  type        = string
-  default     = "t4g.micro"
+variable "eks_node_instance_types" {
+  description = "EKS node instance types"
+  type        = list(string)
+  default     = ["t4g.medium"]
 }
 
-variable "ec2_key_name" {
-  description = "SSH key pair name for the EC2 instance"
-  type        = string
+variable "eks_node_desired_size" {
+  description = "Desired number of EKS nodes"
+  type        = number
+  default     = 1
 }
 
 variable "db_username" {

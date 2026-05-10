@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Aptiverse app icon">
+  <title>Aptiverse</title>
+  <rect x="0" y="0" width="200" height="200" rx="44" fill="#0F2A3F"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round">
+    <line x1="55" y1="145" x2="100" y2="60"/>
+    <line x1="100" y1="60" x2="145" y2="145"/>
+  </g>
+  <circle cx="55" cy="145" r="11" fill="#0F2A3F" stroke="#FFFFFF" stroke-width="5"/>
+  <circle cx="100" cy="60" r="16" fill="#FFFFFF"/>
+  <circle cx="145" cy="145" r="11" fill="#0F2A3F" stroke="#FFFFFF" stroke-width="5"/>
+</svg>

@@ -1,57 +1,55 @@
-import SessionProvider from "@/providers/SessionProvider";
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import localFont from "next/font/local";
-import QueryClientProvider from "../providers/QueryClientProvider";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
+import { AppProviders } from "@/providers/AppProviders";
 import "./globals.css";
 
-const frygia = localFont({
-  src: [
-    {
-      path: './fonts/Frygia/Frygia-Regular.woff',
-      weight: '400',
-      style: 'normal',
-    },
-    {
-      path: './fonts/Frygia/Frygia-Regular.ttf',
-      weight: '400',
-      style: 'normal',
-    },
-  ],
-  variable: '--font-frygia',
-  display: 'swap',
-});
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Aptiverse - Smart Learning Platform",
-  description: "AI-powered educational platform for South African learners",
+  title: {
+    default: "Aptiverse — Grow with confidence",
+    template: "%s · Aptiverse",
+  },
+  description:
+    "AI-powered student success platform built for South African Grade 11 & 12 learners. SBA prep, goals, mastery, wellbeing, and bursary navigation in one calm, empowering space.",
+  applicationName: "Aptiverse",
+  keywords: [
+    "Aptiverse",
+    "SBA",
+    "Grade 12",
+    "Matric",
+    "South Africa",
+    "Bursary",
+    "NSFAS",
+    "Tutor",
+    "AI study",
+  ],
+  authors: [{ name: "Aptiverse" }],
+  openGraph: {
+    title: "Aptiverse — Grow with confidence",
+    description:
+      "Holistic student success: SBA prep, goals, wellbeing, tutors, bursaries.",
+    type: "website",
+  },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#0F6963" },
+    { media: "(prefers-color-scheme: dark)", color: "#0B1219" },
+  ],
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body
-        className={`${frygia.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <SessionProvider>
-          <QueryClientProvider>
-            {children}
-          </QueryClientProvider>
-        </SessionProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.variable}>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

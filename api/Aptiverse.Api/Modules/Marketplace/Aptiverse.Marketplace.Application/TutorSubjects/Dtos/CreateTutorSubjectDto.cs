@@ -1,0 +1,10 @@
+﻿namespace Aptiverse.Marketplace.Application.TutorSubjects.Dtos
+{
+    public record CreateTutorSubjectDto
+    {
+        public long TutorId { get; init; }
+        public string SubjectId { get; init; }
+        public int ProficiencyLevel { get; init; }
+        public decimal CustomHourlyRate { get; init; }
+    }
+}

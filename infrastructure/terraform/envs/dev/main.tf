@@ -44,18 +44,21 @@ module "security" {
 }
 
 # -------------------------------------------------------------------
-# EC2 (Docker Compose host)
+# EKS Cluster (Spot instances for dev)
 # -------------------------------------------------------------------
-module "ec2" {
-  source = "../../modules/ec2"
+module "eks" {
+  source = "../../modules/eks"
 
-  name          = local.name
-  env           = var.env
-  instance_type = var.ec2_instance_type
-  subnet_id     = module.vpc.public_subnet_ids[0]
-  vpc_id        = module.vpc.vpc_id
-  key_name      = var.ec2_key_name
-  tags          = var.tags
+  name                = local.name
+  env                 = var.env
+  vpc_id              = module.vpc.vpc_id
+  subnet_ids          = module.vpc.private_subnet_ids
+  node_instance_types = var.eks_node_instance_types
+  node_desired_size   = var.eks_node_desired_size
+  node_min_size       = 1
+  node_max_size       = 3
+  node_capacity_type  = "SPOT"
+  tags                = var.tags
 }
 
 # -------------------------------------------------------------------
@@ -72,7 +75,7 @@ module "rds" {
   db_username                = var.db_username
   db_password                = var.db_password
   multi_az                   = false
-  allowed_security_group_ids = [module.ec2.security_group_id]
+  allowed_security_group_ids = [module.eks.cluster_security_group_id, module.security.app_security_group_id]
   backup_retention_period    = 0
   tags                       = var.tags
 }
@@ -88,7 +91,7 @@ module "elasticache" {
   vpc_id                     = module.vpc.vpc_id
   subnet_ids                 = module.vpc.private_subnet_ids
   node_type                  = var.redis_node_type
-  allowed_security_group_ids = [module.ec2.security_group_id]
+  allowed_security_group_ids = [module.eks.cluster_security_group_id, module.security.app_security_group_id]
   tags                       = var.tags
 }
 
@@ -100,14 +103,7 @@ module "route53" {
 
   domain_name = var.domain_name
 
-  records = [
-    {
-      name    = "dev.${var.domain_name}"
-      type    = "A"
-      ttl     = 300
-      records = [module.ec2.public_ip]
-    }
-  ]
+  records = []
 
   tags = var.tags
 }

@@ -1,0 +1,13 @@
+# Local-dev overrides on top of docker-compose.dev.yml.
+# Exposes Postgres + Redis to the host so you can run Aptiverse.Api
+# natively (`dotnet run`) and connect via localhost.
+# Compose picks this file up automatically alongside docker-compose.dev.yml
+# when you pass both with `-f`, or by default if you use `docker-compose.yml`.
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"

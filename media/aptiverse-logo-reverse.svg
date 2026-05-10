@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 160" role="img" aria-label="Aptiverse">
+  <title>Aptiverse</title>
+  <rect width="520" height="160" fill="#0E5159"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round">
+    <line x1="30" y1="130" x2="80" y2="30"/>
+    <line x1="80" y1="30" x2="130" y2="130"/>
+  </g>
+  <circle cx="30" cy="130" r="8" fill="#0E5159" stroke="#FFFFFF" stroke-width="3"/>
+  <circle cx="55" cy="80" r="9" fill="#0E5159" stroke="#FFFFFF" stroke-width="3"/>
+  <circle cx="80" cy="30" r="12" fill="#FFFFFF"/>
+  <circle cx="105" cy="80" r="9" fill="#0E5159" stroke="#FFFFFF" stroke-width="3"/>
+  <circle cx="130" cy="130" r="8" fill="#0E5159" stroke="#FFFFFF" stroke-width="3"/>
+  <text x="180" y="105" font-family="Inter, 'Helvetica Neue', Arial, sans-serif" font-size="64" font-weight="500" fill="#FFFFFF" letter-spacing="-2">aptiverse</text>
+</svg>
