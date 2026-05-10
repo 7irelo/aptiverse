@@ -1,34 +1,301 @@
 {
   "app": {
-    "[project]/aptiverse/aptiverse-ui/src/app/(auth)/login/page": [
-      "static/media/Frygia_Regular-s.p.404bb862.woff",
-      "static/media/Frygia_Regular-s.p.6f5cccad.ttf",
-      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
-      "static/media/797e433ab948586e-s.p.dbea232f.woff2"
+    "[project]/aptiverse/ui/src/app/(app)/admin/audit/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
     ],
-    "[project]/aptiverse/aptiverse-ui/src/app/(dashboard)/analytics/page": [
-      "static/media/Frygia_Regular-s.p.404bb862.woff",
-      "static/media/Frygia_Regular-s.p.6f5cccad.ttf",
-      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
-      "static/media/797e433ab948586e-s.p.dbea232f.woff2"
+    "[project]/aptiverse/ui/src/app/(app)/admin/bursaries/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
     ],
-    "[project]/aptiverse/aptiverse-ui/src/app/(dashboard)/dashboard/page": [
-      "static/media/Frygia_Regular-s.p.404bb862.woff",
-      "static/media/Frygia_Regular-s.p.6f5cccad.ttf",
-      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
-      "static/media/797e433ab948586e-s.p.dbea232f.woff2"
+    "[project]/aptiverse/ui/src/app/(app)/admin/courses/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
     ],
-    "[project]/aptiverse/aptiverse-ui/src/app/(dashboard)/subjects/[subject]/page": [
-      "static/media/Frygia_Regular-s.p.404bb862.woff",
-      "static/media/Frygia_Regular-s.p.6f5cccad.ttf",
-      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
-      "static/media/797e433ab948586e-s.p.dbea232f.woff2"
+    "[project]/aptiverse/ui/src/app/(app)/admin/flags/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
     ],
-    "[project]/aptiverse/aptiverse-ui/src/app/(dashboard)/subjects/page": [
-      "static/media/Frygia_Regular-s.p.404bb862.woff",
-      "static/media/Frygia_Regular-s.p.6f5cccad.ttf",
-      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
-      "static/media/797e433ab948586e-s.p.dbea232f.woff2"
+    "[project]/aptiverse/ui/src/app/(app)/admin/impersonate/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/admin/invoices/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/admin/moderation/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/admin/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/admin/payments/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/admin/schools/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/admin/settings/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/admin/subscriptions/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/admin/system/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/admin/tutors/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/admin/users/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/assessments/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/assessments/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/bursaries/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/calendar/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/career/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/chatbot/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/courses/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/diary/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/goals/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/help/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/journey/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/mastery/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/notifications/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/past-papers/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/practice/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/practice/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/psychologist/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/rewards/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/settings/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/study-groups/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/subjects/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/subjects/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/tutors/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/tutors/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/universities/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/wellbeing/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/dashboard/workspace/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/parent/billing/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/parent/celebrations/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/parent/children/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/parent/children/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/parent/help/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/parent/live/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/parent/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/parent/settings/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/parent/wellbeing/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/school-admin/analytics/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/school-admin/bursary-partners/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/school-admin/classes/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/school-admin/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/school-admin/readiness/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/school-admin/settings/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/school-admin/students/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/school-admin/teachers/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/teacher/analytics/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/teacher/assignments/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/teacher/calendar/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/teacher/classes/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/teacher/classes/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/teacher/differentiator/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/teacher/gap-analysis/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/teacher/live/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/teacher/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/teacher/settings/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/teacher/students/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/teacher/verifications/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/tutor/courses/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/tutor/earnings/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/tutor/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/tutor/reviews/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/tutor/sessions/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/tutor/settings/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(app)/tutor/students/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(auth)/forgot-password/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(auth)/login/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(auth)/register/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(auth)/reset-password/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(auth)/verify-email/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(marketing)/about/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(marketing)/bursaries/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(marketing)/careers/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(marketing)/contact/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(marketing)/demo/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(marketing)/features/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(marketing)/for-parents/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(marketing)/for-schools/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(marketing)/for-students/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(marketing)/for-teachers/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(marketing)/for-tutors/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(marketing)/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(marketing)/pricing/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/(marketing)/universities/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
+    ],
+    "[project]/aptiverse/ui/src/app/_not-found/page": [
+      "static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2"
     ]
   },
   "appUsingSizeAdjust": true,

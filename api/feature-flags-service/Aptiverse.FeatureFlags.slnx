@@ -1,7 +1,0 @@
-<Solution>
-  <Project Path="src/Aptiverse.FeatureFlags.Application/Aptiverse.FeatureFlags.Application.csproj" />
-  <Project Path="src/Aptiverse.FeatureFlags.Core/Aptiverse.FeatureFlags.Core.csproj" />
-  <Project Path="src/Aptiverse.FeatureFlags.Domain/Aptiverse.FeatureFlags.Domain.csproj" />
-  <Project Path="src/Aptiverse.FeatureFlags.Infrastructure/Aptiverse.FeatureFlags.Infrastructure.csproj" />
-  <Project Path="src/Aptiverse.FeatureFlags/Aptiverse.FeatureFlags.csproj" />
-</Solution>

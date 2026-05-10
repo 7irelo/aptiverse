@@ -1,7 +1,0 @@
-<Solution>
-  <Project Path="src/Aptiverse.Calendar.Application/Aptiverse.Calendar.Application.csproj" />
-  <Project Path="src/Aptiverse.Calendar.Core/Aptiverse.Calendar.Core.csproj" />
-  <Project Path="src/Aptiverse.Calendar.Domain/Aptiverse.Calendar.Domain.csproj" />
-  <Project Path="src/Aptiverse.Calendar.Infrastructure/Aptiverse.Calendar.Infrastructure.csproj" />
-  <Project Path="src/Aptiverse.Calendar/Aptiverse.Calendar.csproj" />
-</Solution>
