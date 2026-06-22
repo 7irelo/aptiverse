@@ -31,6 +31,7 @@ namespace Aptiverse.Api.Modules
             Aptiverse.Marketplace.Application.ServiceCollectionExtensions.AddApplicationServices(services);
             Aptiverse.Mastery.Application.ServiceCollectionExtensions.AddApplicationServices(services);
             Aptiverse.Moderation.Application.ServiceCollectionExtensions.AddApplicationServices(services);
+            Aptiverse.Notifications.Application.ServiceCollectionExtensions.AddApplicationServices(services);
             Aptiverse.Practice.Application.ServiceCollectionExtensions.AddApplicationServices(services);
             Aptiverse.Support.Application.ServiceCollectionExtensions.AddApplicationServices(services);
             Aptiverse.Wellbeing.Application.ServiceCollectionExtensions.AddApplicationServices(services);

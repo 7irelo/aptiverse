@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Aptiverse.Practice.Application.Practice.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Aptiverse.Practice.Application
 {
@@ -6,6 +7,7 @@ namespace Aptiverse.Practice.Application
     {
         public static IServiceCollection AddApplicationServices(this IServiceCollection services)
         {
+            services.AddScoped<IPracticeService, PracticeService>();
             return services;
         }
     }

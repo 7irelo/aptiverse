@@ -4021,9 +4021,26 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<long>("AttemptId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("attempt_id");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<string>("QuestionId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("question_id");
+
+                    b.Property<int>("SelectedIdx")
+                        .HasColumnType("integer")
+                        .HasColumnName("selected_idx");
+
+                    b.Property<int>("TimeMs")
+                        .HasColumnType("integer")
+                        .HasColumnName("time_ms");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -4038,6 +4055,13 @@ namespace Aptiverse.Api.Migrations
                     b.HasKey("Id")
                         .HasName("pk_answer_submissions");
 
+                    b.HasIndex("AttemptId")
+                        .HasDatabaseName("ix_answer_submissions_attempt_id");
+
+                    b.HasIndex("AttemptId", "QuestionId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_answer_submissions_attempt_id_question_id");
+
                     b.ToTable("answer_submissions", "practice");
                 });
 
@@ -4050,9 +4074,42 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<long>("AttemptId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("attempt_id");
+
+                    b.Property<int>("CorrectCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("correct_count");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<int>("IncorrectCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("incorrect_count");
+
+                    b.Property<string>("PerTopic")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("per_topic");
+
+                    b.Property<int>("ScorePercent")
+                        .HasColumnType("integer")
+                        .HasColumnName("score_percent");
+
+                    b.Property<int>("TotalQuestions")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_questions");
+
+                    b.Property<int>("TotalTimeMs")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_time_ms");
+
+                    b.Property<int>("UnansweredCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("unanswered_count");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -4066,6 +4123,10 @@ namespace Aptiverse.Api.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_attempt_score_summaries");
+
+                    b.HasIndex("AttemptId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_attempt_score_summaries_attempt_id");
 
                     b.ToTable("attempt_score_summaries", "practice");
                 });
@@ -4083,6 +4144,32 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<int?>("Score")
+                        .HasColumnType("integer")
+                        .HasColumnName("score");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("student_id");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<long>("TestId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("test_id");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -4096,6 +4183,18 @@ namespace Aptiverse.Api.Migrations
                     b.HasKey("Id")
                         .HasName("pk_practice_attempts");
 
+                    b.HasIndex("StudentId")
+                        .HasDatabaseName("ix_practice_attempts_student_id");
+
+                    b.HasIndex("TestId")
+                        .HasDatabaseName("ix_practice_attempts_test_id");
+
+                    b.HasIndex("StudentId", "Status")
+                        .HasDatabaseName("ix_practice_attempts_student_id_status");
+
+                    b.HasIndex("StudentId", "TestId")
+                        .HasDatabaseName("ix_practice_attempts_student_id_test_id");
+
                     b.ToTable("practice_attempts", "practice");
                 });
 
@@ -4108,9 +4207,43 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<long?>("AnswerSubmissionId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("answer_submission_id");
+
+                    b.Property<long>("AttemptId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("attempt_id");
+
+                    b.Property<int>("CorrectAnswerIdx")
+                        .HasColumnType("integer")
+                        .HasColumnName("correct_answer_idx");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<int>("GivenAnswerIdx")
+                        .HasColumnType("integer")
+                        .HasColumnName("given_answer_idx");
+
+                    b.Property<bool>("IsCorrect")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_correct");
+
+                    b.Property<string>("QuestionId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("question_id");
+
+                    b.Property<int>("TimeMs")
+                        .HasColumnType("integer")
+                        .HasColumnName("time_ms");
+
+                    b.Property<string>("Topic")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("topic");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -4125,6 +4258,19 @@ namespace Aptiverse.Api.Migrations
                     b.HasKey("Id")
                         .HasName("pk_practice_attempt_items");
 
+                    b.HasIndex("AnswerSubmissionId")
+                        .HasDatabaseName("ix_practice_attempt_items_answer_submission_id");
+
+                    b.HasIndex("AttemptId")
+                        .HasDatabaseName("ix_practice_attempt_items_attempt_id");
+
+                    b.HasIndex("Topic")
+                        .HasDatabaseName("ix_practice_attempt_items_topic");
+
+                    b.HasIndex("AttemptId", "QuestionId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_practice_attempt_items_attempt_id_question_id");
+
                     b.ToTable("practice_attempt_items", "practice");
                 });
 
@@ -4137,9 +4283,46 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<bool>("AiGenerated")
+                        .HasColumnType("boolean")
+                        .HasColumnName("ai_generated");
+
+                    b.Property<string>("AlignedSBA")
+                        .HasColumnType("text")
+                        .HasColumnName("aligned_sba");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<string>("Difficulty")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("difficulty");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_minutes");
+
+                    b.Property<string>("Questions")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("questions");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("subject_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("title");
+
+                    b.Property<string>("Topics")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("topics");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -4154,7 +4337,75 @@ namespace Aptiverse.Api.Migrations
                     b.HasKey("Id")
                         .HasName("pk_practice_tests");
 
+                    b.HasIndex("SubjectId")
+                        .HasDatabaseName("ix_practice_tests_subject_id");
+
+                    b.HasIndex("SubjectId", "Difficulty")
+                        .HasDatabaseName("ix_practice_tests_subject_id_difficulty");
+
                     b.ToTable("practice_tests", "practice");
+                });
+
+            modelBuilder.Entity("Aptiverse.Sales.Domain.Models.ContactEnquiry", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("Contacted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("contacted");
+
+                    b.Property<DateTime?>("ContactedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("contacted_at");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("email");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("first_name");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("last_name");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("message");
+
+                    b.Property<string>("Organisation")
+                        .HasColumnType("text")
+                        .HasColumnName("organisation");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_contact_enquiries");
+
+                    b.ToTable("contact_enquiries", "sales");
                 });
 
             modelBuilder.Entity("Aptiverse.Sales.Domain.Models.SchoolEnquiry", b =>
@@ -4423,6 +4674,11 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("priority");
 
+                    b.Property<string>("RequesterUserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("requester_user_id");
+
                     b.Property<string>("ResolutionNotes")
                         .IsRequired()
                         .HasColumnType("text")
@@ -4471,6 +4727,9 @@ namespace Aptiverse.Api.Migrations
 
                     b.HasIndex("Priority")
                         .HasDatabaseName("ix_support_tickets_priority");
+
+                    b.HasIndex("RequesterUserId")
+                        .HasDatabaseName("ix_support_tickets_requester_user_id");
 
                     b.HasIndex("Status")
                         .HasDatabaseName("ix_support_tickets_status");
@@ -4737,6 +4996,10 @@ namespace Aptiverse.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("notes");
+
+                    b.Property<double?>("SleepHours")
+                        .HasColumnType("double precision")
+                        .HasColumnName("sleep_hours");
 
                     b.Property<string>("SleepQuality")
                         .IsRequired()
@@ -5688,6 +5951,61 @@ namespace Aptiverse.Api.Migrations
                     b.Navigation("ContentReport");
                 });
 
+            modelBuilder.Entity("Aptiverse.Practice.Domain.Models.Practice.AnswerSubmission", b =>
+                {
+                    b.HasOne("Aptiverse.Practice.Domain.Models.Practice.PracticeAttempt", "Attempt")
+                        .WithMany()
+                        .HasForeignKey("AttemptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_answer_submissions_practice_attempt_attempt_id");
+
+                    b.Navigation("Attempt");
+                });
+
+            modelBuilder.Entity("Aptiverse.Practice.Domain.Models.Practice.AttemptScoreSummary", b =>
+                {
+                    b.HasOne("Aptiverse.Practice.Domain.Models.Practice.PracticeAttempt", "Attempt")
+                        .WithOne("ScoreSummary")
+                        .HasForeignKey("Aptiverse.Practice.Domain.Models.Practice.AttemptScoreSummary", "AttemptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_attempt_score_summaries_practice_attempt_attempt_id");
+
+                    b.Navigation("Attempt");
+                });
+
+            modelBuilder.Entity("Aptiverse.Practice.Domain.Models.Practice.PracticeAttempt", b =>
+                {
+                    b.HasOne("Aptiverse.Practice.Domain.Models.Practice.PracticeTest", "Test")
+                        .WithMany()
+                        .HasForeignKey("TestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_practice_attempts_practice_test_test_id");
+
+                    b.Navigation("Test");
+                });
+
+            modelBuilder.Entity("Aptiverse.Practice.Domain.Models.Practice.PracticeAttemptItem", b =>
+                {
+                    b.HasOne("Aptiverse.Practice.Domain.Models.Practice.AnswerSubmission", "AnswerSubmission")
+                        .WithMany()
+                        .HasForeignKey("AnswerSubmissionId")
+                        .HasConstraintName("fk_practice_attempt_items_answer_submissions_answer_submission");
+
+                    b.HasOne("Aptiverse.Practice.Domain.Models.Practice.PracticeAttempt", "Attempt")
+                        .WithMany("Items")
+                        .HasForeignKey("AttemptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_practice_attempt_items_practice_attempts_attempt_id");
+
+                    b.Navigation("AnswerSubmission");
+
+                    b.Navigation("Attempt");
+                });
+
             modelBuilder.Entity("Aptiverse.Support.Domain.Models.Support.SupportCategory", b =>
                 {
                     b.HasOne("Aptiverse.Support.Domain.Models.Support.SupportCategory", "ParentCategory")
@@ -5892,6 +6210,13 @@ namespace Aptiverse.Api.Migrations
             modelBuilder.Entity("Aptiverse.Moderation.Domain.Models.Moderation.ContentReport", b =>
                 {
                     b.Navigation("Actions");
+                });
+
+            modelBuilder.Entity("Aptiverse.Practice.Domain.Models.Practice.PracticeAttempt", b =>
+                {
+                    b.Navigation("Items");
+
+                    b.Navigation("ScoreSummary");
                 });
 
             modelBuilder.Entity("Aptiverse.Support.Domain.Models.Support.SupportCategory", b =>

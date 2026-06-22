@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using Aptiverse.Support.Application.Frontend.Dtos;
+using Aptiverse.Support.Application.Frontend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,26 +9,81 @@ namespace Aptiverse.Support.Controllers
     [ApiController]
     [Route("api/support")]
     [Authorize]
-    public class SupportController : ControllerBase
+    public class SupportController(IFrontendSupportService support) : ControllerBase
     {
+        private readonly IFrontendSupportService _support = support;
+
+        private string? CurrentUserId()
+            => User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirst("sub")?.Value
+            ?? User.FindFirst("userId")?.Value;
+
+        private string CurrentUserName()
+            => User.Identity?.Name
+            ?? User.FindFirstValue(ClaimTypes.Email)
+            ?? User.FindFirst("email")?.Value
+            ?? "";
+
+        private string CurrentUserRole()
+            => User.FindFirstValue(ClaimTypes.Role)
+            ?? User.FindFirst("role")?.Value
+            ?? "Student";
+
         [HttpGet("tickets")]
-        public ActionResult<IEnumerable<FrontendSupportTicketDto>> GetTickets()
-            => Ok(Array.Empty<FrontendSupportTicketDto>());
+        public async Task<ActionResult<IEnumerable<FrontendSupportTicketDto>>> GetTickets(CancellationToken cancellationToken)
+        {
+            var userId = CurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var tickets = await _support.ListTicketsForUserAsync(userId, cancellationToken);
+            return Ok(tickets);
+        }
 
         [HttpPost("tickets")]
-        public ActionResult<FrontendSupportTicketDto> CreateTicket([FromBody] FrontendCreateTicketInput input)
+        public async Task<ActionResult<FrontendSupportTicketDto>> CreateTicket(
+            [FromBody] FrontendCreateTicketInput input, CancellationToken cancellationToken)
         {
-            return Ok(new FrontendSupportTicketDto
-            {
-                Id = $"tk-{Guid.NewGuid():N}",
-                Subject = input.Subject,
-                Body = input.Body,
-                Priority = input.Priority ?? "normal",
-                Status = "open",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                Requester = User?.Identity?.Name ?? "",
-            });
+            var userId = CurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+            if (string.IsNullOrWhiteSpace(input.Subject)) return BadRequest("Subject is required.");
+
+            var dto = await _support.CreateTicketAsync(userId, CurrentUserName(), input, cancellationToken);
+            return CreatedAtAction(nameof(GetTicket), new { id = dto.Id }, dto);
+        }
+
+        [HttpGet("tickets/{id}")]
+        public async Task<ActionResult<FrontendSupportTicketDto>> GetTicket(string id, CancellationToken cancellationToken)
+        {
+            var userId = CurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+            if (!long.TryParse(id, out var ticketId)) return NotFound();
+
+            var dto = await _support.GetTicketForUserAsync(userId, ticketId, cancellationToken);
+            return dto is null ? NotFound() : Ok(dto);
+        }
+
+        [HttpGet("tickets/{id}/messages")]
+        public async Task<ActionResult<IEnumerable<FrontendSupportMessageDto>>> GetMessages(string id, CancellationToken cancellationToken)
+        {
+            var userId = CurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+            if (!long.TryParse(id, out var ticketId)) return NotFound();
+
+            var messages = await _support.ListMessagesForUserAsync(userId, ticketId, cancellationToken);
+            return messages is null ? NotFound() : Ok(messages);
+        }
+
+        [HttpPost("tickets/{id}/messages")]
+        public async Task<ActionResult<FrontendSupportMessageDto>> AddMessage(
+            string id, [FromBody] FrontendCreateMessageInput input, CancellationToken cancellationToken)
+        {
+            var userId = CurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+            if (!long.TryParse(id, out var ticketId)) return NotFound();
+            if (string.IsNullOrWhiteSpace(input.Content)) return BadRequest("Content is required.");
+
+            var dto = await _support.AddMessageForUserAsync(userId, CurrentUserRole(), ticketId, input, cancellationToken);
+            return dto is null ? NotFound() : Ok(dto);
         }
 
         // FAQs are product content (not user data) so they stay populated.

@@ -23,6 +23,10 @@ namespace Aptiverse.Wellbeing.Domain.Models.Wellbeing
         public string EnergyLevel { get; set; }
         public string StressLevel { get; set; }
         public string SleepQuality { get; set; }
+        // Numeric hours slept for the night this check-in covers. Nullable:
+        // the UI may submit a mood check-in without a sleep figure, and the
+        // wellbeing summary averages only the check-ins that supplied one.
+        public double? SleepHours { get; set; }
         public string Triggers { get; set; }
         public string CopingStrategies { get; set; }
         public string Notes { get; set; }
