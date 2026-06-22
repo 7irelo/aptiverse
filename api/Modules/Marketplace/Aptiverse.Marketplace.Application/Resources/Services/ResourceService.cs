@@ -40,8 +40,8 @@ namespace Aptiverse.Marketplace.Application.Resources.Services
             string? subjectId = null,
             string? resourceType = null,
             string? gradeLevel = null,
-            long? teacherId = null,
-            long? tutorId = null,
+            string? teacherId = null,
+            string? tutorId = null,
             long? courseId = null,
             bool? isFree = null,
             bool? isApproved = null,
@@ -56,7 +56,7 @@ namespace Aptiverse.Marketplace.Application.Resources.Services
 
             if (!string.IsNullOrEmpty(search) || !string.IsNullOrEmpty(subjectId) ||
                 !string.IsNullOrEmpty(resourceType) || !string.IsNullOrEmpty(gradeLevel) ||
-                teacherId.HasValue || tutorId.HasValue || courseId.HasValue ||
+                !string.IsNullOrEmpty(teacherId) || !string.IsNullOrEmpty(tutorId) || courseId.HasValue ||
                 isFree.HasValue || isApproved.HasValue || minPrice.HasValue || maxPrice.HasValue)
             {
                 Expression<Func<Resource, bool>> filterPredicate = r =>
@@ -66,8 +66,8 @@ namespace Aptiverse.Marketplace.Application.Resources.Services
                     (string.IsNullOrEmpty(subjectId) || r.SubjectId == subjectId) &&
                     (string.IsNullOrEmpty(resourceType) || r.ResourceType == resourceType) &&
                     (string.IsNullOrEmpty(gradeLevel) || r.GradeLevel == gradeLevel) &&
-                    (!teacherId.HasValue || r.UserId == teacherId.Value) &&
-                    (!tutorId.HasValue || r.UserId == tutorId.Value) &&
+                    (string.IsNullOrEmpty(teacherId) || r.UserId == teacherId) &&
+                    (string.IsNullOrEmpty(tutorId) || r.UserId == tutorId) &&
                     (!courseId.HasValue || r.CourseId == courseId.Value) &&
                     (!isFree.HasValue || r.IsFree == isFree.Value) &&
                     (!isApproved.HasValue || r.IsApproved == isApproved.Value) &&
@@ -207,7 +207,7 @@ namespace Aptiverse.Marketplace.Application.Resources.Services
             return _mapper.Map<IEnumerable<ResourceDto>>(resources);
         }
 
-        public async Task<IEnumerable<ResourceDto>> GetResourcesByTeacherAsync(long teacherId)
+        public async Task<IEnumerable<ResourceDto>> GetResourcesByTeacherAsync(string teacherId)
         {
             var resources = await _resourceRepository.GetManyAsync(
                 predicate: r => r.UserId == teacherId,
@@ -217,7 +217,7 @@ namespace Aptiverse.Marketplace.Application.Resources.Services
             return _mapper.Map<IEnumerable<ResourceDto>>(resources);
         }
 
-        public async Task<IEnumerable<ResourceDto>> GetResourcesByTutorAsync(long tutorId)
+        public async Task<IEnumerable<ResourceDto>> GetResourcesByTutorAsync(string tutorId)
         {
             var resources = await _resourceRepository.GetManyAsync(
                 predicate: r => r.UserId == tutorId,

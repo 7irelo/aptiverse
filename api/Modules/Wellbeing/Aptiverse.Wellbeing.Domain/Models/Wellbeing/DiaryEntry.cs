@@ -13,7 +13,9 @@ namespace Aptiverse.Wellbeing.Domain.Models.Wellbeing
     public class DiaryEntry : IEntityTimestamps
     {
         public long Id { get; set; }
-        public long StudentId { get; set; }
+        // Bare string user-id (identity.users.Id). No FK to a local read-model
+        // stub: matches how AcademicPlanning/Goals/Workspace store student_id.
+        public string StudentId { get; set; }
         public string Title { get; set; }
         public string Content { get; set; }
         // Free-text mood label. Left as string: no documented closed value

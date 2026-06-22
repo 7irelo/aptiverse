@@ -2,7 +2,7 @@ namespace Aptiverse.Support.Application.SupportTickets.Dtos
 {
     public record UpdateSupportTicketDto
     {
-        public long StudentId { get; init; }
+        public string StudentId { get; init; }
         public long CategoryId { get; init; }
         public string Subject { get; init; }
         public string Description { get; init; }

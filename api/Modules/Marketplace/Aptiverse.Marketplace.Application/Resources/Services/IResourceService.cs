@@ -15,8 +15,8 @@ namespace Aptiverse.Marketplace.Application.Resources.Services
             string? subjectId = null,
             string? resourceType = null,
             string? gradeLevel = null,
-            long? teacherId = null,
-            long? tutorId = null,
+            string? teacherId = null,
+            string? tutorId = null,
             long? courseId = null,
             bool? isFree = null,
             bool? isApproved = null,
@@ -37,8 +37,8 @@ namespace Aptiverse.Marketplace.Application.Resources.Services
         Task<bool> ResourceExistsAsync(long id);
 
         Task<IEnumerable<ResourceDto>> GetResourcesBySubjectAsync(string subjectId);
-        Task<IEnumerable<ResourceDto>> GetResourcesByTeacherAsync(long teacherId);
-        Task<IEnumerable<ResourceDto>> GetResourcesByTutorAsync(long tutorId);
+        Task<IEnumerable<ResourceDto>> GetResourcesByTeacherAsync(string teacherId);
+        Task<IEnumerable<ResourceDto>> GetResourcesByTutorAsync(string tutorId);
         Task<IEnumerable<ResourceDto>> GetResourcesByCourseAsync(long courseId);
         Task<IEnumerable<ResourceDto>> GetPopularResourcesAsync(int count = 10);
         Task<IEnumerable<ResourceDto>> GetFreeResourcesAsync();

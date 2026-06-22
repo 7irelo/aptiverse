@@ -12,7 +12,7 @@ namespace Aptiverse.Calendar.Domain.Models.Calendar
     public class CalendarEvent
     {
         public long Id { get; set; }
-        public long StudentId { get; set; }
+        public string StudentId { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }
         public string EventType { get; set; }

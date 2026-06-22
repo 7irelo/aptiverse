@@ -3,7 +3,7 @@
     public record GrowthTrackingDto
     {
         public long Id { get; init; }
-        public long StudentId { get; init; }
+        public string StudentId { get; init; } = "";
         public DateTime TrackingDate { get; init; }
         public decimal AcademicGrowth { get; init; }
         public decimal StudyHabitGrowth { get; init; }

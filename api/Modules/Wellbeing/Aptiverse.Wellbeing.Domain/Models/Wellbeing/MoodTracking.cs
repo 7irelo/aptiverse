@@ -13,7 +13,9 @@ namespace Aptiverse.Wellbeing.Domain.Models.Wellbeing
     public class MoodTracking : IEntityTimestamps
     {
         public long Id { get; set; }
-        public long StudentId { get; set; }
+        // Bare string user-id (identity.users.Id). No FK to a local read-model
+        // stub: matches how AcademicPlanning/Goals/Workspace store student_id.
+        public string StudentId { get; set; }
         // Free-text mood/level labels below are left as string: no documented
         // closed value set exists in the module (DTOs/services pass them
         // through verbatim), so enum-string compatibility with stored values

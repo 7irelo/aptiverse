@@ -8,7 +8,7 @@ namespace Aptiverse.Goals.Application.StudentRewards.Services
         Task<StudentRewardDto> CreateStudentRewardAsync(CreateStudentRewardDto createStudentRewardDto);
         Task<StudentRewardDto?> GetStudentRewardByIdAsync(long id);
         Task<PaginatedResult<StudentRewardDto>> GetStudentRewardsAsync(
-            long? studentId = null,
+            string? studentId = null,
             long? rewardId = null,
             long? goalId = null,
             string? status = null,
@@ -21,7 +21,7 @@ namespace Aptiverse.Goals.Application.StudentRewards.Services
             int pageSize = 20);
         Task<StudentRewardDto> UpdateStudentRewardAsync(long id, UpdateStudentRewardDto updateStudentRewardDto);
         Task<bool> DeleteStudentRewardAsync(long id);
-        Task<int> CountStudentRewardsAsync(long? studentId = null, long? rewardId = null, string? status = null);
+        Task<int> CountStudentRewardsAsync(string? studentId = null, long? rewardId = null, string? status = null);
         Task<bool> StudentRewardExistsAsync(long id);
     }
 }

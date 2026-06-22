@@ -2,7 +2,7 @@ namespace Aptiverse.Wellbeing.Application.DiaryEntries.Dtos
 {
     public record UpdateDiaryEntryDto
     {
-        public long StudentId { get; init; }
+        public string StudentId { get; init; }
         public string Title { get; init; }
         public string Content { get; init; }
         public string Mood { get; init; }

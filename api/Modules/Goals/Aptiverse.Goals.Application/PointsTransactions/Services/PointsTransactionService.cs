@@ -38,7 +38,7 @@ namespace Aptiverse.Goals.Application.PointsTransactions.Services
         public async Task<PaginatedResult<PointsTransactionDto>> GetPointsTransactionsAsync(
             ClaimsPrincipal currentUser,
             long? studentPointsId = null,
-            long? studentId = null,
+            string? studentId = null,
             string? transactionType = null,
             string? source = null,
             long? relatedGoalId = null,
@@ -52,13 +52,13 @@ namespace Aptiverse.Goals.Application.PointsTransactions.Services
         {
             Expression<Func<PointsTransaction, bool>>? predicate = BuildRoleBasedPredicate(currentUser);
 
-            if (studentPointsId.HasValue || studentId.HasValue || !string.IsNullOrEmpty(transactionType) ||
+            if (studentPointsId.HasValue || !string.IsNullOrEmpty(studentId) || !string.IsNullOrEmpty(transactionType) ||
                 !string.IsNullOrEmpty(source) || relatedGoalId.HasValue || relatedRewardId.HasValue ||
                 fromDate.HasValue || toDate.HasValue)
             {
                 Expression<Func<PointsTransaction, bool>> filterPredicate = pt =>
                     (!studentPointsId.HasValue || pt.StudentPointsId == studentPointsId.Value) &&
-                    (!studentId.HasValue || pt.StudentPoints != null && pt.StudentPoints.StudentId == studentId.Value) &&
+                    (string.IsNullOrEmpty(studentId) || pt.StudentPoints != null && pt.StudentPoints.StudentId == studentId) &&
                     (string.IsNullOrEmpty(transactionType) || pt.TransactionType == transactionType) &&
                     (string.IsNullOrEmpty(source) || pt.Source == source) &&
                     (!relatedGoalId.HasValue || pt.RelatedGoalId == relatedGoalId.Value) &&
@@ -163,7 +163,7 @@ namespace Aptiverse.Goals.Application.PointsTransactions.Services
         public async Task<int> CountPointsTransactionsAsync(
             ClaimsPrincipal currentUser,
             long? studentPointsId = null,
-            long? studentId = null,
+            string? studentId = null,
             string? transactionType = null,
             DateTime? fromDate = null,
             DateTime? toDate = null)
@@ -172,7 +172,7 @@ namespace Aptiverse.Goals.Application.PointsTransactions.Services
 
             Expression<Func<PointsTransaction, bool>> filterPredicate = pt =>
                 (!studentPointsId.HasValue || pt.StudentPointsId == studentPointsId.Value) &&
-                (!studentId.HasValue || pt.StudentPoints != null && pt.StudentPoints.StudentId == studentId.Value) &&
+                (string.IsNullOrEmpty(studentId) || pt.StudentPoints != null && pt.StudentPoints.StudentId == studentId) &&
                 (string.IsNullOrEmpty(transactionType) || pt.TransactionType == transactionType) &&
                 (!fromDate.HasValue || pt.TransactionDate >= fromDate.Value) &&
                 (!toDate.HasValue || pt.TransactionDate <= toDate.Value);
@@ -199,7 +199,7 @@ namespace Aptiverse.Goals.Application.PointsTransactions.Services
             return _mapper.Map<IEnumerable<PointsTransactionDto>>(transactions);
         }
 
-        public async Task<IEnumerable<PointsTransactionDto>> GetTransactionsByStudentAsync(long studentId)
+        public async Task<IEnumerable<PointsTransactionDto>> GetTransactionsByStudentAsync(string studentId)
         {
             var transactions = await _pointsTransactionRepository.GetManyAsync(
                 predicate: pt => pt.StudentPoints != null && pt.StudentPoints.StudentId == studentId,
@@ -209,7 +209,7 @@ namespace Aptiverse.Goals.Application.PointsTransactions.Services
             return _mapper.Map<IEnumerable<PointsTransactionDto>>(transactions);
         }
 
-        public async Task<IEnumerable<PointsTransactionDto>> GetRecentTransactionsByStudentAsync(long studentId, int count = 10)
+        public async Task<IEnumerable<PointsTransactionDto>> GetRecentTransactionsByStudentAsync(string studentId, int count = 10)
         {
             var transactions = await _pointsTransactionRepository.GetManyAsync(
                 predicate: pt => pt.StudentPoints != null && pt.StudentPoints.StudentId == studentId,
@@ -219,7 +219,7 @@ namespace Aptiverse.Goals.Application.PointsTransactions.Services
             return _mapper.Map<IEnumerable<PointsTransactionDto>>(transactions.Take(count));
         }
 
-        public async Task<IEnumerable<PointsTransactionDto>> GetEarnedTransactionsByStudentAsync(long studentId, DateTime? fromDate = null, DateTime? toDate = null)
+        public async Task<IEnumerable<PointsTransactionDto>> GetEarnedTransactionsByStudentAsync(string studentId, DateTime? fromDate = null, DateTime? toDate = null)
         {
             Expression<Func<PointsTransaction, bool>> predicate = pt =>
                 pt.StudentPoints != null &&
@@ -243,7 +243,7 @@ namespace Aptiverse.Goals.Application.PointsTransactions.Services
             return _mapper.Map<IEnumerable<PointsTransactionDto>>(transactions);
         }
 
-        public async Task<IEnumerable<PointsTransactionDto>> GetSpentTransactionsByStudentAsync(long studentId, DateTime? fromDate = null, DateTime? toDate = null)
+        public async Task<IEnumerable<PointsTransactionDto>> GetSpentTransactionsByStudentAsync(string studentId, DateTime? fromDate = null, DateTime? toDate = null)
         {
             Expression<Func<PointsTransaction, bool>> predicate = pt =>
                 pt.StudentPoints != null &&
@@ -267,7 +267,7 @@ namespace Aptiverse.Goals.Application.PointsTransactions.Services
             return _mapper.Map<IEnumerable<PointsTransactionDto>>(transactions);
         }
 
-        public async Task<Dictionary<string, int>> GetTransactionSummaryAsync(long studentId, DateTime? fromDate = null, DateTime? toDate = null)
+        public async Task<Dictionary<string, int>> GetTransactionSummaryAsync(string studentId, DateTime? fromDate = null, DateTime? toDate = null)
         {
             Expression<Func<PointsTransaction, bool>> predicate = pt =>
                 pt.StudentPoints != null && pt.StudentPoints.StudentId == studentId;
@@ -296,7 +296,7 @@ namespace Aptiverse.Goals.Application.PointsTransactions.Services
             return summary;
         }
 
-        public async Task<int> GetTotalEarnedPointsAsync(long studentId, DateTime? fromDate = null, DateTime? toDate = null)
+        public async Task<int> GetTotalEarnedPointsAsync(string studentId, DateTime? fromDate = null, DateTime? toDate = null)
         {
             Expression<Func<PointsTransaction, bool>> predicate = pt =>
                 pt.StudentPoints != null &&
@@ -319,7 +319,7 @@ namespace Aptiverse.Goals.Application.PointsTransactions.Services
             return transactions.Sum(t => t.Points);
         }
 
-        public async Task<int> GetTotalSpentPointsAsync(long studentId, DateTime? fromDate = null, DateTime? toDate = null)
+        public async Task<int> GetTotalSpentPointsAsync(string studentId, DateTime? fromDate = null, DateTime? toDate = null)
         {
             Expression<Func<PointsTransaction, bool>> predicate = pt =>
                 pt.StudentPoints != null &&

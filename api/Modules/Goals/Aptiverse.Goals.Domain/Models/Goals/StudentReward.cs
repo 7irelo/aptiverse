@@ -1,5 +1,4 @@
 ﻿using Aptiverse.Api.Data.Abstractions;
-using Aptiverse.Goals.Domain.Models.External.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Aptiverse.Goals.Domain.Models.Goals
@@ -12,7 +11,9 @@ namespace Aptiverse.Goals.Domain.Models.Goals
     public class StudentReward : IEntityTimestamps
     {
         public long Id { get; set; }
-        public long StudentId { get; set; }
+
+        // Recipient — identity.users.id. Bare string user-id with no enforced FK.
+        public string StudentId { get; set; } = "";
         public long RewardId { get; set; }
         public long? GoalId { get; set; }
         public DateTime EarnedAt { get; set; }
@@ -24,7 +25,6 @@ namespace Aptiverse.Goals.Domain.Models.Goals
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-        public virtual Student Student { get; set; }
         public virtual Reward Reward { get; set; }
         public virtual Goal Goal { get; set; }
     }

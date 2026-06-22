@@ -1,5 +1,4 @@
 ﻿using Aptiverse.Api.Data.Abstractions;
-using Aptiverse.Goals.Domain.Models.External.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Aptiverse.Goals.Domain.Models.Goals
@@ -11,7 +10,10 @@ namespace Aptiverse.Goals.Domain.Models.Goals
     public class GrowthTracking : IEntityTimestamps
     {
         public long Id { get; set; }
-        public long StudentId { get; set; }
+
+        // Subject of this growth snapshot — identity.users.id. Bare string
+        // user-id with no enforced FK.
+        public string StudentId { get; set; } = "";
         public DateTime TrackingDate { get; set; }
         public decimal AcademicGrowth { get; set; }
         public decimal StudyHabitGrowth { get; set; }
@@ -22,7 +24,5 @@ namespace Aptiverse.Goals.Domain.Models.Goals
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
-        public virtual Student Student { get; set; }
     }
 }

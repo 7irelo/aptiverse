@@ -28,7 +28,6 @@ namespace Aptiverse.Goals.Application.StudentRewards.Services
             var studentReward = await _studentRewardRepository.GetAsync(
                 predicate: sr => sr.Id == id,
                 include: query => query
-                    .Include(sr => sr.Student)
                     .Include(sr => sr.Reward)
                     .Include(sr => sr.Goal),
                 disableTracking: false);
@@ -40,7 +39,7 @@ namespace Aptiverse.Goals.Application.StudentRewards.Services
         }
 
         public async Task<PaginatedResult<StudentRewardDto>> GetStudentRewardsAsync(
-            long? studentId = null,
+            string? studentId = null,
             long? rewardId = null,
             long? goalId = null,
             string? status = null,
@@ -63,7 +62,6 @@ namespace Aptiverse.Goals.Application.StudentRewards.Services
                 predicate: predicate,
                 orderBy: orderBy,
                 include: query => query
-                    .Include(sr => sr.Student)
                     .Include(sr => sr.Reward)
                     .Include(sr => sr.Goal));
 
@@ -77,7 +75,7 @@ namespace Aptiverse.Goals.Application.StudentRewards.Services
         }
 
         private Expression<Func<StudentReward, bool>>? BuildFilterPredicate(
-            long? studentId,
+            string? studentId,
             long? rewardId,
             long? goalId,
             string? status,
@@ -85,13 +83,13 @@ namespace Aptiverse.Goals.Application.StudentRewards.Services
             DateTime? earnedBefore,
             DateTime? expiresBefore)
         {
-            if (!studentId.HasValue && !rewardId.HasValue && !goalId.HasValue &&
+            if (string.IsNullOrEmpty(studentId) && !rewardId.HasValue && !goalId.HasValue &&
                 string.IsNullOrEmpty(status) && !earnedAfter.HasValue &&
                 !earnedBefore.HasValue && !expiresBefore.HasValue)
                 return null;
 
             return sr =>
-                (!studentId.HasValue || sr.StudentId == studentId.Value) &&
+                (string.IsNullOrEmpty(studentId) || sr.StudentId == studentId) &&
                 (!rewardId.HasValue || sr.RewardId == rewardId.Value) &&
                 (!goalId.HasValue || sr.GoalId == goalId.Value) &&
                 (string.IsNullOrEmpty(status) || sr.Status == status) &&
@@ -151,13 +149,13 @@ namespace Aptiverse.Goals.Application.StudentRewards.Services
             return true;
         }
 
-        public async Task<int> CountStudentRewardsAsync(long? studentId = null, long? rewardId = null, string? status = null)
+        public async Task<int> CountStudentRewardsAsync(string? studentId = null, long? rewardId = null, string? status = null)
         {
-            if (!studentId.HasValue && !rewardId.HasValue && string.IsNullOrEmpty(status))
+            if (string.IsNullOrEmpty(studentId) && !rewardId.HasValue && string.IsNullOrEmpty(status))
                 return await _studentRewardRepository.CountAsync();
 
             Expression<Func<StudentReward, bool>> predicate = sr =>
-                (!studentId.HasValue || sr.StudentId == studentId.Value) &&
+                (string.IsNullOrEmpty(studentId) || sr.StudentId == studentId) &&
                 (!rewardId.HasValue || sr.RewardId == rewardId.Value) &&
                 (string.IsNullOrEmpty(status) || sr.Status == status);
 

@@ -12,7 +12,7 @@ namespace Aptiverse.Marketplace.Application.CourseEnrollments.Services
         Task<PaginatedResult<CourseEnrollmentDto>> GetEnrollmentsAsync(
             ClaimsPrincipal currentUser,
             long? courseId = null,
-            long? studentId = null,
+            string? studentId = null,
             string? paymentStatus = null,
             decimal? minProgress = null,
             decimal? maxProgress = null,
@@ -25,13 +25,13 @@ namespace Aptiverse.Marketplace.Application.CourseEnrollments.Services
         Task<bool> DeleteEnrollmentAsync(long id);
         Task<int> CountEnrollmentsAsync(ClaimsPrincipal currentUser,
             long? courseId = null,
-            long? studentId = null,
+            string? studentId = null,
             string? paymentStatus = null);
         Task<bool> EnrollmentExistsAsync(long id);
 
-        Task<IEnumerable<CourseEnrollmentDto>> GetEnrollmentsByStudentAsync(long studentId);
+        Task<IEnumerable<CourseEnrollmentDto>> GetEnrollmentsByStudentAsync(string studentId);
         Task<IEnumerable<CourseEnrollmentDto>> GetEnrollmentsByCourseAsync(long courseId);
-        Task<decimal> GetStudentProgressAsync(long studentId, long courseId);
-        Task<bool> IsStudentEnrolledAsync(long studentId, long courseId);
+        Task<decimal> GetStudentProgressAsync(string studentId, long courseId);
+        Task<bool> IsStudentEnrolledAsync(string studentId, long courseId);
     }
 }

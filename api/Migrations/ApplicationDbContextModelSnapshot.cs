@@ -605,8 +605,9 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("started_date");
 
-                    b.Property<long>("StudentId")
-                        .HasColumnType("bigint")
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text")
                         .HasColumnName("student_id");
 
                     b.Property<long>("TutorId")
@@ -747,8 +748,9 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("status");
 
-                    b.Property<long>("StudentId")
-                        .HasColumnType("bigint")
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text")
                         .HasColumnName("student_id");
 
                     b.Property<string>("Title")
@@ -820,8 +822,9 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("provider");
 
-                    b.Property<long>("StudentId")
-                        .HasColumnType("bigint")
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text")
                         .HasColumnName("student_id");
 
                     b.Property<string>("SyncDirection")
@@ -2171,8 +2174,9 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("numeric")
                         .HasColumnName("overall_growth");
 
-                    b.Property<long>("StudentId")
-                        .HasColumnType("bigint")
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text")
                         .HasColumnName("student_id");
 
                     b.Property<decimal>("StudyHabitGrowth")
@@ -2384,8 +2388,9 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("level");
 
-                    b.Property<long>("StudentId")
-                        .HasColumnType("bigint")
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text")
                         .HasColumnName("student_id");
 
                     b.Property<int>("TotalPoints")
@@ -2461,8 +2466,9 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("status");
 
-                    b.Property<long>("StudentId")
-                        .HasColumnType("bigint")
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text")
                         .HasColumnName("student_id");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -2895,13 +2901,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
-                    b.Property<long>("UserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("user_id");
-
-                    b.Property<string>("UserId1")
+                    b.Property<string>("UserId")
+                        .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("user_id1");
+                        .HasColumnName("user_id");
 
                     b.Property<uint>("xmin")
                         .IsConcurrencyToken()
@@ -2920,9 +2923,6 @@ namespace Aptiverse.Api.Migrations
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_course_enrollments_user_id");
-
-                    b.HasIndex("UserId1")
-                        .HasDatabaseName("ix_course_enrollments_user_id1");
 
                     b.HasIndex("UserId", "CourseId")
                         .HasDatabaseName("ix_course_enrollments_user_id_course_id");
@@ -3135,13 +3135,9 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
-                    b.Property<long?>("UserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("user_id");
-
-                    b.Property<string>("UserId1")
+                    b.Property<string>("UserId")
                         .HasColumnType("text")
-                        .HasColumnName("user_id1");
+                        .HasColumnName("user_id");
 
                     b.Property<uint>("xmin")
                         .IsConcurrencyToken()
@@ -3179,9 +3175,6 @@ namespace Aptiverse.Api.Migrations
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_resources_user_id");
 
-                    b.HasIndex("UserId1")
-                        .HasDatabaseName("ix_resources_user_id1");
-
                     b.ToTable("resources", "marketplace");
                 });
 
@@ -3202,14 +3195,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("resource_id");
 
-                    b.Property<long>("UserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("user_id");
-
-                    b.Property<string>("UserId1")
+                    b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("user_id1");
+                        .HasColumnName("user_id");
 
                     b.Property<uint>("xmin")
                         .IsConcurrencyToken()
@@ -3225,9 +3214,6 @@ namespace Aptiverse.Api.Migrations
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_resource_downloads_user_id");
-
-                    b.HasIndex("UserId1")
-                        .HasDatabaseName("ix_resource_downloads_user_id1");
 
                     b.HasIndex("UserId", "ResourceId")
                         .HasDatabaseName("ix_resource_downloads_user_id_resource_id");
@@ -4762,8 +4748,9 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("status");
 
-                    b.Property<long>("StudentId")
-                        .HasColumnType("bigint")
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text")
                         .HasColumnName("student_id");
 
                     b.Property<string>("Subject")
@@ -4905,8 +4892,9 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("double precision")
                         .HasColumnName("sentiment_score");
 
-                    b.Property<long>("StudentId")
-                        .HasColumnType("bigint")
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text")
                         .HasColumnName("student_id");
 
                     b.Property<string>("Tags")
@@ -4981,8 +4969,9 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_completed");
 
-                    b.Property<long>("StudentId")
-                        .HasColumnType("bigint")
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text")
                         .HasColumnName("student_id");
 
                     b.Property<DateTime>("TargetDate")
@@ -5076,8 +5065,9 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("stress_level");
 
-                    b.Property<long>("StudentId")
-                        .HasColumnType("bigint")
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text")
                         .HasColumnName("student_id");
 
                     b.Property<DateTime>("TrackedAt")
@@ -5425,21 +5415,12 @@ namespace Aptiverse.Api.Migrations
 
             modelBuilder.Entity("Aptiverse.Booking.Domain.Models.Booking.TutorStudent", b =>
                 {
-                    b.HasOne("Aptiverse.Booking.Domain.Models.External.Identity.Student", "Student")
-                        .WithMany()
-                        .HasForeignKey("StudentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_tutor_students_students_student_id");
-
                     b.HasOne("Aptiverse.Booking.Domain.Models.External.Identity.Tutor", "Tutor")
                         .WithMany()
                         .HasForeignKey("TutorId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_tutor_students_tutors_tutor_id");
-
-                    b.Navigation("Student");
 
                     b.Navigation("Tutor");
                 });
@@ -5679,18 +5660,6 @@ namespace Aptiverse.Api.Migrations
                     b.Navigation("Goal");
                 });
 
-            modelBuilder.Entity("Aptiverse.Goals.Domain.Models.Goals.GrowthTracking", b =>
-                {
-                    b.HasOne("Aptiverse.Goals.Domain.Models.External.Identity.Student", "Student")
-                        .WithMany()
-                        .HasForeignKey("StudentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_growth_trackings_student_student_id");
-
-                    b.Navigation("Student");
-                });
-
             modelBuilder.Entity("Aptiverse.Goals.Domain.Models.Goals.PointsTransaction", b =>
                 {
                     b.HasOne("Aptiverse.Goals.Domain.Models.Goals.Goal", "RelatedGoal")
@@ -5717,18 +5686,6 @@ namespace Aptiverse.Api.Migrations
                     b.Navigation("StudentPoints");
                 });
 
-            modelBuilder.Entity("Aptiverse.Goals.Domain.Models.Goals.StudentPoints", b =>
-                {
-                    b.HasOne("Aptiverse.Goals.Domain.Models.External.Identity.Student", "Student")
-                        .WithMany()
-                        .HasForeignKey("StudentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_student_points_student_student_id");
-
-                    b.Navigation("Student");
-                });
-
             modelBuilder.Entity("Aptiverse.Goals.Domain.Models.Goals.StudentReward", b =>
                 {
                     b.HasOne("Aptiverse.Goals.Domain.Models.Goals.Goal", "Goal")
@@ -5743,18 +5700,9 @@ namespace Aptiverse.Api.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_student_rewards_rewards_reward_id");
 
-                    b.HasOne("Aptiverse.Goals.Domain.Models.External.Identity.Student", "Student")
-                        .WithMany()
-                        .HasForeignKey("StudentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_student_rewards_student_student_id");
-
                     b.Navigation("Goal");
 
                     b.Navigation("Reward");
-
-                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("Aptiverse.Insights.Domain.Models.Insights.GradeDistribution", b =>
@@ -5836,8 +5784,10 @@ namespace Aptiverse.Api.Migrations
 
                     b.HasOne("Aptiverse.Marketplace.Domain.Models.External.Identity.User", "User")
                         .WithMany()
-                        .HasForeignKey("UserId1")
-                        .HasConstraintName("fk_course_enrollments_user_user_id1");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_course_enrollments_user_user_id");
 
                     b.Navigation("Course");
 
@@ -5889,8 +5839,8 @@ namespace Aptiverse.Api.Migrations
 
                     b.HasOne("Aptiverse.Marketplace.Domain.Models.External.Identity.User", "User")
                         .WithMany()
-                        .HasForeignKey("UserId1")
-                        .HasConstraintName("fk_resources_user_user_id1");
+                        .HasForeignKey("UserId")
+                        .HasConstraintName("fk_resources_user_user_id");
 
                     b.Navigation("Course");
 
@@ -5910,10 +5860,10 @@ namespace Aptiverse.Api.Migrations
 
                     b.HasOne("Aptiverse.Marketplace.Domain.Models.External.Identity.User", "User")
                         .WithMany()
-                        .HasForeignKey("UserId1")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_resource_downloads_user_user_id1");
+                        .HasConstraintName("fk_resource_downloads_user_user_id");
 
                     b.Navigation("Resource");
 

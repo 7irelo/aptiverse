@@ -12,7 +12,7 @@ namespace Aptiverse.Marketplace.Domain.Models.Marketplace
     {
         public long Id { get; set; }
         public long CourseId { get; set; }
-        public long UserId { get; set; }
+        public string UserId { get; set; }
         public DateTime EnrolledAt { get; set; }
         public decimal AmountPaid { get; set; }
         public string PaymentStatus { get; set; }

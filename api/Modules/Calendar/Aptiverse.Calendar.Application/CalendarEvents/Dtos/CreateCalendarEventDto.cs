@@ -2,7 +2,7 @@ namespace Aptiverse.Calendar.Application.CalendarEvents.Dtos
 {
     public record CreateCalendarEventDto
     {
-        public long StudentId { get; init; }
+        public string StudentId { get; init; }
         public string Title { get; init; }
         public string Description { get; init; }
         public string EventType { get; init; }

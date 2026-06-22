@@ -9,7 +9,7 @@ namespace Aptiverse.Booking.Application.TutorStudents.Services
         Task<TutorStudentDto?> GetTutorStudentByIdAsync(long id);
         Task<PaginatedResult<TutorStudentDto>> GetTutorStudentsAsync(
             long? tutorId = null,
-            long? studentId = null,
+            string? studentId = null,
             bool? isActive = null,
             int? minSessionsPerWeek = null,
             int? maxSessionsPerWeek = null,
@@ -21,7 +21,7 @@ namespace Aptiverse.Booking.Application.TutorStudents.Services
             int pageSize = 20);
         Task<TutorStudentDto> UpdateTutorStudentAsync(long id, UpdateTutorStudentDto updateTutorStudentDto);
         Task<bool> DeleteTutorStudentAsync(long id);
-        Task<int> CountTutorStudentsAsync(long? tutorId = null, long? studentId = null, bool? isActive = null);
+        Task<int> CountTutorStudentsAsync(long? tutorId = null, string? studentId = null, bool? isActive = null);
         Task<bool> TutorStudentExistsAsync(long id);
     }
 }

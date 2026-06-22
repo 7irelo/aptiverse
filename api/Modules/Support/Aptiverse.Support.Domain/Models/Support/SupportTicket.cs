@@ -45,12 +45,17 @@ namespace Aptiverse.Support.Domain.Models.Support
     public class SupportTicket
     {
         public long Id { get; set; }
-        public long StudentId { get; set; }
+        // Bare Identity user-id (identity.users.Id string) of the student the
+        // ticket belongs to. Vestigial today — the authoritative requester ref
+        // is RequesterUserId — but kept for consistency and populated from the
+        // claim userId at create time. No enforced FK/navigation to a local
+        // student read-model stub (matches how AcademicPlanning/Goals/Workspace
+        // store student_id as a plain string).
+        public string StudentId { get; set; }
         // Auth user id (Identity string/GUID) of the person who opened the
-        // ticket. StudentId is a numeric FK into the (future) student catalog
-        // and cannot hold the Identity GUID, so ownership/list-by-user keys
-        // off this string column. Nullable so historical/agent-created rows
-        // and the additive migration stay backward compatible.
+        // ticket. Ownership/list-by-user keys off this string column. Nullable
+        // so historical/agent-created rows and the additive migration stay
+        // backward compatible.
         public string RequesterUserId { get; set; }
         public long CategoryId { get; set; }
         public string Subject { get; set; }
