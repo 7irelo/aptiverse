@@ -41,10 +41,17 @@ namespace Aptiverse.Support.Domain.Models.Support
     [Index(nameof(Status))]
     [Index(nameof(Priority))]
     [Index(nameof(StudentId), nameof(Status))]
+    [Index(nameof(RequesterUserId))]
     public class SupportTicket
     {
         public long Id { get; set; }
         public long StudentId { get; set; }
+        // Auth user id (Identity string/GUID) of the person who opened the
+        // ticket. StudentId is a numeric FK into the (future) student catalog
+        // and cannot hold the Identity GUID, so ownership/list-by-user keys
+        // off this string column. Nullable so historical/agent-created rows
+        // and the additive migration stay backward compatible.
+        public string RequesterUserId { get; set; }
         public long CategoryId { get; set; }
         public string Subject { get; set; }
         public string Description { get; set; }

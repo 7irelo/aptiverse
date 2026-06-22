@@ -24,6 +24,17 @@ namespace Aptiverse.Wellbeing.Application.Frontend.Dtos
         [JsonPropertyName("mood")] public double Mood { get; init; }
     }
 
+    public record FrontendCreateMoodInput
+    {
+        // 1-5 mood score, matching the diary mood scale used by the UI.
+        [JsonPropertyName("mood")] public int Mood { get; init; }
+        [JsonPropertyName("energyLevel")] public string? EnergyLevel { get; init; }
+        [JsonPropertyName("stressLevel")] public string? StressLevel { get; init; }
+        [JsonPropertyName("sleepQuality")] public string? SleepQuality { get; init; }
+        [JsonPropertyName("sleepHours")] public double? SleepHours { get; init; }
+        [JsonPropertyName("notes")] public string? Notes { get; init; }
+    }
+
     public record FrontendCounsellorDto
     {
         [JsonPropertyName("id")] public string Id { get; init; } = "";

@@ -1,3 +1,4 @@
+using Aptiverse.Support.Application.Frontend.Services;
 using Aptiverse.Support.Application.SupportTickets.Services;
 using Aptiverse.Support.Application.SupportMessages.Services;
 using Aptiverse.Support.Application.SupportCategories.Services;
@@ -12,6 +13,7 @@ namespace Aptiverse.Support.Application
             services.AddScoped<ISupportTicketService, SupportTicketService>();
             services.AddScoped<ISupportMessageService, SupportMessageService>();
             services.AddScoped<ISupportCategoryService, SupportCategoryService>();
+            services.AddScoped<IFrontendSupportService, FrontendSupportService>();
 
             return services;
         }

@@ -21,6 +21,21 @@ namespace Aptiverse.Support.Application.Frontend.Dtos
         [JsonPropertyName("priority")] public string? Priority { get; init; }
     }
 
+    public record FrontendSupportMessageDto
+    {
+        [JsonPropertyName("id")] public string Id { get; init; } = "";
+        [JsonPropertyName("ticketId")] public string TicketId { get; init; } = "";
+        [JsonPropertyName("sender")] public string Sender { get; init; } = "";
+        [JsonPropertyName("senderRole")] public string SenderRole { get; init; } = "";
+        [JsonPropertyName("content")] public string Content { get; init; } = "";
+        [JsonPropertyName("createdAt")] public DateTime CreatedAt { get; init; }
+    }
+
+    public record FrontendCreateMessageInput
+    {
+        [JsonPropertyName("content")] public string Content { get; init; } = "";
+    }
+
     public record FrontendFaqDto
     {
         [JsonPropertyName("id")] public string Id { get; init; } = "";
