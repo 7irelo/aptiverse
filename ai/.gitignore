@@ -1,0 +1,13 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+app/models/*.pkl
+app/models/*.joblib
+app/models/*.bin
+dist/
+build/
+*.egg-info/

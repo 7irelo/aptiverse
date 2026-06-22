@@ -1,0 +1,19 @@
+aws_region = "af-south-1"
+env        = "dev"
+
+# Required — also settable via TF_VAR_db_username / TF_VAR_db_password env
+db_username = "aptiverse_admin"
+db_password = "CHANGE_ME_STRONG"
+
+# Lock SSH to your IP. Find it with: curl ifconfig.me
+# ssh_allowed_cidrs = ["YOUR.PUBLIC.IP/32"]
+
+# Lock HTTP to Cloudflare's published IPv4 ranges so only Cloudflare's
+# proxy can hit the origin. Pull the current list from
+#   https://www.cloudflare.com/ips-v4
+# http_allowed_cidrs = [
+#   "173.245.48.0/20", "103.21.244.0/22", "103.22.200.0/22", "103.31.4.0/22",
+#   "141.101.64.0/18", "108.162.192.0/18", "190.93.240.0/20", "188.114.96.0/20",
+#   "197.234.240.0/22", "198.41.128.0/17", "162.158.0.0/15", "104.16.0.0/13",
+#   "104.24.0.0/14", "172.64.0.0/13", "131.0.72.0/22"
+# ]
