@@ -13,15 +13,15 @@ Cadence/weight (see ARCHITECTURE.md §5):
 
 from __future__ import annotations
 
+from app.services.at_risk import AtRiskPredictorService
 from app.services.base import AnalyticsService
+from app.services.diary_nlp import DiaryNlpService
+from app.services.gaps import KnowledgeGapService
 from app.services.grade_distribution import GradeDistributionService
 from app.services.growth import GrowthTrackingService
-from app.services.tips import ImprovementTipsService
-from app.services.subject_analytics import SubjectAnalyticsService
-from app.services.gaps import KnowledgeGapService
 from app.services.mastery import MasteryEstimatorService
-from app.services.at_risk import AtRiskPredictorService
-from app.services.diary_nlp import DiaryNlpService
+from app.services.subject_analytics import SubjectAnalyticsService
+from app.services.tips import ImprovementTipsService
 
 REGISTRY: dict[str, AnalyticsService] = {
     s.name: s
