@@ -347,7 +347,7 @@ function AddSubjectDialog({
                 >
                   {g.label}
                 </Typography>
-                <Stack spacing={0.75}>
+                <Stack spacing={1}>
                   {g.subjects.map((s) => {
                     const already = existingSubjectIds.has(s.id);
                     const isAdding = adding === s.curriculumSubjectId;
@@ -564,7 +564,7 @@ function SubjectCard({ subject: s }: { subject: Subject }) {
             <Typography variant="overline" color="text.secondary">
               Topic mastery
             </Typography>
-            <Stack spacing={1.25} sx={{ mt: 0.75 }}>
+            <Stack spacing={1.5} sx={{ mt: 1 }}>
               {s.topics.slice(0, 4).map((t) => (
                 <Box key={t.name}>
                   <Stack direction="row" justifyContent="space-between">

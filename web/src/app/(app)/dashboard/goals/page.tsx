@@ -20,8 +20,9 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
+import { alpha } from "@mui/material/styles";
 import AddIcon from "@mui/icons-material/Add";
-import EmojiEventsIcon from "@mui/icons-material/EmojiEventsOutlined";
+import RedeemIcon from "@mui/icons-material/RedeemOutlined";
 import FlagIcon from "@mui/icons-material/FlagOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { useSnackbar } from "notistack";
@@ -408,13 +409,15 @@ function GoalCard({ goal, subject }: { goal: Goal; subject?: Subject }) {
                 mt: 2,
                 p: 1.5,
                 borderRadius: 1.5,
-                bgcolor: "action.hover",
+                bgcolor: (t) => alpha(t.palette.achievement.main, 0.1),
+                border: 1,
+                borderColor: (t) => alpha(t.palette.achievement.main, 0.3),
                 display: "flex",
                 alignItems: "center",
                 gap: 1.5,
               }}
             >
-              <EmojiEventsIcon sx={{ color: "achievement.main" }} />
+              <RedeemIcon fontSize="small" sx={{ color: "achievement.dark" }} />
               <Typography variant="caption" sx={{ fontWeight: 500 }}>
                 {goal.reward}
               </Typography>

@@ -8,7 +8,8 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
-import EmojiEventsIcon from "@mui/icons-material/EmojiEventsOutlined";
+import { alpha } from "@mui/material/styles";
+import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremiumOutlined";
 import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartmentOutlined";
 import CardGiftcardIcon from "@mui/icons-material/CardGiftcardOutlined";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -24,40 +25,46 @@ export default function RewardsPage() {
     <>
       <PageHeader
         title="Rewards"
-        description="Real perks for real effort — tutor hours, masterclasses, and badges that universities can see."
+        description="Points you've earned, spent on things worth having — tutor hours, masterclasses, and badges that go on your university applications."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Rewards" }]}
       />
 
-      <Card sx={{ mb: 3, background: (t) => `linear-gradient(135deg, ${t.palette.achievement.dark}, ${t.palette.achievement.main})`, color: "achievement.contrastText" }}>
+      <Card
+        sx={{
+          mb: 3,
+          bgcolor: (t) => alpha(t.palette.achievement.main, 0.1),
+          borderColor: (t) => alpha(t.palette.achievement.main, 0.3),
+        }}
+      >
         <CardContent sx={{ p: 4 }}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={3} justifyContent="space-between" alignItems={{ md: "center" }}>
             <Box>
-              <Typography variant="overline" sx={{ opacity: 0.85 }}>
+              <Typography variant="overline" color="text.secondary">
                 Your rewards balance
               </Typography>
               <Typography variant="h2" sx={{ fontWeight: 700 }}>
                 {points.toLocaleString()} pts
               </Typography>
-              <Typography variant="body2" sx={{ opacity: 0.92 }}>
+              <Typography variant="body2" color="text.secondary">
                 Earned from completed goals, verified by your school. Earn more by hitting goals, building streaks, and helping peers.
               </Typography>
             </Box>
             <Stack direction="row" spacing={3}>
               <Stack alignItems="center">
-                <LocalFireDepartmentIcon sx={{ fontSize: 32 }} />
+                <LocalFireDepartmentIcon sx={{ fontSize: 28, color: "achievement.dark" }} />
                 <Typography variant="h5" sx={{ fontWeight: 700 }}>
                   12
                 </Typography>
-                <Typography variant="caption" sx={{ opacity: 0.85 }}>
+                <Typography variant="caption" color="text.secondary">
                   day streak
                 </Typography>
               </Stack>
               <Stack alignItems="center">
-                <EmojiEventsIcon sx={{ fontSize: 32 }} />
+                <WorkspacePremiumIcon sx={{ fontSize: 28, color: "achievement.dark" }} />
                 <Typography variant="h5" sx={{ fontWeight: 700 }}>
                   4
                 </Typography>
-                <Typography variant="caption" sx={{ opacity: 0.85 }}>
+                <Typography variant="caption" color="text.secondary">
                   badges
                 </Typography>
               </Stack>

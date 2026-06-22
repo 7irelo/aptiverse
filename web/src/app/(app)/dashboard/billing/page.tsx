@@ -225,7 +225,7 @@ export default function BillingPage() {
                 </Typography>
               </Stack>
 
-              <Stack spacing={2.25}>
+              <Stack spacing={2}>
                 <QuotaBar
                   label="Quick AI replies"
                   used={usage.data?.aiQuick.used ?? 0}
@@ -253,7 +253,7 @@ export default function BillingPage() {
                 <Box
                   sx={{
                     mt: 3,
-                    p: 1.75,
+                    p: 2,
                     borderRadius: 1.5,
                     bgcolor: "action.hover",
                     border: 1,
