@@ -29,6 +29,17 @@ class Settings(BaseSettings):
     # Stamped onto every analytics row so outputs are reproducible / auditable.
     model_version: str = "2026.06.0"
 
+    # Feature flag: insights.risk_scores does not exist in .NET yet. The At-Risk
+    # sink stays a no-op until a .NET migration creates the table and this flips.
+    enable_risk_scores: bool = False
+
+    # Feature flag: diary theme embeddings. The fast VADER-only path always runs;
+    # the heavy sentence-transformers theme path is opt-in (it pulls torch). Off by
+    # default so the service runs with only light deps installed.
+    enable_diary_embeddings: bool = False
+    # sentence-transformers model used when embeddings are enabled. Small + local.
+    diary_embedding_model: str = "all-MiniLM-L6-v2"
+
 
 @lru_cache
 def get_settings() -> Settings:
