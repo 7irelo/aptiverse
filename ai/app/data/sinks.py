@@ -240,20 +240,22 @@ async def upsert_improvement_tips(rows: list[dict[str, Any]]) -> int:
 
 # --------------------------------------------------------------------------- #
 # goals.growth_trackings
-# natural key: (student_id, tracking_date)
-# columns: student_id (bigint), tracking_date (timestamptz),
+# natural key: (student_id, tracking_date)  [UNIQUE index ix_growth_trackings_
+#   student_id_tracking_date]
+# columns: student_id (text == canonical identity.users.Id after Phase-2),
+#          tracking_date (timestamptz),
 #          academic_growth/emotional_growth/study_habit_growth/overall_growth
 #          (numeric), growth_factors (text), areas_for_improvement (text),
 #          created_at, updated_at
 # --------------------------------------------------------------------------- #
 async def upsert_growth_trackings(rows: list[dict[str, Any]]) -> int:
-    """Each row: student_id (bigint legacy id), tracking_date, academic_growth,
+    """Each row: student_id (text canonical id), tracking_date, academic_growth,
     emotional_growth, study_habit_growth, overall_growth, growth_factors,
     areas_for_improvement."""
     s = stamp()
     payload = [
         {
-            "student_id": r["student_id"],
+            "student_id": str(r["student_id"]),
             "tracking_date": r["tracking_date"],
             "academic_growth": r.get("academic_growth", 0),
             "emotional_growth": r.get("emotional_growth", 0),

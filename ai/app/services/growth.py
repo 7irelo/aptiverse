@@ -20,12 +20,11 @@ service is the "light, nightly" tier). If a heavy method is ever added it MUST b
 imported lazily inside the function that uses it, per the package convention.
 
 Identity note (see app/data/signals.py): the canonical student id is the *text*
-``identity.users.Id``. Goals / assessments / practice rows are keyed by that text
-id, while ``wellbeing.mood_trackings`` and the ``goals.growth_trackings`` SINK are
-keyed by the *bigint* legacy ``Student.Id``. Until Phase-2 unification reconciles
-the two, this service keys output rows on the numeric id (the sink column is
-bigint) and attaches the text-keyed signals by string-equality of the id, which
-holds for the pre-unification data where the canonical id stringifies a number.
+``identity.users.Id``. After Phase-2 *every* source and the ``goals.growth_trackings``
+SINK key on that single text id — goals, assessments, practice AND
+``wellbeing.mood_trackings`` are all text now. This service therefore groups every
+source by the text id and emits output rows keyed on the text canonical id (the
+sink upserts on the UNIQUE (student_id, tracking_date)).
 """
 
 from __future__ import annotations
@@ -60,25 +59,22 @@ class GrowthTrackingService(AnalyticsService):
     weight = "light"
 
     async def compute(self, user_id: str | None) -> int:
-        # Read the three signal sources. Goals + assessments + practice are
-        # keyed by the canonical text id; mood is keyed by the bigint legacy id
-        # (signals applies a numeric filter only when user_id parses as int).
+        # Read the three signal sources. After Phase-2 all four are keyed by the
+        # canonical text id (identity.users.Id), so the optional user_id filter
+        # binds as text uniformly inside signals.*.
         goals_rows = _records(await signals.goals(user_id))
         assessments_rows = _records(await signals.assessments(user_id))
         practice_rows = _records(await signals.attempt_score_summaries(user_id))
         mood_rows = _records(await signals.mood_trackings(user_id))
 
-        # Group every source by student. Text-keyed sources are grouped by their
-        # stringified id; mood (and the output) by the bigint legacy id.
-        goals_by = _group(goals_rows, "student_id", as_str=True)
-        assess_by = _group(assessments_rows, "student_id", as_str=True)
-        practice_by = _group(practice_rows, "student_id", as_str=True)
-        mood_by = _group(mood_rows, "student_id", as_str=False)
+        # Group every source by the canonical text student id.
+        goals_by = _group(goals_rows, "student_id")
+        assess_by = _group(assessments_rows, "student_id")
+        practice_by = _group(practice_rows, "student_id")
+        mood_by = _group(mood_rows, "student_id")
 
-        # The set of students to emit a row for. The output table is keyed by the
-        # bigint legacy id, so the candidate ids are the numeric ones we can see
-        # across all sources. (A text canonical id that stringifies a number maps
-        # 1:1 onto the legacy id in the pre-unification data.)
+        # The set of students to emit a row for: the union of the text ids seen
+        # across all sources (restricted to the requested user_id when given).
         candidate_ids = _candidate_student_ids(
             goals_by, assess_by, practice_by, mood_by, user_id
         )
@@ -90,12 +86,10 @@ class GrowthTrackingService(AnalyticsService):
         out: list[dict[str, Any]] = []
 
         for sid in candidate_ids:
-            skey = str(sid)
-
             academic = _academic_growth(
-                assess_by.get(skey, []), practice_by.get(skey, [])
+                assess_by.get(sid, []), practice_by.get(sid, [])
             )
-            study_habit = _study_habit_growth(goals_by.get(skey, []))
+            study_habit = _study_habit_growth(goals_by.get(sid, []))
             emotional = _emotional_growth(mood_by.get(sid, []))
 
             overall = (
@@ -299,16 +293,19 @@ def _records(frame: Any) -> list[Mapping[str, Any]]:
 
 
 def _group(
-    rows: list[Mapping[str, Any]], key: str, *, as_str: bool
-) -> dict[Any, list[Mapping[str, Any]]]:
-    """Group rows by a key column, preserving row order within each group."""
-    out: dict[Any, list[Mapping[str, Any]]] = {}
+    rows: list[Mapping[str, Any]], key: str
+) -> dict[str, list[Mapping[str, Any]]]:
+    """Group rows by a (text) key column, preserving row order within each group.
+
+    The key is stringified so every source groups on the canonical text student
+    id regardless of the driver's Python type for the column.
+    """
+    out: dict[str, list[Mapping[str, Any]]] = {}
     for r in rows:
         raw = r.get(key)
         if raw is None:
             continue
-        k = str(raw) if as_str else raw
-        out.setdefault(k, []).append(r)
+        out.setdefault(str(raw), []).append(r)
     return out
 
 
@@ -316,44 +313,24 @@ def _candidate_student_ids(
     goals_by: Mapping[str, Any],
     assess_by: Mapping[str, Any],
     practice_by: Mapping[str, Any],
-    mood_by: Mapping[Any, Any],
+    mood_by: Mapping[str, Any],
     user_id: str | None,
-) -> list[int]:
-    """The bigint legacy ids to emit growth rows for.
+) -> list[str]:
+    """The canonical text student ids to emit growth rows for.
 
-    The output table (goals.growth_trackings.student_id) is bigint, so candidates
-    must be numeric. We union the numeric ids visible across the text-keyed
-    sources (goals/assessments/practice) with the bigint ids from mood. When a
-    single ``user_id`` is requested and it parses as a number, we restrict to it.
+    The output table (goals.growth_trackings.student_id) is the text canonical id
+    after Phase-2, so candidates are simply the union of the text ids visible
+    across all four sources. When a single ``user_id`` is requested we restrict
+    to it.
     """
-    ids: set[int] = set()
-
-    for keymap in (goals_by, assess_by, practice_by):
-        for k in keymap:
-            n = _maybe_int(k)
-            if n is not None:
-                ids.add(n)
-    for k in mood_by:  # mood ids are already bigint
-        n = _maybe_int(k)
-        if n is not None:
-            ids.add(n)
+    ids: set[str] = set()
+    for keymap in (goals_by, assess_by, practice_by, mood_by):
+        ids.update(keymap)
 
     if user_id is not None:
-        wanted = _maybe_int(user_id)
-        if wanted is not None:
-            ids &= {wanted}
-        # A non-numeric canonical id can't key the bigint sink; nothing to emit.
-        else:
-            return []
+        ids &= {str(user_id)}
 
     return sorted(ids)
-
-
-def _maybe_int(value: Any) -> int | None:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
 
 
 def _num(value: Any) -> float | None:

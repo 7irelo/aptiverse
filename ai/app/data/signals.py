@@ -13,17 +13,17 @@ student identity is ``identity.users."Id"`` (text). A subtlety worth knowing:
 * ``academic_planning.assessments.student_id``   -> text   (== canonical user id)
 * ``goals.goals.student_id``                     -> text   (== canonical user id)
 * ``audit.audit_logs.user_id``                   -> text   (== canonical user id)
-* ``wellbeing.mood_trackings.student_id``        -> bigint (legacy numeric id)
-* ``wellbeing.diary_entries.student_id``          -> bigint (legacy numeric id)
-* ``goals.growth_trackings.student_id``          -> bigint (legacy numeric id)
-* ``calendar.calendar_events.student_id``        -> bigint (legacy numeric id)
+* ``wellbeing.mood_trackings.student_id``        -> text   (== canonical user id)
+* ``goals.growth_trackings.student_id``          -> text   (== canonical user id)
 
-So a ``user_id`` filter is bound as text for the first group and is intentionally
-NOT applied to the bigint group (Phase-2 unification will reconcile them); for the
-bigint tables a ``user_id`` filter is treated as the numeric student id when it
-parses as an int, otherwise it is ignored and all rows are returned. Callers get a
-polars DataFrame; if polars is not installed they get a list[dict] fallback so the
-package still imports with only light deps.
+Phase-2 retyped the formerly-bigint student/user columns (wellbeing.*, calendar.*,
+goals.growth_trackings, etc.) to the canonical *text* ``identity.users."Id"``, so a
+``user_id`` filter is now bound as text uniformly across every table here. Some
+heavy-service signals below (diary_entries, calendar_events) are not exercised by
+this round's light services; their query bodies are left as-is pending a dedicated
+pass, but the canonical id everywhere is the text user id. Callers get a polars
+DataFrame; if polars is not installed they get a list[dict] fallback so the package
+still imports with only light deps.
 
 Each helper accepts an optional ``user_id`` (None = all students).
 """
@@ -314,10 +314,11 @@ async def attempt_score_summaries(user_id: str | None = None) -> Any:
 async def mood_trackings(user_id: str | None = None) -> Any:
     """Mood check-ins.
 
-    wellbeing.mood_trackings: id, student_id (bigint), mood, mood_score,
-    energy_level, stress_level, sleep_quality, sleep_hours, coping_strategies,
-    triggers, notes, tracked_at. NOTE student_id is a bigint legacy id; a text
-    canonical user_id is only applied when it parses as an int.
+    wellbeing.mood_trackings: id, student_id (text == canonical identity.users.Id
+    after Phase-2), mood, mood_score, energy_level, stress_level, sleep_quality,
+    sleep_hours, coping_strategies, triggers, notes, tracked_at. Phase-2 retyped
+    student_id from the legacy bigint to the canonical text id, so the user_id
+    filter binds as text exactly like the other canonical tables.
     """
     sql = (
         "SELECT id, student_id, mood, mood_score, energy_level, stress_level, "
@@ -326,10 +327,9 @@ async def mood_trackings(user_id: str | None = None) -> Any:
         "FROM wellbeing.mood_trackings"
     )
     params: dict[str, Any] = {}
-    sid = _maybe_int(user_id)
-    if sid is not None:
-        sql += " WHERE student_id = :sid"
-        params["sid"] = sid
+    if user_id is not None:
+        sql += " WHERE student_id = :uid"
+        params["uid"] = user_id
     sql += " ORDER BY tracked_at"
     return _to_frame(await _fetch(sql, params))
 
