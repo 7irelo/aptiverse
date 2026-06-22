@@ -5,8 +5,7 @@
         public string Title { get; init; }
         public string Description { get; init; }
         public string SubjectId { get; init; }
-        public long? TeacherId { get; init; }
-        public long? TutorId { get; init; }
+        public string? UserId { get; init; }
         public long? CourseId { get; init; }
         public string ResourceType { get; init; }
         public string S3Key { get; init; }

@@ -2,7 +2,7 @@ namespace Aptiverse.Calendar.Application.CalendarSyncs.Dtos
 {
     public record CreateCalendarSyncDto
     {
-        public long StudentId { get; init; }
+        public string StudentId { get; init; }
         public string Provider { get; init; }
         public string ExternalCalendarId { get; init; }
         public string SyncToken { get; init; }

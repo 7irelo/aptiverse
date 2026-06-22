@@ -17,7 +17,7 @@ namespace Aptiverse.Marketplace.Domain.Models.Marketplace
         public long Id { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }
-        public long? UserId { get; set; }
+        public string? UserId { get; set; }
         public long? CourseId { get; set; }
         public string? SubjectId { get; set; }
         public string ResourceType { get; set; }

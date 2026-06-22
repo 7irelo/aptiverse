@@ -38,7 +38,7 @@ namespace Aptiverse.Marketplace.Application.ResourceDownloads.Services
         public async Task<PaginatedResult<ResourceDownloadDto>> GetResourceDownloadsAsync(
             ClaimsPrincipal currentUser,
             long? resourceId = null,
-            long? studentId = null,
+            string? studentId = null,
             DateTime? fromDate = null,
             DateTime? toDate = null,
             string? sortBy = "DownloadedAt",
@@ -48,11 +48,11 @@ namespace Aptiverse.Marketplace.Application.ResourceDownloads.Services
         {
             Expression<Func<ResourceDownload, bool>>? predicate = BuildRoleBasedPredicate(currentUser);
 
-            if (resourceId.HasValue || studentId.HasValue || fromDate.HasValue || toDate.HasValue)
+            if (resourceId.HasValue || !string.IsNullOrEmpty(studentId) || fromDate.HasValue || toDate.HasValue)
             {
                 Expression<Func<ResourceDownload, bool>> filterPredicate = rd =>
                     (!resourceId.HasValue || rd.ResourceId == resourceId.Value) &&
-                    (!studentId.HasValue || rd.UserId == studentId.Value) &&
+                    (string.IsNullOrEmpty(studentId) || rd.UserId == studentId) &&
                     (!fromDate.HasValue || rd.DownloadedAt >= fromDate.Value) &&
                     (!toDate.HasValue || rd.DownloadedAt <= toDate.Value);
 
@@ -130,7 +130,7 @@ namespace Aptiverse.Marketplace.Application.ResourceDownloads.Services
         public async Task<int> CountResourceDownloadsAsync(
             ClaimsPrincipal currentUser,
             long? resourceId = null,
-            long? studentId = null,
+            string? studentId = null,
             DateTime? fromDate = null,
             DateTime? toDate = null)
         {
@@ -138,7 +138,7 @@ namespace Aptiverse.Marketplace.Application.ResourceDownloads.Services
 
             Expression<Func<ResourceDownload, bool>> filterPredicate = rd =>
                 (!resourceId.HasValue || rd.ResourceId == resourceId.Value) &&
-                (!studentId.HasValue || rd.UserId == studentId.Value) &&
+                (string.IsNullOrEmpty(studentId) || rd.UserId == studentId) &&
                 (!fromDate.HasValue || rd.DownloadedAt >= fromDate.Value) &&
                 (!toDate.HasValue || rd.DownloadedAt <= toDate.Value);
 
@@ -164,7 +164,7 @@ namespace Aptiverse.Marketplace.Application.ResourceDownloads.Services
             return _mapper.Map<IEnumerable<ResourceDownloadDto>>(downloads);
         }
 
-        public async Task<IEnumerable<ResourceDownloadDto>> GetDownloadsByStudentAsync(long studentId)
+        public async Task<IEnumerable<ResourceDownloadDto>> GetDownloadsByStudentAsync(string studentId)
         {
             var downloads = await _resourceDownloadRepository.GetManyAsync(
                 predicate: rd => rd.UserId == studentId,
@@ -174,7 +174,7 @@ namespace Aptiverse.Marketplace.Application.ResourceDownloads.Services
             return _mapper.Map<IEnumerable<ResourceDownloadDto>>(downloads);
         }
 
-        public async Task<IEnumerable<ResourceDownloadDto>> GetRecentDownloadsAsync(long studentId, int count = 10)
+        public async Task<IEnumerable<ResourceDownloadDto>> GetRecentDownloadsAsync(string studentId, int count = 10)
         {
             var downloads = await _resourceDownloadRepository.GetManyAsync(
                 predicate: rd => rd.UserId == studentId,
@@ -184,7 +184,7 @@ namespace Aptiverse.Marketplace.Application.ResourceDownloads.Services
             return _mapper.Map<IEnumerable<ResourceDownloadDto>>(downloads.Take(count));
         }
 
-        public async Task<bool> HasStudentDownloadedResourceAsync(long studentId, long resourceId)
+        public async Task<bool> HasStudentDownloadedResourceAsync(string studentId, long resourceId)
         {
             return await _resourceDownloadRepository.ExistsAsync(rd =>
                 rd.UserId == studentId && rd.ResourceId == resourceId);
@@ -195,7 +195,7 @@ namespace Aptiverse.Marketplace.Application.ResourceDownloads.Services
             return await _resourceDownloadRepository.CountAsync(rd => rd.ResourceId == resourceId);
         }
 
-        public async Task<int> GetDownloadCountByStudentAsync(long studentId)
+        public async Task<int> GetDownloadCountByStudentAsync(string studentId)
         {
             return await _resourceDownloadRepository.CountAsync(rd => rd.UserId == studentId);
         }

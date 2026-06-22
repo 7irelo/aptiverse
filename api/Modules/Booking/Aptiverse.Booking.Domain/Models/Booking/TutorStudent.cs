@@ -15,13 +15,15 @@ namespace Aptiverse.Booking.Domain.Models.Booking
     {
         public long Id { get; set; }
         public long TutorId { get; set; }
-        public long StudentId { get; set; }
+
+        // Canonical identity = the string identity.users.Id.
+        // Bare user-id string; no FK/navigation to the local booking.students read-model stub.
+        public string StudentId { get; set; }
         public DateTime StartedDate { get; set; }
         public bool IsActive { get; set; } = true;
         public int SessionsPerWeek { get; set; }
 
         public virtual Tutor Tutor { get; set; }
-        public virtual Student Student { get; set; }
 
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }

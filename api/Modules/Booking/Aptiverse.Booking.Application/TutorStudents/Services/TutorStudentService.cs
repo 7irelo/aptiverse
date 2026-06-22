@@ -28,8 +28,7 @@ namespace Aptiverse.Booking.Application.TutorStudents.Services
             var tutorStudent = await _tutorStudentRepository.GetAsync(
                 predicate: ts => ts.Id == id,
                 include: query => query
-                    .Include(ts => ts.Tutor)
-                    .Include(ts => ts.Student),
+                    .Include(ts => ts.Tutor),
                 disableTracking: false);
 
             if (tutorStudent == null)
@@ -40,7 +39,7 @@ namespace Aptiverse.Booking.Application.TutorStudents.Services
 
         public async Task<PaginatedResult<TutorStudentDto>> GetTutorStudentsAsync(
             long? tutorId = null,
-            long? studentId = null,
+            string? studentId = null,
             bool? isActive = null,
             int? minSessionsPerWeek = null,
             int? maxSessionsPerWeek = null,
@@ -62,8 +61,7 @@ namespace Aptiverse.Booking.Application.TutorStudents.Services
                 predicate: predicate,
                 orderBy: orderBy,
                 include: query => query
-                    .Include(ts => ts.Tutor)
-                    .Include(ts => ts.Student));
+                    .Include(ts => ts.Tutor));
 
             var tutorStudentDtos = _mapper.Map<List<TutorStudentDto>>(paginatedResult.Data);
 
@@ -76,21 +74,21 @@ namespace Aptiverse.Booking.Application.TutorStudents.Services
 
         private Expression<Func<TutorStudent, bool>>? BuildFilterPredicate(
             long? tutorId,
-            long? studentId,
+            string? studentId,
             bool? isActive,
             int? minSessionsPerWeek,
             int? maxSessionsPerWeek,
             DateTime? startedAfter,
             DateTime? startedBefore)
         {
-            if (!tutorId.HasValue && !studentId.HasValue &&
+            if (!tutorId.HasValue && string.IsNullOrEmpty(studentId) &&
                 !isActive.HasValue && !minSessionsPerWeek.HasValue &&
                 !maxSessionsPerWeek.HasValue && !startedAfter.HasValue && !startedBefore.HasValue)
                 return null;
 
             return ts =>
                 (!tutorId.HasValue || ts.TutorId == tutorId.Value) &&
-                (!studentId.HasValue || ts.StudentId == studentId.Value) &&
+                (string.IsNullOrEmpty(studentId) || ts.StudentId == studentId) &&
                 (!isActive.HasValue || ts.IsActive == isActive.Value) &&
                 (!minSessionsPerWeek.HasValue || ts.SessionsPerWeek >= minSessionsPerWeek.Value) &&
                 (!maxSessionsPerWeek.HasValue || ts.SessionsPerWeek <= maxSessionsPerWeek.Value) &&
@@ -149,14 +147,14 @@ namespace Aptiverse.Booking.Application.TutorStudents.Services
             return true;
         }
 
-        public async Task<int> CountTutorStudentsAsync(long? tutorId = null, long? studentId = null, bool? isActive = null)
+        public async Task<int> CountTutorStudentsAsync(long? tutorId = null, string? studentId = null, bool? isActive = null)
         {
-            if (!tutorId.HasValue && !studentId.HasValue && !isActive.HasValue)
+            if (!tutorId.HasValue && string.IsNullOrEmpty(studentId) && !isActive.HasValue)
                 return await _tutorStudentRepository.CountAsync();
 
             Expression<Func<TutorStudent, bool>> predicate = ts =>
                 (!tutorId.HasValue || ts.TutorId == tutorId.Value) &&
-                (!studentId.HasValue || ts.StudentId == studentId.Value) &&
+                (string.IsNullOrEmpty(studentId) || ts.StudentId == studentId) &&
                 (!isActive.HasValue || ts.IsActive == isActive.Value);
 
             return await _tutorStudentRepository.CountAsync(predicate);

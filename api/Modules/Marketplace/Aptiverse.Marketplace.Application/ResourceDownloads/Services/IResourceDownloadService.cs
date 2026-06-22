@@ -12,7 +12,7 @@ namespace Aptiverse.Marketplace.Application.ResourceDownloads.Services
         Task<PaginatedResult<ResourceDownloadDto>> GetResourceDownloadsAsync(
             ClaimsPrincipal currentUser,
             long? resourceId = null,
-            long? studentId = null,
+            string? studentId = null,
             DateTime? fromDate = null,
             DateTime? toDate = null,
             string? sortBy = "DownloadedAt",
@@ -23,17 +23,17 @@ namespace Aptiverse.Marketplace.Application.ResourceDownloads.Services
         Task<bool> DeleteResourceDownloadAsync(long id);
         Task<int> CountResourceDownloadsAsync(ClaimsPrincipal currentUser,
             long? resourceId = null,
-            long? studentId = null,
+            string? studentId = null,
             DateTime? fromDate = null,
             DateTime? toDate = null);
         Task<bool> ResourceDownloadExistsAsync(long id);
 
         Task<IEnumerable<ResourceDownloadDto>> GetDownloadsByResourceAsync(long resourceId);
-        Task<IEnumerable<ResourceDownloadDto>> GetDownloadsByStudentAsync(long studentId);
-        Task<IEnumerable<ResourceDownloadDto>> GetRecentDownloadsAsync(long studentId, int count = 10);
-        Task<bool> HasStudentDownloadedResourceAsync(long studentId, long resourceId);
+        Task<IEnumerable<ResourceDownloadDto>> GetDownloadsByStudentAsync(string studentId);
+        Task<IEnumerable<ResourceDownloadDto>> GetRecentDownloadsAsync(string studentId, int count = 10);
+        Task<bool> HasStudentDownloadedResourceAsync(string studentId, long resourceId);
         Task<int> GetDownloadCountByResourceAsync(long resourceId);
-        Task<int> GetDownloadCountByStudentAsync(long studentId);
+        Task<int> GetDownloadCountByStudentAsync(string studentId);
         Task<Dictionary<long, int>> GetPopularResourcesAsync(int count = 10, DateTime? fromDate = null, DateTime? toDate = null);
     }
 }

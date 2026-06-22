@@ -1,6 +1,5 @@
 using Aptiverse.Api.Data;
 using Aptiverse.Calendar.Domain.Models.Calendar;
-using Aptiverse.Calendar.Domain.Models.External.Identity;
 using Aptiverse.Notifications.Application.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -103,8 +102,9 @@ namespace Aptiverse.Calendar.Application.Reminders.Scheduling
 
             // Due = not yet sent AND the event start is within MinutesBefore
             // of now (StartTime <= now + MinutesBefore). We join through the
-            // CalendarEvent navigation and pull the student's UserId so the
-            // notification is correctly user-scoped.
+            // CalendarEvent navigation and pull the StudentId, which is now the
+            // canonical identity.users.Id string, so the notification is
+            // correctly user-scoped without a stub lookup.
             var due = await db.Set<Reminder>()
                 .Where(r => !r.IsSent)
                 .Select(r => new DueReminder
@@ -122,12 +122,6 @@ namespace Aptiverse.Calendar.Application.Reminders.Scheduling
 
             if (due.Count == 0) return;
 
-            // Resolve student -> user ids in one round-trip.
-            var studentIds = due.Select(d => d.StudentId).Distinct().ToList();
-            var userIdByStudent = await db.Set<Student>()
-                .Where(s => studentIds.Contains(s.Id))
-                .ToDictionaryAsync(s => s.Id, s => s.UserId, ct);
-
             var fired = 0;
             foreach (var item in due)
             {
@@ -135,12 +129,13 @@ namespace Aptiverse.Calendar.Application.Reminders.Scheduling
 
                 try
                 {
-                    if (!userIdByStudent.TryGetValue(item.StudentId, out var userId) ||
-                        string.IsNullOrWhiteSpace(userId))
+                    // StudentId is the canonical identity.users.Id string.
+                    var userId = item.StudentId;
+                    if (string.IsNullOrWhiteSpace(userId))
                     {
                         logger.LogWarning(
-                            "Skipping reminder {ReminderId} — could not resolve a UserId for student {StudentId}.",
-                            item.ReminderId, item.StudentId);
+                            "Skipping reminder {ReminderId} — event has no UserId (StudentId is empty).",
+                            item.ReminderId);
                         continue;
                     }
 
@@ -193,7 +188,7 @@ namespace Aptiverse.Calendar.Application.Reminders.Scheduling
             public DateTime StartTime { get; init; }
             public int MinutesBefore { get; init; }
             public string? EventTitle { get; init; }
-            public long StudentId { get; init; }
+            public string StudentId { get; init; }
         }
     }
 }

@@ -26,6 +26,9 @@ namespace Aptiverse.Support.Application.Frontend.Services
             var entity = new SupportTicket
             {
                 RequesterUserId = requesterUserId,
+                // Vestigial mirror of the requester; kept consistent with the
+                // canonical string Identity user-id from the claim.
+                StudentId = requesterUserId,
                 Subject = (input.Subject ?? "").Trim(),
                 Description = input.Body ?? "",
                 Priority = ParsePriority(input.Priority),

@@ -10,7 +10,7 @@ namespace Aptiverse.Marketplace.Domain.Models.Marketplace
     {
         public long Id { get; set; }
         public long ResourceId { get; set; }
-        public long UserId { get; set; }
+        public string UserId { get; set; }
         public DateTime DownloadedAt { get; set; }
 
         public virtual Resource Resource { get; set; }

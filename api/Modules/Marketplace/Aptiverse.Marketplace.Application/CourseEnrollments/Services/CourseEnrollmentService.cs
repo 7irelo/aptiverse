@@ -40,7 +40,7 @@ namespace Aptiverse.Marketplace.Application.CourseEnrollments.Services
         public async Task<PaginatedResult<CourseEnrollmentDto>> GetEnrollmentsAsync(
             ClaimsPrincipal currentUser,
             long? courseId = null,
-            long? studentId = null,
+            string? studentId = null,
             string? paymentStatus = null,
             decimal? minProgress = null,
             decimal? maxProgress = null,
@@ -51,11 +51,12 @@ namespace Aptiverse.Marketplace.Application.CourseEnrollments.Services
         {
             Expression<Func<CourseEnrollment, bool>>? predicate = BuildRoleBasedPredicate(currentUser);
 
-            if (courseId.HasValue || studentId.HasValue || !string.IsNullOrEmpty(paymentStatus) ||
+            if (courseId.HasValue || !string.IsNullOrEmpty(studentId) || !string.IsNullOrEmpty(paymentStatus) ||
                 minProgress.HasValue || maxProgress.HasValue)
             {
                 Expression<Func<CourseEnrollment, bool>> filterPredicate = e =>
                     (!courseId.HasValue || e.CourseId == courseId.Value) &&
+                    (string.IsNullOrEmpty(studentId) || e.UserId == studentId) &&
                     (string.IsNullOrEmpty(paymentStatus) || e.PaymentStatus == paymentStatus) &&
                     (!minProgress.HasValue || e.Progress >= minProgress.Value) &&
                     (!maxProgress.HasValue || e.Progress <= maxProgress.Value);
@@ -157,14 +158,14 @@ namespace Aptiverse.Marketplace.Application.CourseEnrollments.Services
         public async Task<int> CountEnrollmentsAsync(
             ClaimsPrincipal currentUser,
             long? courseId = null,
-            long? studentId = null,
+            string? studentId = null,
             string? paymentStatus = null)
         {
             var predicate = BuildRoleBasedPredicate(currentUser);
 
             Expression<Func<CourseEnrollment, bool>> filterPredicate = e =>
                 (!courseId.HasValue || e.CourseId == courseId.Value) &&
-                (!studentId.HasValue || e.UserId == studentId.Value) &&
+                (string.IsNullOrEmpty(studentId) || e.UserId == studentId) &&
                 (string.IsNullOrEmpty(paymentStatus) || e.PaymentStatus == paymentStatus);
 
             predicate = predicate == null
@@ -179,7 +180,7 @@ namespace Aptiverse.Marketplace.Application.CourseEnrollments.Services
             return await _enrollmentRepository.ExistsAsync(e => e.Id == id);
         }
 
-        public async Task<IEnumerable<CourseEnrollmentDto>> GetEnrollmentsByStudentAsync(long studentId)
+        public async Task<IEnumerable<CourseEnrollmentDto>> GetEnrollmentsByStudentAsync(string studentId)
         {
             var enrollments = await _enrollmentRepository.GetManyAsync(
                 predicate: e => e.UserId == studentId,
@@ -199,7 +200,7 @@ namespace Aptiverse.Marketplace.Application.CourseEnrollments.Services
             return _mapper.Map<IEnumerable<CourseEnrollmentDto>>(enrollments);
         }
 
-        public async Task<decimal> GetStudentProgressAsync(long studentId, long courseId)
+        public async Task<decimal> GetStudentProgressAsync(string studentId, long courseId)
         {
             var enrollment = await _enrollmentRepository.GetAsync(
                 predicate: e => e.UserId == studentId && e.CourseId == courseId,
@@ -208,7 +209,7 @@ namespace Aptiverse.Marketplace.Application.CourseEnrollments.Services
             return enrollment?.Progress ?? 0;
         }
 
-        public async Task<bool> IsStudentEnrolledAsync(long studentId, long courseId)
+        public async Task<bool> IsStudentEnrolledAsync(string studentId, long courseId)
         {
             return await _enrollmentRepository.ExistsAsync(e =>
                 e.UserId == studentId && e.CourseId == courseId);

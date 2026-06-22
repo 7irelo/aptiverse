@@ -47,7 +47,7 @@ namespace Aptiverse.Goals.Application.GrowthTrackings.Services
 
         public async Task<PaginatedResult<GrowthTrackingDto>> GetGrowthTrackingsAsync(
             ClaimsPrincipal currentUser,
-            long? studentId = null,
+            string? studentId = null,
             DateTime? fromDate = null,
             DateTime? toDate = null,
             decimal? minGrowth = null,
@@ -59,10 +59,10 @@ namespace Aptiverse.Goals.Application.GrowthTrackings.Services
         {
             Expression<Func<GrowthTracking, bool>>? predicate = BuildRoleBasedPredicate(currentUser);
 
-            if (studentId.HasValue || fromDate.HasValue || toDate.HasValue || minGrowth.HasValue || maxGrowth.HasValue)
+            if (!string.IsNullOrEmpty(studentId) || fromDate.HasValue || toDate.HasValue || minGrowth.HasValue || maxGrowth.HasValue)
             {
                 Expression<Func<GrowthTracking, bool>> filterPredicate = gt =>
-                    (!studentId.HasValue || gt.StudentId == studentId.Value) &&
+                    (string.IsNullOrEmpty(studentId) || gt.StudentId == studentId) &&
                     (!fromDate.HasValue || gt.TrackingDate >= fromDate.Value.Date) &&
                     (!toDate.HasValue || gt.TrackingDate <= toDate.Value.Date) &&
                     (!minGrowth.HasValue || gt.OverallGrowth >= minGrowth.Value) &&
@@ -168,14 +168,14 @@ namespace Aptiverse.Goals.Application.GrowthTrackings.Services
 
         public async Task<int> CountGrowthTrackingsAsync(
             ClaimsPrincipal currentUser,
-            long? studentId = null,
+            string? studentId = null,
             DateTime? fromDate = null,
             DateTime? toDate = null)
         {
             var predicate = BuildRoleBasedPredicate(currentUser);
 
             Expression<Func<GrowthTracking, bool>> filterPredicate = gt =>
-                (!studentId.HasValue || gt.StudentId == studentId.Value) &&
+                (string.IsNullOrEmpty(studentId) || gt.StudentId == studentId) &&
                 (!fromDate.HasValue || gt.TrackingDate >= fromDate.Value.Date) &&
                 (!toDate.HasValue || gt.TrackingDate <= toDate.Value.Date);
 
@@ -191,7 +191,7 @@ namespace Aptiverse.Goals.Application.GrowthTrackings.Services
             return await _growthTrackingRepository.ExistsAsync(gt => gt.Id == id);
         }
 
-        public async Task<IEnumerable<GrowthTrackingDto>> GetGrowthTrackingsByStudentAsync(long studentId)
+        public async Task<IEnumerable<GrowthTrackingDto>> GetGrowthTrackingsByStudentAsync(string studentId)
         {
             var growthTrackings = await _growthTrackingRepository.GetManyAsync(
                 predicate: gt => gt.StudentId == studentId,
@@ -201,7 +201,7 @@ namespace Aptiverse.Goals.Application.GrowthTrackings.Services
             return _mapper.Map<IEnumerable<GrowthTrackingDto>>(growthTrackings);
         }
 
-        public async Task<IEnumerable<GrowthTrackingDto>> GetGrowthTrackingsByDateRangeAsync(long studentId, DateTime startDate, DateTime endDate)
+        public async Task<IEnumerable<GrowthTrackingDto>> GetGrowthTrackingsByDateRangeAsync(string studentId, DateTime startDate, DateTime endDate)
         {
             var growthTrackings = await _growthTrackingRepository.GetManyAsync(
                 predicate: gt => gt.StudentId == studentId &&
@@ -213,7 +213,7 @@ namespace Aptiverse.Goals.Application.GrowthTrackings.Services
             return _mapper.Map<IEnumerable<GrowthTrackingDto>>(growthTrackings);
         }
 
-        public async Task<GrowthTrackingDto?> GetLatestGrowthTrackingAsync(long studentId)
+        public async Task<GrowthTrackingDto?> GetLatestGrowthTrackingAsync(string studentId)
         {
             var growthTrackings = await _growthTrackingRepository.GetManyAsync(
                 predicate: gt => gt.StudentId == studentId,
@@ -223,7 +223,7 @@ namespace Aptiverse.Goals.Application.GrowthTrackings.Services
             return _mapper.Map<GrowthTrackingDto>(growthTrackings.FirstOrDefault());
         }
 
-        public async Task<GrowthTrackingDto?> GetGrowthTrackingByDateAsync(long studentId, DateTime date)
+        public async Task<GrowthTrackingDto?> GetGrowthTrackingByDateAsync(string studentId, DateTime date)
         {
             var growthTracking = await _growthTrackingRepository.GetAsync(
                 predicate: gt => gt.StudentId == studentId && gt.TrackingDate.Date == date.Date,
@@ -232,7 +232,7 @@ namespace Aptiverse.Goals.Application.GrowthTrackings.Services
             return _mapper.Map<GrowthTrackingDto>(growthTracking);
         }
 
-        public async Task<Dictionary<string, decimal>> GetGrowthTrendsAsync(long studentId, DateTime? fromDate = null, DateTime? toDate = null)
+        public async Task<Dictionary<string, decimal>> GetGrowthTrendsAsync(string studentId, DateTime? fromDate = null, DateTime? toDate = null)
         {
             Expression<Func<GrowthTracking, bool>> predicate = gt => gt.StudentId == studentId;
 
@@ -261,7 +261,7 @@ namespace Aptiverse.Goals.Application.GrowthTrackings.Services
             };
         }
 
-        public async Task<decimal> GetAverageOverallGrowthAsync(long studentId, DateTime? fromDate = null, DateTime? toDate = null)
+        public async Task<decimal> GetAverageOverallGrowthAsync(string studentId, DateTime? fromDate = null, DateTime? toDate = null)
         {
             Expression<Func<GrowthTracking, bool>> predicate = gt => gt.StudentId == studentId;
 
@@ -282,7 +282,7 @@ namespace Aptiverse.Goals.Application.GrowthTrackings.Services
             return growthTrackings.Average(gt => gt.OverallGrowth);
         }
 
-        public async Task<IEnumerable<GrowthTrackingDto>> GetRecentGrowthTrackingsAsync(long studentId, int count = 10)
+        public async Task<IEnumerable<GrowthTrackingDto>> GetRecentGrowthTrackingsAsync(string studentId, int count = 10)
         {
             var growthTrackings = await _growthTrackingRepository.GetManyAsync(
                 predicate: gt => gt.StudentId == studentId,

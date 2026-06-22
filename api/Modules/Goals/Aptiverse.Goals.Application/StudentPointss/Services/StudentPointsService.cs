@@ -30,7 +30,6 @@ namespace Aptiverse.Goals.Application.StudentPointss.Services
             var studentPoints = await _studentPointsRepository.GetAsync(
                 predicate: sp => sp.Id == id,
                 include: query => query
-                    .Include(sp => sp.Student)
                     .Include(sp => sp.Transactions),
                 disableTracking: false);
 
@@ -40,12 +39,11 @@ namespace Aptiverse.Goals.Application.StudentPointss.Services
             return _mapper.Map<StudentPointsDto>(studentPoints);
         }
 
-        public async Task<StudentPointsDto?> GetStudentPointsByStudentIdAsync(long studentId)
+        public async Task<StudentPointsDto?> GetStudentPointsByStudentIdAsync(string studentId)
         {
             var studentPoints = await _studentPointsRepository.GetAsync(
                 predicate: sp => sp.StudentId == studentId,
                 include: query => query
-                    .Include(sp => sp.Student)
                     .Include(sp => sp.Transactions),
                 disableTracking: false);
 
@@ -56,7 +54,7 @@ namespace Aptiverse.Goals.Application.StudentPointss.Services
         }
 
         public async Task<PaginatedResult<StudentPointsDto>> GetStudentPointsAsync(
-            long? studentId = null,
+            string? studentId = null,
             int? minLevel = null,
             int? maxLevel = null,
             string? rank = null,
@@ -74,7 +72,6 @@ namespace Aptiverse.Goals.Application.StudentPointss.Services
                 predicate: predicate,
                 orderBy: orderBy,
                 include: query => query
-                    .Include(sp => sp.Student)
                     .Include(sp => sp.Transactions));
 
             var studentPointsDtos = _mapper.Map<List<StudentPointsDto>>(paginatedResult.Data);
@@ -87,16 +84,16 @@ namespace Aptiverse.Goals.Application.StudentPointss.Services
         }
 
         private Expression<Func<StudentPoints, bool>>? BuildFilterPredicate(
-            long? studentId,
+            string? studentId,
             int? minLevel,
             int? maxLevel,
             string? rank)
         {
-            if (!studentId.HasValue && !minLevel.HasValue && !maxLevel.HasValue && string.IsNullOrEmpty(rank))
+            if (string.IsNullOrEmpty(studentId) && !minLevel.HasValue && !maxLevel.HasValue && string.IsNullOrEmpty(rank))
                 return null;
 
             return sp =>
-                (!studentId.HasValue || sp.StudentId == studentId.Value) &&
+                (string.IsNullOrEmpty(studentId) || sp.StudentId == studentId) &&
                 (!minLevel.HasValue || sp.Level >= minLevel.Value) &&
                 (!maxLevel.HasValue || sp.Level <= maxLevel.Value) &&
                 (string.IsNullOrEmpty(rank) || sp.CurrentRank == rank);
@@ -155,13 +152,13 @@ namespace Aptiverse.Goals.Application.StudentPointss.Services
             return true;
         }
 
-        public async Task<int> CountStudentPointsAsync(long? studentId = null, int? minLevel = null, string? rank = null)
+        public async Task<int> CountStudentPointsAsync(string? studentId = null, int? minLevel = null, string? rank = null)
         {
-            if (!studentId.HasValue && !minLevel.HasValue && string.IsNullOrEmpty(rank))
+            if (string.IsNullOrEmpty(studentId) && !minLevel.HasValue && string.IsNullOrEmpty(rank))
                 return await _studentPointsRepository.CountAsync();
 
             Expression<Func<StudentPoints, bool>> predicate = sp =>
-                (!studentId.HasValue || sp.StudentId == studentId.Value) &&
+                (string.IsNullOrEmpty(studentId) || sp.StudentId == studentId) &&
                 (!minLevel.HasValue || sp.Level >= minLevel.Value) &&
                 (string.IsNullOrEmpty(rank) || sp.CurrentRank == rank);
 
@@ -173,7 +170,7 @@ namespace Aptiverse.Goals.Application.StudentPointss.Services
             return await _studentPointsRepository.ExistsAsync(sp => sp.Id == id);
         }
 
-        public async Task<bool> StudentPointsExistsForStudentAsync(long studentId)
+        public async Task<bool> StudentPointsExistsForStudentAsync(string studentId)
         {
             return await _studentPointsRepository.ExistsAsync(sp => sp.StudentId == studentId);
         }

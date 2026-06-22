@@ -3,8 +3,8 @@ using Aptiverse.Wellbeing.Application.Frontend.Dtos;
 namespace Aptiverse.Wellbeing.Application.Frontend.Services
 {
     // UI-facing read/write surface for the Wellbeing dashboard. All methods
-    // take the string UserId (the caller's identity claim) and internally
-    // resolve it to the long Student.Id used by the persisted entities.
+    // take the string UserId (the caller's identity claim), which is stored
+    // directly as StudentId on the persisted entities.
     public interface IFrontendWellbeingService
     {
         Task<IList<FrontendDiaryEntryDto>> GetDiaryEntriesAsync(string userId, CancellationToken cancellationToken = default);

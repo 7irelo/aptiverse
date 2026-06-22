@@ -12,7 +12,7 @@ namespace Aptiverse.Goals.Application.PointsTransactions.Services
         Task<PaginatedResult<PointsTransactionDto>> GetPointsTransactionsAsync(
             ClaimsPrincipal currentUser,
             long? studentPointsId = null,
-            long? studentId = null,
+            string? studentId = null,
             string? transactionType = null,
             string? source = null,
             long? relatedGoalId = null,
@@ -28,19 +28,19 @@ namespace Aptiverse.Goals.Application.PointsTransactions.Services
         Task<bool> DeletePointsTransactionAsync(long id);
         Task<int> CountPointsTransactionsAsync(ClaimsPrincipal currentUser,
             long? studentPointsId = null,
-            long? studentId = null,
+            string? studentId = null,
             string? transactionType = null,
             DateTime? fromDate = null,
             DateTime? toDate = null);
         Task<bool> PointsTransactionExistsAsync(long id);
 
         Task<IEnumerable<PointsTransactionDto>> GetTransactionsByStudentPointsAsync(long studentPointsId);
-        Task<IEnumerable<PointsTransactionDto>> GetTransactionsByStudentAsync(long studentId);
-        Task<IEnumerable<PointsTransactionDto>> GetRecentTransactionsByStudentAsync(long studentId, int count = 10);
-        Task<IEnumerable<PointsTransactionDto>> GetEarnedTransactionsByStudentAsync(long studentId, DateTime? fromDate = null, DateTime? toDate = null);
-        Task<IEnumerable<PointsTransactionDto>> GetSpentTransactionsByStudentAsync(long studentId, DateTime? fromDate = null, DateTime? toDate = null);
-        Task<Dictionary<string, int>> GetTransactionSummaryAsync(long studentId, DateTime? fromDate = null, DateTime? toDate = null);
-        Task<int> GetTotalEarnedPointsAsync(long studentId, DateTime? fromDate = null, DateTime? toDate = null);
-        Task<int> GetTotalSpentPointsAsync(long studentId, DateTime? fromDate = null, DateTime? toDate = null);
+        Task<IEnumerable<PointsTransactionDto>> GetTransactionsByStudentAsync(string studentId);
+        Task<IEnumerable<PointsTransactionDto>> GetRecentTransactionsByStudentAsync(string studentId, int count = 10);
+        Task<IEnumerable<PointsTransactionDto>> GetEarnedTransactionsByStudentAsync(string studentId, DateTime? fromDate = null, DateTime? toDate = null);
+        Task<IEnumerable<PointsTransactionDto>> GetSpentTransactionsByStudentAsync(string studentId, DateTime? fromDate = null, DateTime? toDate = null);
+        Task<Dictionary<string, int>> GetTransactionSummaryAsync(string studentId, DateTime? fromDate = null, DateTime? toDate = null);
+        Task<int> GetTotalEarnedPointsAsync(string studentId, DateTime? fromDate = null, DateTime? toDate = null);
+        Task<int> GetTotalSpentPointsAsync(string studentId, DateTime? fromDate = null, DateTime? toDate = null);
     }
 }

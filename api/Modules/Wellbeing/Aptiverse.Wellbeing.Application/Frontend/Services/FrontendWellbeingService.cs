@@ -1,27 +1,23 @@
 using Aptiverse.Wellbeing.Application.Frontend.Dtos;
-using Aptiverse.Wellbeing.Domain.Models.External.Identity;
 using Aptiverse.Wellbeing.Domain.Models.Wellbeing;
 using Aptiverse.Wellbeing.Domain.Repositories;
 
 namespace Aptiverse.Wellbeing.Application.Frontend.Services
 {
     // Persistence-backed implementation of the Wellbeing UI surface. Reads and
-    // writes DiaryEntry / MoodTracking rows scoped to the resolved Student.Id.
-    // AI sentiment fields (SentimentAnalysis/SentimentScore/KeyThemes/
-    // AiInsights) are intentionally left null/default here — the Python
-    // diary_nlp service backfills them out of band.
+    // writes DiaryEntry / MoodTracking rows scoped directly to the caller's
+    // string identity (StudentId == the userId claim). AI sentiment fields
+    // (SentimentAnalysis/SentimentScore/KeyThemes/AiInsights) are intentionally
+    // left null/default here — the Python diary_nlp service backfills them out
+    // of band.
     public class FrontendWellbeingService(
         IRepository<DiaryEntry> diaryRepository,
-        IRepository<MoodTracking> moodRepository,
-        IRepository<Student> studentRepository) : IFrontendWellbeingService
+        IRepository<MoodTracking> moodRepository) : IFrontendWellbeingService
     {
         public async Task<IList<FrontendDiaryEntryDto>> GetDiaryEntriesAsync(string userId, CancellationToken cancellationToken = default)
         {
-            var studentId = await ResolveStudentIdAsync(userId, create: false, cancellationToken);
-            if (studentId is null) return [];
-
             var entries = await diaryRepository.GetManyAsync(
-                predicate: e => e.StudentId == studentId.Value,
+                predicate: e => e.StudentId == userId,
                 orderBy: q => q.OrderByDescending(e => e.EntryDate),
                 cancellationToken: cancellationToken);
 
@@ -30,12 +26,10 @@ namespace Aptiverse.Wellbeing.Application.Frontend.Services
 
         public async Task<FrontendDiaryEntryDto> CreateDiaryEntryAsync(string userId, FrontendCreateDiaryEntryInput input, CancellationToken cancellationToken = default)
         {
-            var studentId = await ResolveStudentIdAsync(userId, create: true, cancellationToken);
-
             var now = DateTime.UtcNow;
             var entity = new DiaryEntry
             {
-                StudentId = studentId!.Value,
+                StudentId = userId,
                 Title = string.Empty,
                 Content = input.Content ?? string.Empty,
                 // Free-text mood label is owned by the AI service; the UI only
@@ -56,14 +50,11 @@ namespace Aptiverse.Wellbeing.Application.Frontend.Services
 
         public async Task<IList<FrontendMoodPointDto>> GetMoodTrendAsync(string userId, int days, CancellationToken cancellationToken = default)
         {
-            var studentId = await ResolveStudentIdAsync(userId, create: false, cancellationToken);
-            if (studentId is null) return [];
-
             var window = Math.Clamp(days, 1, 365);
             var since = DateTime.UtcNow.Date.AddDays(-(window - 1));
 
             var rows = await moodRepository.GetManyAsync(
-                predicate: m => m.StudentId == studentId.Value && m.TrackedAt >= since,
+                predicate: m => m.StudentId == userId && m.TrackedAt >= since,
                 cancellationToken: cancellationToken);
 
             // Average the mood score per calendar day so the trend line has at
@@ -80,12 +71,10 @@ namespace Aptiverse.Wellbeing.Application.Frontend.Services
 
         public async Task<FrontendMoodPointDto> CreateMoodAsync(string userId, FrontendCreateMoodInput input, CancellationToken cancellationToken = default)
         {
-            var studentId = await ResolveStudentIdAsync(userId, create: true, cancellationToken);
-
             var now = DateTime.UtcNow;
             var entity = new MoodTracking
             {
-                StudentId = studentId!.Value,
+                StudentId = userId,
                 Mood = string.Empty,
                 MoodScore = Math.Clamp(input.Mood, 1, 5),
                 EnergyLevel = input.EnergyLevel ?? string.Empty,
@@ -109,23 +98,11 @@ namespace Aptiverse.Wellbeing.Application.Frontend.Services
 
         public async Task<FrontendWellbeingSummaryDto> GetSummaryAsync(string userId, CancellationToken cancellationToken = default)
         {
-            var studentId = await ResolveStudentIdAsync(userId, create: false, cancellationToken);
-            if (studentId is null)
-            {
-                return new FrontendWellbeingSummaryDto
-                {
-                    MoodAvg7d = 0,
-                    CheckinStreakDays = 0,
-                    StressSignal = "none",
-                    SleepHours = 0,
-                };
-            }
-
             var today = DateTime.UtcNow.Date;
             var sevenDaysAgo = today.AddDays(-6);
 
             var recent = (await moodRepository.GetManyAsync(
-                predicate: m => m.StudentId == studentId.Value && m.TrackedAt >= sevenDaysAgo,
+                predicate: m => m.StudentId == userId && m.TrackedAt >= sevenDaysAgo,
                 cancellationToken: cancellationToken)).ToList();
 
             var moodAvg7d = recent.Count > 0
@@ -138,12 +115,12 @@ namespace Aptiverse.Wellbeing.Application.Frontend.Services
             // Stress signal comes from the most recent check-in's free-text
             // stress level, normalised to the UI's none/low/medium/high band.
             var latest = (await moodRepository.GetManyAsync(
-                predicate: m => m.StudentId == studentId.Value,
+                predicate: m => m.StudentId == userId,
                 orderBy: q => q.OrderByDescending(m => m.TrackedAt),
                 cancellationToken: cancellationToken)).FirstOrDefault();
             var stressSignal = NormaliseStress(latest?.StressLevel);
 
-            var streak = await ComputeCheckinStreakAsync(studentId.Value, today, cancellationToken);
+            var streak = await ComputeCheckinStreakAsync(userId, today, cancellationToken);
 
             return new FrontendWellbeingSummaryDto
             {
@@ -156,11 +133,11 @@ namespace Aptiverse.Wellbeing.Application.Frontend.Services
 
         // Consecutive days (ending today or yesterday) on which the student
         // logged at least one mood check-in. Looks back at most a year.
-        private async Task<int> ComputeCheckinStreakAsync(long studentId, DateTime today, CancellationToken cancellationToken)
+        private async Task<int> ComputeCheckinStreakAsync(string userId, DateTime today, CancellationToken cancellationToken)
         {
             var lookback = today.AddDays(-365);
             var rows = await moodRepository.GetManyAsync(
-                predicate: m => m.StudentId == studentId && m.TrackedAt >= lookback,
+                predicate: m => m.StudentId == userId && m.TrackedAt >= lookback,
                 cancellationToken: cancellationToken);
 
             var days = rows.Select(m => m.TrackedAt.Date).ToHashSet();
@@ -181,19 +158,6 @@ namespace Aptiverse.Wellbeing.Application.Frontend.Services
                 cursor = cursor.Value.AddDays(-1);
             }
             return streak;
-        }
-
-        // Resolve the string identity UserId to the long Student.Id. When
-        // create is true (write paths) the external Student projection row is
-        // materialised on first use; read paths return null when absent.
-        private async Task<long?> ResolveStudentIdAsync(string userId, bool create, CancellationToken cancellationToken)
-        {
-            var student = await studentRepository.GetAsync(s => s.UserId == userId, cancellationToken: cancellationToken);
-            if (student is not null) return student.Id;
-            if (!create) return null;
-
-            var created = await studentRepository.AddAsync(new Student { UserId = userId }, cancellationToken);
-            return created.Id;
         }
 
         private static FrontendDiaryEntryDto ToDiaryDto(DiaryEntry e) => new()

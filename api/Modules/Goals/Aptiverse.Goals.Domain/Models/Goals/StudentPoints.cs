@@ -1,5 +1,4 @@
 ﻿using Aptiverse.Api.Data.Abstractions;
-using Aptiverse.Goals.Domain.Models.External.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Aptiverse.Goals.Domain.Models.Goals
@@ -9,7 +8,10 @@ namespace Aptiverse.Goals.Domain.Models.Goals
     public class StudentPoints : IEntityTimestamps
     {
         public long Id { get; set; }
-        public long StudentId { get; set; }
+
+        // Owner of these points — identity.users.id. Bare string user-id with
+        // no enforced FK (matches Goals.Goal's StudentId convention).
+        public string StudentId { get; set; } = "";
         public int TotalPoints { get; set; }
         public int AvailablePoints { get; set; }
         public int UsedPoints { get; set; }
@@ -20,7 +22,6 @@ namespace Aptiverse.Goals.Domain.Models.Goals
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-        public virtual Student Student { get; set; }
         public virtual ICollection<PointsTransaction> Transactions { get; set; }
     }
 }

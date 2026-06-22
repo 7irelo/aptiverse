@@ -3,6 +3,6 @@
     public record CreateResourceDownloadDto
     {
         public long ResourceId { get; init; }
-        public long StudentId { get; init; }
+        public string UserId { get; init; }
     }
 }

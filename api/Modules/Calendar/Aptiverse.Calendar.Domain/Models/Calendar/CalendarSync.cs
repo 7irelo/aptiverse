@@ -10,7 +10,7 @@ namespace Aptiverse.Calendar.Domain.Models.Calendar
     public class CalendarSync : IEntityTimestamps
     {
         public long Id { get; set; }
-        public long StudentId { get; set; }
+        public string StudentId { get; set; }
         public string Provider { get; set; }
         public string ExternalCalendarId { get; set; }
         public string SyncToken { get; set; }

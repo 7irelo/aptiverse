@@ -2,7 +2,7 @@
 {
     public record CreateStudentPointsDto
     {
-        public long StudentId { get; init; }
+        public string StudentId { get; init; } = "";
         public int TotalPoints { get; init; }
         public int AvailablePoints { get; init; }
         public int UsedPoints { get; init; }
