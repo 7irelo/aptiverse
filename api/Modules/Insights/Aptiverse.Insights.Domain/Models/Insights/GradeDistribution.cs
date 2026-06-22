@@ -8,6 +8,9 @@ namespace Aptiverse.Insights.Domain.Models.Insights
     // Count of items that fell into it. Derived/recomputed insight data,
     // so it audits with CreatedAt/UpdatedAt.
     [Index(nameof(StudentSubjectId))]
+    // Natural key for the AI grade-distribution upsert (ai/app/data/sinks.py):
+    // one row per (student-subject, grade band). UNIQUE so ON CONFLICT binds.
+    [Index(nameof(StudentSubjectId), nameof(Grade), IsUnique = true)]
     public class GradeDistribution : IEntityTimestamps
     {
         public long Id { get; set; }

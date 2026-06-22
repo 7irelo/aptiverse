@@ -12,6 +12,9 @@ namespace Aptiverse.Mastery.Domain.Models.Mastery
     [Index(nameof(Severity))]
     // Matches the common service query shape: filter by subject + severity.
     [Index(nameof(StudentSubjectId), nameof(Severity))]
+    // Natural key for the AI gap upsert (ai/app/data/sinks.py): one row per
+    // (student-subject, topic). UNIQUE so the Python ON CONFLICT path binds.
+    [Index(nameof(StudentSubjectId), nameof(TopicId), IsUnique = true)]
     public class KnowledgeGap : IEntityTimestamps
     {
         public long Id { get; set; }

@@ -8,7 +8,9 @@ namespace Aptiverse.Mastery.Domain.Models.Mastery
     // Implements IEntityTimestamps for automatic audit stamping (additive).
     [Index(nameof(StudentSubjectId))]
     [Index(nameof(TopicId))]
-    [Index(nameof(StudentSubjectId), nameof(TopicId))]
+    // Natural key for the AI subject-analytics upsert (ai/app/data/sinks.py):
+    // one row per (student-subject, topic). UNIQUE so ON CONFLICT binds.
+    [Index(nameof(StudentSubjectId), nameof(TopicId), IsUnique = true)]
     public class StudentSubjectAnalytics : IEntityTimestamps
     {
         public long Id { get; set; }
