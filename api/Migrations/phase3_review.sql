@@ -6323,5 +6323,457 @@ BEGIN
     VALUES ('20260622175212_EnterpriseDataLayerPhase1', '9.0.1');
     END IF;
 END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE support.support_tickets ADD requester_user_id text NOT NULL DEFAULT '';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_tests ADD ai_generated boolean NOT NULL DEFAULT FALSE;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_tests ADD aligned_sba text;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_tests ADD difficulty text NOT NULL DEFAULT '';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_tests ADD duration_minutes integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_tests ADD questions jsonb NOT NULL DEFAULT '{}';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_tests ADD subject_id text NOT NULL DEFAULT '';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_tests ADD title text NOT NULL DEFAULT '';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_tests ADD topics jsonb NOT NULL DEFAULT '{}';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_attempts ADD score integer;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_attempts ADD started_at timestamp with time zone NOT NULL DEFAULT TIMESTAMPTZ '-infinity';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_attempts ADD status text NOT NULL DEFAULT '';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_attempts ADD student_id text NOT NULL DEFAULT '';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_attempts ADD submitted_at timestamp with time zone;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_attempts ADD test_id bigint NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_attempt_items ADD answer_submission_id bigint;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_attempt_items ADD attempt_id bigint NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_attempt_items ADD correct_answer_idx integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_attempt_items ADD given_answer_idx integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_attempt_items ADD is_correct boolean NOT NULL DEFAULT FALSE;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_attempt_items ADD question_id text NOT NULL DEFAULT '';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_attempt_items ADD time_ms integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_attempt_items ADD topic text NOT NULL DEFAULT '';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE wellbeing.mood_trackings ADD sleep_hours double precision;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.attempt_score_summaries ADD attempt_id bigint NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.attempt_score_summaries ADD correct_count integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.attempt_score_summaries ADD incorrect_count integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.attempt_score_summaries ADD per_topic jsonb NOT NULL DEFAULT '{}';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.attempt_score_summaries ADD score_percent integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.attempt_score_summaries ADD total_questions integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.attempt_score_summaries ADD total_time_ms integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.attempt_score_summaries ADD unanswered_count integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.answer_submissions ADD attempt_id bigint NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.answer_submissions ADD question_id text NOT NULL DEFAULT '';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.answer_submissions ADD selected_idx integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.answer_submissions ADD time_ms integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    CREATE TABLE sales.contact_enquiries (
+        id bigint GENERATED BY DEFAULT AS IDENTITY,
+        first_name text NOT NULL,
+        last_name text NOT NULL,
+        email text NOT NULL,
+        organisation text,
+        reason text NOT NULL,
+        message text NOT NULL,
+        submitted_at timestamp with time zone NOT NULL,
+        contacted boolean NOT NULL,
+        contacted_at timestamp with time zone,
+        CONSTRAINT pk_contact_enquiries PRIMARY KEY (id)
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    CREATE INDEX ix_support_tickets_requester_user_id ON support.support_tickets (requester_user_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    CREATE INDEX ix_practice_tests_subject_id ON practice.practice_tests (subject_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    CREATE INDEX ix_practice_tests_subject_id_difficulty ON practice.practice_tests (subject_id, difficulty);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    CREATE INDEX ix_practice_attempts_student_id ON practice.practice_attempts (student_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    CREATE INDEX ix_practice_attempts_student_id_status ON practice.practice_attempts (student_id, status);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    CREATE INDEX ix_practice_attempts_student_id_test_id ON practice.practice_attempts (student_id, test_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    CREATE INDEX ix_practice_attempts_test_id ON practice.practice_attempts (test_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    CREATE INDEX ix_practice_attempt_items_answer_submission_id ON practice.practice_attempt_items (answer_submission_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    CREATE INDEX ix_practice_attempt_items_attempt_id ON practice.practice_attempt_items (attempt_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    CREATE UNIQUE INDEX ix_practice_attempt_items_attempt_id_question_id ON practice.practice_attempt_items (attempt_id, question_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    CREATE INDEX ix_practice_attempt_items_topic ON practice.practice_attempt_items (topic);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    CREATE UNIQUE INDEX ix_attempt_score_summaries_attempt_id ON practice.attempt_score_summaries (attempt_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    CREATE INDEX ix_answer_submissions_attempt_id ON practice.answer_submissions (attempt_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    CREATE UNIQUE INDEX ix_answer_submissions_attempt_id_question_id ON practice.answer_submissions (attempt_id, question_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.answer_submissions ADD CONSTRAINT fk_answer_submissions_practice_attempt_attempt_id FOREIGN KEY (attempt_id) REFERENCES practice.practice_attempts (id) ON DELETE CASCADE;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.attempt_score_summaries ADD CONSTRAINT fk_attempt_score_summaries_practice_attempt_attempt_id FOREIGN KEY (attempt_id) REFERENCES practice.practice_attempts (id) ON DELETE CASCADE;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_attempt_items ADD CONSTRAINT fk_practice_attempt_items_answer_submissions_answer_submission FOREIGN KEY (answer_submission_id) REFERENCES practice.answer_submissions (id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_attempt_items ADD CONSTRAINT fk_practice_attempt_items_practice_attempts_attempt_id FOREIGN KEY (attempt_id) REFERENCES practice.practice_attempts (id) ON DELETE CASCADE;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    ALTER TABLE practice.practice_attempts ADD CONSTRAINT fk_practice_attempts_practice_test_test_id FOREIGN KEY (test_id) REFERENCES practice.practice_tests (id) ON DELETE CASCADE;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622181202_Phase3Features') THEN
+    INSERT INTO "__EFMigrationsHistory" (migration_id, product_version)
+    VALUES ('20260622181202_Phase3Features', '9.0.1');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622182230_AddOutboxMessages') THEN
+        IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'events') THEN
+            CREATE SCHEMA events;
+        END IF;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622182230_AddOutboxMessages') THEN
+    CREATE TABLE events.outbox_messages (
+        id bigint GENERATED BY DEFAULT AS IDENTITY,
+        type text NOT NULL,
+        payload text NOT NULL,
+        occurred_at timestamp with time zone NOT NULL,
+        processed_at timestamp with time zone,
+        created_at timestamp with time zone NOT NULL,
+        updated_at timestamp with time zone NOT NULL,
+        CONSTRAINT pk_outbox_messages PRIMARY KEY (id)
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622182230_AddOutboxMessages') THEN
+    CREATE INDEX ix_outbox_messages_processed_at_occurred_at ON events.outbox_messages (processed_at, occurred_at);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260622182230_AddOutboxMessages') THEN
+    INSERT INTO "__EFMigrationsHistory" (migration_id, product_version)
+    VALUES ('20260622182230_AddOutboxMessages', '9.0.1');
+    END IF;
+END $EF$;
 COMMIT;
 
