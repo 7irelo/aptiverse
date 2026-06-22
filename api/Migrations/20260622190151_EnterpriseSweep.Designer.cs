@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Aptiverse.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260622182230_AddOutboxMessages")]
-    partial class AddOutboxMessages
+    [Migration("20260622190151_EnterpriseSweep")]
+    partial class EnterpriseSweep
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
