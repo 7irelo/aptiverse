@@ -2200,6 +2200,7 @@ namespace Aptiverse.Api.Migrations
                         .HasDatabaseName("ix_growth_trackings_student_id");
 
                     b.HasIndex("StudentId", "TrackingDate")
+                        .IsUnique()
                         .HasDatabaseName("ix_growth_trackings_student_id_tracking_date");
 
                     b.ToTable("growth_trackings", "goals");
@@ -2579,6 +2580,10 @@ namespace Aptiverse.Api.Migrations
                     b.HasIndex("StudentSubjectId")
                         .HasDatabaseName("ix_grade_distributions_student_subject_id");
 
+                    b.HasIndex("StudentSubjectId", "Grade")
+                        .IsUnique()
+                        .HasDatabaseName("ix_grade_distributions_student_subject_id_grade");
+
                     b.ToTable("grade_distributions", "insights");
                 });
 
@@ -2633,6 +2638,10 @@ namespace Aptiverse.Api.Migrations
 
                     b.HasIndex("StudentSubjectId", "Priority")
                         .HasDatabaseName("ix_improvement_tips_student_subject_id_priority");
+
+                    b.HasIndex("StudentSubjectId", "StudentSubjectTopicId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_improvement_tips_student_subject_id_student_subject_topic_id");
 
                     b.ToTable("improvement_tips", "insights");
                 });
@@ -3462,6 +3471,10 @@ namespace Aptiverse.Api.Migrations
                     b.HasIndex("StudentSubjectId", "Severity")
                         .HasDatabaseName("ix_knowledge_gaps_student_subject_id_severity");
 
+                    b.HasIndex("StudentSubjectId", "TopicId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_knowledge_gaps_student_subject_id_topic_id");
+
                     b.ToTable("knowledge_gaps", "mastery");
                 });
 
@@ -3608,6 +3621,7 @@ namespace Aptiverse.Api.Migrations
                         .HasDatabaseName("ix_student_subject_analytics_topic_id");
 
                     b.HasIndex("StudentSubjectId", "TopicId")
+                        .IsUnique()
                         .HasDatabaseName("ix_student_subject_analytics_student_subject_id_topic_id");
 
                     b.ToTable("student_subject_analytics", "mastery");
@@ -3666,6 +3680,7 @@ namespace Aptiverse.Api.Migrations
                         .HasDatabaseName("ix_topic_masteries_topic_id1");
 
                     b.HasIndex("StudentSubjectId", "TopicId")
+                        .IsUnique()
                         .HasDatabaseName("ix_topic_masteries_student_subject_id_topic_id");
 
                     b.ToTable("topic_masteries", "mastery");

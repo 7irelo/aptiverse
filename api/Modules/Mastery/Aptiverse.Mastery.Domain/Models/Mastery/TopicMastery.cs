@@ -10,7 +10,9 @@ namespace Aptiverse.Mastery.Domain.Models.Mastery
     // unchanged per the PK/type-change exclusion.
     [Index(nameof(StudentSubjectId))]
     [Index(nameof(TopicId))]
-    [Index(nameof(StudentSubjectId), nameof(TopicId))]
+    // Natural key for the AI mastery upsert (ai/app/data/sinks.py): one row per
+    // (student-subject, topic). UNIQUE so the Python ON CONFLICT path binds.
+    [Index(nameof(StudentSubjectId), nameof(TopicId), IsUnique = true)]
     public class TopicMastery : IEntityTimestamps
     {
         public long Id { get; set; }

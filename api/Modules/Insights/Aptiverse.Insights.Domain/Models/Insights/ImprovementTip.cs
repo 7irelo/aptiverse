@@ -10,6 +10,9 @@ namespace Aptiverse.Insights.Domain.Models.Insights
     [Index(nameof(StudentSubjectId))]
     [Index(nameof(StudentSubjectTopicId))]
     [Index(nameof(StudentSubjectId), nameof(Priority))]
+    // Natural key for the AI tips upsert (ai/app/data/sinks.py): one row per
+    // (student-subject, topic). UNIQUE so the Python ON CONFLICT path binds.
+    [Index(nameof(StudentSubjectId), nameof(StudentSubjectTopicId), IsUnique = true)]
     public class ImprovementTip : IEntityTimestamps
     {
         public long Id { get; set; }

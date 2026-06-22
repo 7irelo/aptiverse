@@ -5,7 +5,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Aptiverse.Goals.Domain.Models.Goals
 {
     [Index(nameof(StudentId))]
-    [Index(nameof(StudentId), nameof(TrackingDate))]
+    // Natural key for the AI growth upsert (ai/app/data/sinks.py): one row per
+    // (student, tracking date). UNIQUE so the Python ON CONFLICT path binds.
+    [Index(nameof(StudentId), nameof(TrackingDate), IsUnique = true)]
     public class GrowthTracking : IEntityTimestamps
     {
         public long Id { get; set; }
