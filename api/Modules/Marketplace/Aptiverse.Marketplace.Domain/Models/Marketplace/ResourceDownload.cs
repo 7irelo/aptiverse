@@ -1,7 +1,11 @@
 ﻿using Aptiverse.Marketplace.Domain.Models.External.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aptiverse.Marketplace.Domain.Models.Marketplace
 {
+    [Index(nameof(ResourceId))]
+    [Index(nameof(UserId))]
+    [Index(nameof(UserId), nameof(ResourceId))]
     public class ResourceDownload
     {
         public long Id { get; set; }

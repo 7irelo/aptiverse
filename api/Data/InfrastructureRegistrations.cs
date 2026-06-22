@@ -2,6 +2,7 @@
 // Infrastructure/Registrations.cs files that each tried to register Redis +
 // their own DbContext + their own Repository<T>.
 
+using Aptiverse.Api.Data.Abstractions;
 using Aptiverse.Api.Data.Email;
 using Aptiverse.Core.Services;
 using Aptiverse.Domain.Interfaces;
@@ -24,13 +25,19 @@ namespace Aptiverse.Api.Data
             this IServiceCollection services,
             IConfiguration configuration)
         {
+            // Cross-cutting audit interceptor: UTC timestamp stamping for
+            // IEntityTimestamps + hard-delete-to-soft-delete rewriting for
+            // ISoftDelete. Stateless, so a singleton is safe and cheap.
+            services.AddSingleton<AuditableEntityInterceptor>();
+
             // Unified Postgres-backed DbContext. Migrations live in
             // api/Aptiverse.Api/Migrations/ — the host assembly itself.
-            services.AddDbContext<ApplicationDbContext>(options =>
+            services.AddDbContext<ApplicationDbContext>((sp, options) =>
                 options.UseNpgsql(
                     configuration.GetConnectionString("DefaultConnection"),
                     b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName))
                        .UseSnakeCaseNamingConvention()
+                       .AddInterceptors(sp.GetRequiredService<AuditableEntityInterceptor>())
                        .EnableSensitiveDataLogging()
                        .EnableDetailedErrors());
 

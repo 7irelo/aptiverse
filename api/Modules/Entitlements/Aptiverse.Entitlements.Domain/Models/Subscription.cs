@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using Aptiverse.Api.Data.Abstractions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aptiverse.Entitlements.Domain.Models
 {
@@ -11,7 +13,15 @@ namespace Aptiverse.Entitlements.Domain.Models
     //
     // Solo plans (Student) still go through this — a Student plan just
     // has the buying user as the only member.
-    public class Subscription
+    //
+    // Indexes: PlanCode is the FK to Plan. OwnerUserId scopes "my
+    // subscriptions" admin reads. Status is filtered on every
+    // entitlement resolve (active/trialing), so index it alongside the
+    // PlanCode it's almost always read with.
+    [Index(nameof(PlanCode))]
+    [Index(nameof(OwnerUserId))]
+    [Index(nameof(Status))]
+    public class Subscription : IEntityTimestamps
     {
         public long Id { get; set; }
         public required string PlanCode { get; set; }

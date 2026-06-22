@@ -1,7 +1,13 @@
 ﻿using Aptiverse.Marketplace.Domain.Models.External.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aptiverse.Marketplace.Domain.Models.Marketplace
 {
+    [Index(nameof(UserId))]
+    [Index(nameof(TutorId))]
+    [Index(nameof(SubjectId))]
+    [Index(nameof(IsPublished))]
+    [Index(nameof(Level))]
     public class Course
     {
         public long Id { get; set; }

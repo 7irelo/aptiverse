@@ -1,8 +1,11 @@
+using Microsoft.EntityFrameworkCore;
+
 namespace Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning
 {
     // A canonical subject in the FET-phase catalog. Linked to one or more
     // curricula via CurriculumSubject. Students enrol in subjects via
     // StudentSubject.
+    [Index(nameof(Category))]
     public class Subject
     {
         public required string Id { get; set; }      // slug: "math", "physci", "eng_hl"

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aptiverse.Entitlements.Domain.Models
 {
@@ -6,6 +7,10 @@ namespace Aptiverse.Entitlements.Domain.Models
     // user-editable. Pricing is for display only; actual billing is
     // handled by Paystack when a paid sign-up is in scope (separate
     // phase from the entitlement plumbing).
+    //
+    // Kind ("free" / "paid" / "custom") drives the sign-up CTA and is
+    // filtered when listing plans by group, so index it.
+    [Index(nameof(Kind))]
     public class Plan
     {
         // Plan.Code is the primary key (not a conventional Id) — string

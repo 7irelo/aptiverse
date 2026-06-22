@@ -1,5 +1,9 @@
-﻿namespace Aptiverse.Marketplace.Domain.Models.Marketplace
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace Aptiverse.Marketplace.Domain.Models.Marketplace
 {
+    [Index(nameof(ModuleId))]
+    [Index(nameof(ModuleId), nameof(Order))]
     public class ModuleLesson
     {
         public long Id { get; set; }

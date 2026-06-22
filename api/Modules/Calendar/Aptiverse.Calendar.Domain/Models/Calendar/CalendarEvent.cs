@@ -1,5 +1,14 @@
+using Microsoft.EntityFrameworkCore;
+
 namespace Aptiverse.Calendar.Domain.Models.Calendar
 {
+    [Index(nameof(StudentId))]
+    [Index(nameof(StudentId), nameof(StartTime))]
+    [Index(nameof(StudentId), nameof(Status))]
+    [Index(nameof(EventType))]
+    [Index(nameof(Status))]
+    [Index(nameof(StartTime))]
+    [Index(nameof(RelatedEntityType), nameof(RelatedEntityId))]
     public class CalendarEvent
     {
         public long Id { get; set; }

@@ -2,6 +2,7 @@
 // Bypasses the host's full DI graph so a single bad module registration
 // doesn't prevent migration generation.
 
+using Aptiverse.Api.Data.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -26,6 +27,7 @@ namespace Aptiverse.Api.Data
             var options = new DbContextOptionsBuilder<ApplicationDbContext>()
                 .UseNpgsql(connectionString, b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName))
                 .UseSnakeCaseNamingConvention()
+                .AddInterceptors(new AuditableEntityInterceptor())
                 // Suppress the design-time PendingModelChangesWarning. Our
                 // snapshot has known historical drift from prior modules; the
                 // migrations themselves are correct, so blocking `database

@@ -1,10 +1,17 @@
-﻿namespace Aptiverse.Domain.Models
+using Aptiverse.Api.Data.Abstractions;
+using Microsoft.EntityFrameworkCore;
+
+namespace Aptiverse.Domain.Models
 {
-    public class Teacher
+    [Index(nameof(UserId))]
+    public class Teacher : IEntityTimestamps
     {
         public long Id { get; set; }
         public required string UserId { get; set; }
         public User? User { get; set; }
         public virtual ICollection<StudentTeacher> StudentTeachers { get; set; } = new List<StudentTeacher>();
+
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
     }
 }

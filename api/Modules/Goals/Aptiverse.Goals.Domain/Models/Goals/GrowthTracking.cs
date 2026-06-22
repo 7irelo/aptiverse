@@ -1,8 +1,12 @@
-﻿using Aptiverse.Goals.Domain.Models.External.Identity;
+﻿using Aptiverse.Api.Data.Abstractions;
+using Aptiverse.Goals.Domain.Models.External.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aptiverse.Goals.Domain.Models.Goals
 {
-    public class GrowthTracking
+    [Index(nameof(StudentId))]
+    [Index(nameof(StudentId), nameof(TrackingDate))]
+    public class GrowthTracking : IEntityTimestamps
     {
         public long Id { get; set; }
         public long StudentId { get; set; }
@@ -13,6 +17,9 @@ namespace Aptiverse.Goals.Domain.Models.Goals
         public decimal OverallGrowth { get; set; }
         public string GrowthFactors { get; set; }
         public string AreasForImprovement { get; set; }
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         public virtual Student Student { get; set; }
     }

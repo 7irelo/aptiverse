@@ -1,3 +1,4 @@
+using Aptiverse.Api.Data.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Aptiverse.Workspace.Domain.Models
@@ -17,7 +18,7 @@ namespace Aptiverse.Workspace.Domain.Models
     // gives us. Orphans on assessment delete are acceptable for v1; a
     // sweep job can prune them later.
     [Index(nameof(UserId), nameof(AssessmentId), nameof(PanelKey), IsUnique = true)]
-    public class WorkspaceDraft
+    public class WorkspaceDraft : IEntityTimestamps
     {
         public long Id { get; set; }
 
@@ -36,6 +37,14 @@ namespace Aptiverse.Workspace.Domain.Models
 
         public string Content { get; set; } = "";
 
+        // Set once on insert by AuditableEntityInterceptor and protected
+        // from being overwritten on subsequent autosave updates. Additive
+        // column — the row was previously tracked only by UpdatedAt.
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        // Bumped automatically by AuditableEntityInterceptor on every
+        // autosave update. Previously set manually by the upsert path;
+        // the interceptor now keeps it current with zero wiring.
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }

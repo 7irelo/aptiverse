@@ -1,7 +1,11 @@
 ﻿using Aptiverse.Marketplace.Domain.Models.External.AcademicPlanning;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aptiverse.Marketplace.Domain.Models.Marketplace
 {
+    [Index(nameof(TutorId))]
+    [Index(nameof(SubjectId))]
+    [Index(nameof(TutorId), nameof(SubjectId))]
     public class TutorSubject
     {
         public long Id { get; set; }

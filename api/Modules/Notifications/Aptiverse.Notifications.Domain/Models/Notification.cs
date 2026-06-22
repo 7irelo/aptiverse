@@ -1,3 +1,4 @@
+using Aptiverse.Api.Data.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Aptiverse.Notifications.Domain.Models
@@ -12,7 +13,8 @@ namespace Aptiverse.Notifications.Domain.Models
     // separate Announcement entity; out of scope for v1.
     [Index(nameof(UserId), nameof(Time))]
     [Index(nameof(UserId), nameof(Read))]
-    public class Notification
+    [Index(nameof(UserId), nameof(Kind))]
+    public class Notification : IEntityTimestamps
     {
         public long Id { get; set; }
 
@@ -43,5 +45,10 @@ namespace Aptiverse.Notifications.Domain.Models
         public string? ActionHref { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        // Bumped automatically by AuditableEntityInterceptor on every
+        // update (e.g. when Read flips false -> true via mark-as-read).
+        // CreatedAt is protected from being overwritten on update.
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }

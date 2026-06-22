@@ -1,8 +1,15 @@
-﻿using Aptiverse.Mastery.Domain.Models.External.AcademicPlanning;
+﻿using Aptiverse.Api.Data.Abstractions;
+using Aptiverse.Mastery.Domain.Models.External.AcademicPlanning;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aptiverse.Mastery.Domain.Models.Mastery
 {
-    public class StudentSubjectAnalytics
+    // Transactional: created/updated via StudentSubjectAnalyticsService.
+    // Implements IEntityTimestamps for automatic audit stamping (additive).
+    [Index(nameof(StudentSubjectId))]
+    [Index(nameof(TopicId))]
+    [Index(nameof(StudentSubjectId), nameof(TopicId))]
+    public class StudentSubjectAnalytics : IEntityTimestamps
     {
         public long Id { get; set; }
         public long StudentSubjectId { get; set; }
@@ -31,7 +38,14 @@ namespace Aptiverse.Mastery.Domain.Models.Mastery
         public double MotivationLevel { get; set; }
         public int Importance { get; set; }
         public double InterestLevel { get; set; }
+        // Closed-set conceptually but kept as string: exposed as a string on
+        // the DTOs and ReverseMapped by AutoMapper; converting to an enum
+        // would require out-of-module Application changes. Stays text.
         public string Alignment { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+
         public virtual StudentSubject StudentSubject { get; set; }
         public virtual StudentSubjectTopic Topic { get; set; }
     }

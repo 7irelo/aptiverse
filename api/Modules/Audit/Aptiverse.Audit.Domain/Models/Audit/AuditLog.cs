@@ -1,5 +1,20 @@
+using Microsoft.EntityFrameworkCore;
+
 namespace Aptiverse.Audit.Domain.Models.Audit
 {
+    // Append-only audit trail row. Written once when an auditable
+    // action occurs and read back by admin trail views, never updated.
+    // Intentionally does NOT adopt IEntityTimestamps (it is immutable;
+    // CreatedAt is the only time it cares about and is set on insert).
+    //
+    // Indexed for the common query shapes: by user, by action (FK), by
+    // the (EntityType, EntityId) target of the change, by correlation
+    // id for request tracing, and by service for per-service filtering.
+    [Index(nameof(ActionId))]
+    [Index(nameof(UserId), nameof(CreatedAt))]
+    [Index(nameof(EntityType), nameof(EntityId))]
+    [Index(nameof(CorrelationId))]
+    [Index(nameof(ServiceName))]
     public class AuditLog
     {
         public long Id { get; set; }
