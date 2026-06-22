@@ -73,7 +73,7 @@ export default function ChatbotPage() {
             </Typography>
           </Box>
           <Box sx={{ flex: 1 }} />
-          <Chip icon={<AutoAwesomeIcon />} label="GPT-class" size="small" variant="outlined" />
+          <Chip icon={<AutoAwesomeIcon />} label="NSC-aligned" size="small" variant="outlined" />
         </Stack>
 
         <Box sx={{ flex: 1, overflowY: "auto", p: 3 }}>

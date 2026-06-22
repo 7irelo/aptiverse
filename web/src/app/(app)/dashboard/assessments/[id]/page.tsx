@@ -246,7 +246,7 @@ function RubricCard({ rubric }: { rubric?: Assessment["rubric"] }) {
                       {r.weight}%
                     </Typography>
                   </Stack>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.75 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
                     {r.description}
                   </Typography>
                   <LinearProgress

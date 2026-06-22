@@ -169,7 +169,7 @@ function UpcomingAssessmentsCard({
           secondary cards below (which stay at the standard
           { xs: 2.5, sm: 3 }). Same padding everywhere is
           monotony; the size difference encodes hierarchy. */}
-      <CardContent sx={{ p: { xs: 2.5, sm: 3.5 } }}>
+      <CardContent sx={{ p: { xs: 2.5, sm: 4 } }}>
         <SectionHeader
           overline="Up next"
           title="Upcoming SBAs"
@@ -187,7 +187,7 @@ function UpcomingAssessmentsCard({
         />
 
         {loading ? (
-          <Stack spacing={1.25}>
+          <Stack spacing={1.5}>
             <Skeleton variant="rounded" height={120} />
             <Skeleton variant="rounded" height={56} />
             <Skeleton variant="rounded" height={56} />
@@ -312,7 +312,7 @@ function HeroUpcomingRow({
             // identities + radian-measure problem set") shouldn't
             // shove the meta row off-screen. Clamp to two lines.
             wordBreak: "break-word",
-            mt: 0.25,
+            mt: 0.5,
             "&:hover": { color: "primary.main" },
             transition: "color 180ms cubic-bezier(0.165, 0.84, 0.44, 1)",
           }}
@@ -330,7 +330,7 @@ function HeroUpcomingRow({
           useFlexGap
           flexWrap="wrap"
           rowGap={0.5}
-          sx={{ mt: 0.75 }}
+          sx={{ mt: 1 }}
           divider={<Box component="span" sx={{ color: "text.disabled" }}>·</Box>}
         >
           <Typography variant="body2" color="text.secondary">
@@ -406,7 +406,7 @@ function CompactUpcomingRow({
       href={`/dashboard/assessments/${a.id}`}
       sx={{
         px: 1.5,
-        py: 1.25,
+        py: 1,
         borderRadius: 1.5,
         display: "flex",
         alignItems: "center",
@@ -581,7 +581,7 @@ function MasteryTrendCard({
                   </IconButton>
                 </Tooltip>
               </Stack>
-              <Stack direction="row" alignItems="baseline" spacing={0.75}>
+              <Stack direction="row" alignItems="baseline" spacing={1}>
                 <Typography
                   component="div"
                   sx={{
@@ -614,10 +614,10 @@ function MasteryTrendCard({
               <Stack
                 direction="row"
                 alignItems="center"
-                spacing={0.25}
+                spacing={0.5}
                 sx={{
                   color: delta > 0 ? "success.main" : "warning.main",
-                  pb: 0.75,
+                  pb: 1,
                 }}
               >
                 {delta > 0 ? (
@@ -758,7 +758,7 @@ function GoalRow({ g }: { g: Goal }) {
         textDecoration: "none",
         color: "inherit",
         px: 1.5,
-        py: 1.25,
+        py: 1,
         mx: -1.5,
         borderRadius: 1.5,
         transition:
@@ -770,7 +770,7 @@ function GoalRow({ g }: { g: Goal }) {
         direction="row"
         justifyContent="space-between"
         alignItems="flex-start"
-        sx={{ mb: 0.75, gap: 1 }}
+        sx={{ mb: 1, gap: 1 }}
       >
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography
@@ -787,14 +787,14 @@ function GoalRow({ g }: { g: Goal }) {
             <Typography
               variant="caption"
               color="text.secondary"
-              sx={{ display: "block", mt: 0.25 }}
+              sx={{ display: "block", mt: 0.5 }}
               noWrap
             >
               Target: {g.target}
             </Typography>
           )}
         </Box>
-        <Stack alignItems="flex-end" spacing={0.25} sx={{ flexShrink: 0 }}>
+        <Stack alignItems="flex-end" spacing={0.5} sx={{ flexShrink: 0 }}>
           <Typography
             variant="subtitle2"
             sx={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}
