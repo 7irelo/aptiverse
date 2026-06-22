@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api/fetcher";
+import { apiClient, openEventStream } from "@/lib/api/fetcher";
 import {
   BURSARIES,
   CHILDREN,
@@ -648,6 +649,37 @@ export const useLiveActivity = (take = 30) =>
     queryKey: [...queryKeys.liveActivity(), take],
     queryFn: () => apiClient.get<LiveActivity[]>(`/api/insights/live-activity?take=${take}`),
   });
+
+/**
+ * Subscribes to the live-activity SSE stream and merges pushed events into the
+ * `useLiveActivity(take)` query cache, so the feed updates in real time on top
+ * of the initial backlog. New items are prepended (newest-first) and de-duped
+ * by id; the list is capped so a long-lived stream can't grow unbounded.
+ * Aborts the stream on unmount.
+ */
+export const useLiveActivityStream = (take = 30) => {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const stop = openEventStream("/api/insights/live-activity/stream", (event, data) => {
+      if (event !== "activity") return;
+      let item: LiveActivity;
+      try {
+        item = JSON.parse(data) as LiveActivity;
+      } catch {
+        return;
+      }
+      queryClient.setQueryData<LiveActivity[]>(
+        [...queryKeys.liveActivity(), take],
+        (old) => {
+          const list = old ?? [];
+          if (list.some((x) => x.id === item.id)) return list;
+          return [item, ...list].slice(0, Math.max(take, 50));
+        },
+      );
+    });
+    return stop;
+  }, [queryClient, take]);
+};
 
 export const useGaps = () =>
   useQuery<Gap[]>({
