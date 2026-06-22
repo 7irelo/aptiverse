@@ -10,7 +10,7 @@ import Skeleton from "@mui/material/Skeleton";
 import SensorsOutlinedIcon from "@mui/icons-material/SensorsOutlined";
 import { Dot } from "@/components/common/Dot";
 import { EmptyState } from "@/components/common/EmptyState";
-import { useLiveActivity, type LiveActivity } from "@/lib/api/queries";
+import { useLiveActivity, useLiveActivityStream, type LiveActivity } from "@/lib/api/queries";
 import { initials, formatRelative } from "@/lib/format";
 import dayjs from "dayjs";
 
@@ -24,6 +24,8 @@ export type LiveActivityFeedProps = {
 
 export function LiveActivityFeed({ title = "Live activity", description, height = 480, take = 30 }: LiveActivityFeedProps) {
   const query = useLiveActivity(take);
+  // Merge real-time SSE pushes into the same query cache on top of the backlog.
+  useLiveActivityStream(take);
   const items = query.data ?? [];
   const isLive = items.length > 0;
 
