@@ -1,6 +1,7 @@
 using Aptiverse.AI.Core;
 using Aptiverse.AI.Infrastructure;
 using Aptiverse.Entitlements.Application.Services;
+using Aptiverse.Entitlements.Infrastructure.Paystack;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Aptiverse.Entitlements.Application
@@ -14,6 +15,12 @@ namespace Aptiverse.Entitlements.Application
 
             // AI client uses HttpClient — let the factory manage the pool.
             services.AddHttpClient<IAnthropicClient, AnthropicClient>();
+
+            // Paystack billing: typed client via IHttpClientFactory, plus
+            // the webhook-driven Subscription lifecycle service. Secret key
+            // is read from PAYSTACK_SECRET_KEY (never hardcoded).
+            services.AddHttpClient<IPaystackClient, PaystackClient>();
+            services.AddScoped<IPaystackSubscriptionService, PaystackSubscriptionService>();
 
             return services;
         }

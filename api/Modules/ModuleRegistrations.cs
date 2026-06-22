@@ -25,6 +25,11 @@ namespace Aptiverse.Api.Modules
             Aptiverse.Booking.Application.ServiceCollectionExtensions.AddApplicationServices(services);
             Aptiverse.Calendar.Application.ServiceCollectionExtensions.AddApplicationServices(services);
             Aptiverse.Entitlements.Application.ServiceCollectionExtensions.AddApplicationServices(services);
+            // Events (transactional outbox): registers scoped IEventPublisher ->
+            // EventPublisher AND AddHostedService<OutboxDispatcher>. The hosted
+            // dispatcher is registered ONLY here (AddHostedService is not
+            // idempotent — a second registration would run a duplicate).
+            Aptiverse.Events.Application.ServiceCollectionExtensions.AddApplicationServices(services);
             Aptiverse.FeatureFlags.Application.ServiceCollectionExtensions.AddApplicationServices(services);
             Aptiverse.Goals.Application.ServiceCollectionExtensions.AddApplicationServices(services);
             Aptiverse.Insights.Application.ServiceCollectionExtensions.AddApplicationServices(services);

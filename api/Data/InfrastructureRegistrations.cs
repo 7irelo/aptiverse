@@ -74,6 +74,13 @@ namespace Aptiverse.Api.Data
             services.AddSingleton<EmailQueue>();
             services.AddHostedService<EmailDispatcher>();
 
+            // Calendar reminder scheduler (BackgroundService). Polls due,
+            // unsent Calendar.Reminder rows and fires a user-scoped
+            // Notification via INotificationService. Singleton hosted service —
+            // it resolves scoped ApplicationDbContext/INotificationService via
+            // IServiceScopeFactory per poll iteration (never injects them).
+            services.AddHostedService<Aptiverse.Calendar.Application.Reminders.Scheduling.ReminderSchedulerService>();
+
             // Auth's repository contract (Aptiverse.Domain.Interfaces.IRepository<T>).
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
