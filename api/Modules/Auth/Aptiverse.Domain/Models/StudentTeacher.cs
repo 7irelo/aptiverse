@@ -1,5 +1,8 @@
-﻿namespace Aptiverse.Domain.Models
+using Microsoft.EntityFrameworkCore;
+
+namespace Aptiverse.Domain.Models
 {
+    [Index(nameof(TeacherId))]
     public class StudentTeacher
     {
         public long StudentId { get; set; }

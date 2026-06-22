@@ -1,10 +1,18 @@
+using Aptiverse.Api.Data.Abstractions;
+using Microsoft.EntityFrameworkCore;
+
 namespace Aptiverse.Goals.Domain.Models.Goals
 {
     // Simplified entity matching the FrontendGoalDto shape. The previous
     // Goal carried TargetValue/CurrentValue/Unit/GoalType which we're
     // not surfacing through the UI today — promote them back when there's
     // a real product reason.
-    public class Goal
+    [Index(nameof(StudentId))]
+    [Index(nameof(SubjectId))]
+    [Index(nameof(Status))]
+    [Index(nameof(Category))]
+    [Index(nameof(StudentId), nameof(Status))]
+    public class Goal : IEntityTimestamps
     {
         public long Id { get; set; }
 

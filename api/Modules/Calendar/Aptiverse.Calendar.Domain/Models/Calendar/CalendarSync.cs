@@ -1,6 +1,13 @@
+using Aptiverse.Api.Data.Abstractions;
+using Microsoft.EntityFrameworkCore;
+
 namespace Aptiverse.Calendar.Domain.Models.Calendar
 {
-    public class CalendarSync
+    [Index(nameof(StudentId))]
+    [Index(nameof(StudentId), nameof(Provider))]
+    [Index(nameof(Provider))]
+    [Index(nameof(SyncStatus))]
+    public class CalendarSync : IEntityTimestamps
     {
         public long Id { get; set; }
         public long StudentId { get; set; }
@@ -11,5 +18,6 @@ namespace Aptiverse.Calendar.Domain.Models.Calendar
         public string SyncStatus { get; set; } = "Active";
         public string SyncDirection { get; set; } = "Both";
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }

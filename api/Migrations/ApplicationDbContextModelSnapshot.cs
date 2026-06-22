@@ -88,10 +88,96 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("weight");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_assessments");
 
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_assessments_status");
+
+                    b.HasIndex("StudentId")
+                        .HasDatabaseName("ix_assessments_student_id");
+
+                    b.HasIndex("SubjectId")
+                        .HasDatabaseName("ix_assessments_subject_id");
+
+                    b.HasIndex("Type")
+                        .HasDatabaseName("ix_assessments_type");
+
+                    b.HasIndex("StudentId", "DueDate")
+                        .HasDatabaseName("ix_assessments_student_id_due_date");
+
+                    b.HasIndex("StudentId", "Status")
+                        .HasDatabaseName("ix_assessments_student_id_status");
+
+                    b.HasIndex("StudentId", "SubjectId")
+                        .HasDatabaseName("ix_assessments_student_id_subject_id");
+
                     b.ToTable("assessments", "academic_planning");
+                });
+
+            modelBuilder.Entity("Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning.AssessmentUpload", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("AssessmentId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("assessment_id");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Filename")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("filename");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("storage_path");
+
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("student_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_assessment_uploads");
+
+                    b.HasIndex("AssessmentId")
+                        .HasDatabaseName("ix_assessment_uploads_assessment_id");
+
+                    b.HasIndex("StudentId")
+                        .HasDatabaseName("ix_assessment_uploads_student_id");
+
+                    b.ToTable("assessment_uploads", "academic_planning");
                 });
 
             modelBuilder.Entity("Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning.Curriculum", b =>
@@ -113,6 +199,12 @@ namespace Aptiverse.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("short_name");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_curricula");
@@ -147,6 +239,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("subject_id");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_curriculum_subjects");
 
@@ -155,6 +253,10 @@ namespace Aptiverse.Api.Migrations
 
                     b.HasIndex("SubjectId")
                         .HasDatabaseName("ix_curriculum_subjects_subject_id");
+
+                    b.HasIndex("CurriculumId", "SubjectId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_curriculum_subjects_curriculum_id_subject_id");
 
                     b.ToTable("curriculum_subjects", "academic_planning");
                 });
@@ -193,11 +295,23 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_student_subjects");
 
                     b.HasIndex("CurriculumSubjectId")
                         .HasDatabaseName("ix_student_subjects_curriculum_subject_id");
+
+                    b.HasIndex("StudentId")
+                        .HasDatabaseName("ix_student_subjects_student_id");
+
+                    b.HasIndex("StudentId", "Grade")
+                        .HasDatabaseName("ix_student_subjects_student_id_grade");
 
                     b.ToTable("student_subjects", "academic_planning");
                 });
@@ -231,8 +345,17 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("name");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_subjects");
+
+                    b.HasIndex("Category")
+                        .HasDatabaseName("ix_subjects_category");
 
                     b.ToTable("subjects", "academic_planning");
                 });
@@ -274,8 +397,27 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("severity");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_audit_actions");
+
+                    b.HasIndex("Category")
+                        .HasDatabaseName("ix_audit_actions_category");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("ix_audit_actions_is_active");
+
+                    b.HasIndex("Severity")
+                        .HasDatabaseName("ix_audit_actions_severity");
 
                     b.ToTable("audit_actions", "audit");
                 });
@@ -352,11 +494,29 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("user_role");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_audit_logs");
 
                     b.HasIndex("ActionId")
                         .HasDatabaseName("ix_audit_logs_action_id");
+
+                    b.HasIndex("CorrelationId")
+                        .HasDatabaseName("ix_audit_logs_correlation_id");
+
+                    b.HasIndex("ServiceName")
+                        .HasDatabaseName("ix_audit_logs_service_name");
+
+                    b.HasIndex("EntityType", "EntityId")
+                        .HasDatabaseName("ix_audit_logs_entity_type_entity_id");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_audit_logs_user_id_created_at");
 
                     b.ToTable("audit_logs", "audit");
                 });
@@ -370,8 +530,13 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<int>("DayOfWeek")
-                        .HasColumnType("integer")
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DayOfWeek")
+                        .IsRequired()
+                        .HasColumnType("text")
                         .HasColumnName("day_of_week");
 
                     b.Property<TimeSpan>("EndTime")
@@ -390,11 +555,27 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("tutor_id");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_tutor_availabilities");
 
                     b.HasIndex("TutorId")
                         .HasDatabaseName("ix_tutor_availabilities_tutor_id");
+
+                    b.HasIndex("TutorId", "DayOfWeek")
+                        .HasDatabaseName("ix_tutor_availabilities_tutor_id_day_of_week");
+
+                    b.HasIndex("TutorId", "IsAvailable")
+                        .HasDatabaseName("ix_tutor_availabilities_tutor_id_is_available");
 
                     b.ToTable("tutor_availabilities", "booking");
                 });
@@ -407,6 +588,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
@@ -428,6 +613,16 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("tutor_id");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_tutor_students");
 
@@ -436,6 +631,12 @@ namespace Aptiverse.Api.Migrations
 
                     b.HasIndex("TutorId")
                         .HasDatabaseName("ix_tutor_students_tutor_id");
+
+                    b.HasIndex("StudentId", "IsActive")
+                        .HasDatabaseName("ix_tutor_students_student_id_is_active");
+
+                    b.HasIndex("TutorId", "IsActive")
+                        .HasDatabaseName("ix_tutor_students_tutor_id_is_active");
 
                     b.ToTable("tutor_students", "booking");
                 });
@@ -448,6 +649,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_students");
@@ -463,6 +670,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_tutors");
@@ -547,8 +760,35 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_calendar_events");
+
+                    b.HasIndex("EventType")
+                        .HasDatabaseName("ix_calendar_events_event_type");
+
+                    b.HasIndex("StartTime")
+                        .HasDatabaseName("ix_calendar_events_start_time");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_calendar_events_status");
+
+                    b.HasIndex("StudentId")
+                        .HasDatabaseName("ix_calendar_events_student_id");
+
+                    b.HasIndex("RelatedEntityType", "RelatedEntityId")
+                        .HasDatabaseName("ix_calendar_events_related_entity_type_related_entity_id");
+
+                    b.HasIndex("StudentId", "StartTime")
+                        .HasDatabaseName("ix_calendar_events_student_id_start_time");
+
+                    b.HasIndex("StudentId", "Status")
+                        .HasDatabaseName("ix_calendar_events_student_id_status");
 
                     b.ToTable("calendar_events", "calendar");
                 });
@@ -599,8 +839,30 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("sync_token");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_calendar_syncs");
+
+                    b.HasIndex("Provider")
+                        .HasDatabaseName("ix_calendar_syncs_provider");
+
+                    b.HasIndex("StudentId")
+                        .HasDatabaseName("ix_calendar_syncs_student_id");
+
+                    b.HasIndex("SyncStatus")
+                        .HasDatabaseName("ix_calendar_syncs_sync_status");
+
+                    b.HasIndex("StudentId", "Provider")
+                        .HasDatabaseName("ix_calendar_syncs_student_id_provider");
 
                     b.ToTable("calendar_syncs", "calendar");
                 });
@@ -639,11 +901,27 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("sent_at");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_reminders");
 
                     b.HasIndex("CalendarEventId")
                         .HasDatabaseName("ix_reminders_calendar_event_id");
+
+                    b.HasIndex("IsSent")
+                        .HasDatabaseName("ix_reminders_is_sent");
+
+                    b.HasIndex("ReminderType")
+                        .HasDatabaseName("ix_reminders_reminder_type");
 
                     b.ToTable("reminders", "calendar");
                 });
@@ -662,6 +940,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("user_id");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_students");
 
@@ -677,10 +961,24 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("user_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_admins");
@@ -700,10 +998,24 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("user_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_parents");
@@ -723,10 +1035,24 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("user_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_students");
@@ -751,6 +1077,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("assigned_date");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("StudentId", "AdminId")
                         .HasName("pk_student_admins");
 
@@ -773,6 +1105,12 @@ namespace Aptiverse.Api.Migrations
                     b.Property<DateTime>("AssignedDate")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("assigned_date");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("StudentId", "ParentId")
                         .HasName("pk_student_parents");
@@ -797,6 +1135,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("assigned_date");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("StudentId", "TeacherId")
                         .HasName("pk_student_teachers");
 
@@ -815,10 +1159,24 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("user_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_superusers");
@@ -838,10 +1196,24 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("user_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_teachers");
@@ -949,6 +1321,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("user_name");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_users");
 
@@ -970,6 +1348,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<DateTime>("PeriodStart")
                         .HasColumnType("timestamp with time zone")
@@ -993,8 +1375,17 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("user_id");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_feature_usages");
+
+                    b.HasIndex("UserId", "QuotaKey", "PeriodStart")
+                        .HasDatabaseName("ix_feature_usages_user_id_quota_key_period_start");
 
                     b.ToTable("feature_usages", "entitlements");
                 });
@@ -1035,8 +1426,17 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("name");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Code")
                         .HasName("pk_plans");
+
+                    b.HasIndex("Kind")
+                        .HasDatabaseName("ix_plans_kind");
 
                     b.ToTable("plans", "entitlements");
                 });
@@ -1060,8 +1460,17 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("plan_code");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_plan_features");
+
+                    b.HasIndex("FeatureKey")
+                        .HasDatabaseName("ix_plan_features_feature_key");
 
                     b.HasIndex("PlanCode")
                         .HasDatabaseName("ix_plan_features_plan_code");
@@ -1092,11 +1501,17 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("quota_key");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_plan_quotas");
 
-                    b.HasIndex("PlanCode")
-                        .HasDatabaseName("ix_plan_quotas_plan_code");
+                    b.HasIndex("PlanCode", "QuotaKey")
+                        .HasDatabaseName("ix_plan_quotas_plan_code_quota_key");
 
                     b.ToTable("plan_quotas", "entitlements");
                 });
@@ -1157,11 +1572,23 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("valid_until");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_subscriptions");
 
+                    b.HasIndex("OwnerUserId")
+                        .HasDatabaseName("ix_subscriptions_owner_user_id");
+
                     b.HasIndex("PlanCode")
                         .HasDatabaseName("ix_subscriptions_plan_code");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_subscriptions_status");
 
                     b.ToTable("subscriptions", "entitlements");
                 });
@@ -1174,6 +1601,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<string>("InvitedByUserId")
                         .HasColumnType("text")
@@ -1192,16 +1623,29 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("subscription_id");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("user_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_subscription_members");
 
                     b.HasIndex("SubscriptionId")
                         .HasDatabaseName("ix_subscription_members_subscription_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_subscription_members_user_id");
 
                     b.ToTable("subscription_members", "entitlements");
                 });
@@ -1265,8 +1709,23 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_feature_flags");
+
+                    b.HasIndex("Environment")
+                        .HasDatabaseName("ix_feature_flags_environment");
+
+                    b.HasIndex("IsEnabled")
+                        .HasDatabaseName("ix_feature_flags_is_enabled");
+
+                    b.HasIndex("Key")
+                        .HasDatabaseName("ix_feature_flags_key");
 
                     b.ToTable("feature_flags", "feature_flags");
                 });
@@ -1307,11 +1766,26 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("user_id");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_feature_flag_evaluations");
 
+                    b.HasIndex("EvaluatedAt")
+                        .HasDatabaseName("ix_feature_flag_evaluations_evaluated_at");
+
                     b.HasIndex("FeatureFlagId")
                         .HasDatabaseName("ix_feature_flag_evaluations_feature_flag_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_feature_flag_evaluations_user_id");
+
+                    b.HasIndex("FeatureFlagId", "UserId")
+                        .HasDatabaseName("ix_feature_flag_evaluations_feature_flag_id_user_id");
 
                     b.ToTable("feature_flag_evaluations", "feature_flags");
                 });
@@ -1351,16 +1825,32 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("rule_type");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.Property<string>("Value")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("value");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_feature_flag_rules");
 
                     b.HasIndex("FeatureFlagId")
                         .HasDatabaseName("ix_feature_flag_rules_feature_flag_id");
+
+                    b.HasIndex("FeatureFlagId", "IsEnabled")
+                        .HasDatabaseName("ix_feature_flag_rules_feature_flag_id_is_enabled");
+
+                    b.HasIndex("FeatureFlagId", "Priority")
+                        .HasDatabaseName("ix_feature_flag_rules_feature_flag_id_priority");
 
                     b.ToTable("feature_flag_rules", "feature_flags");
                 });
@@ -1373,6 +1863,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_subjects");
@@ -1393,6 +1889,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("reward_id");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_reward_features");
 
@@ -1410,6 +1912,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_students");
@@ -1483,11 +1991,32 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_goals");
 
+                    b.HasIndex("Category")
+                        .HasDatabaseName("ix_goals_category");
+
                     b.HasIndex("RewardId")
                         .HasDatabaseName("ix_goals_reward_id");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_goals_status");
+
+                    b.HasIndex("StudentId")
+                        .HasDatabaseName("ix_goals_student_id");
+
+                    b.HasIndex("SubjectId")
+                        .HasDatabaseName("ix_goals_subject_id");
+
+                    b.HasIndex("StudentId", "Status")
+                        .HasDatabaseName("ix_goals_student_id_status");
 
                     b.ToTable("goals", "goals");
                 });
@@ -1539,11 +2068,20 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_goal_milestones");
 
                     b.HasIndex("GoalId")
                         .HasDatabaseName("ix_goal_milestones_goal_id");
+
+                    b.HasIndex("IsCompleted")
+                        .HasDatabaseName("ix_goal_milestones_is_completed");
 
                     b.ToTable("goal_milestones", "goals");
                 });
@@ -1565,6 +2103,10 @@ namespace Aptiverse.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("areas_for_improvement");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<decimal>("EmotionalGrowth")
                         .HasColumnType("numeric")
@@ -1591,11 +2133,24 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("tracking_date");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_growth_trackings");
 
                     b.HasIndex("StudentId")
                         .HasDatabaseName("ix_growth_trackings_student_id");
+
+                    b.HasIndex("StudentId", "TrackingDate")
+                        .HasDatabaseName("ix_growth_trackings_student_id_tracking_date");
 
                     b.ToTable("growth_trackings", "goals");
                 });
@@ -1608,6 +2163,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -1644,6 +2203,16 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("transaction_type");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_points_transactions");
 
@@ -1653,8 +2222,17 @@ namespace Aptiverse.Api.Migrations
                     b.HasIndex("RelatedRewardId")
                         .HasDatabaseName("ix_points_transactions_related_reward_id");
 
+                    b.HasIndex("Source")
+                        .HasDatabaseName("ix_points_transactions_source");
+
                     b.HasIndex("StudentPointsId")
                         .HasDatabaseName("ix_points_transactions_student_points_id");
+
+                    b.HasIndex("TransactionType")
+                        .HasDatabaseName("ix_points_transactions_transaction_type");
+
+                    b.HasIndex("StudentPointsId", "TransactionType")
+                        .HasDatabaseName("ix_points_transactions_student_points_id_transaction_type");
 
                     b.ToTable("points_transactions", "goals");
                 });
@@ -1703,8 +2281,24 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("stock_quantity");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_rewards");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("ix_rewards_is_active");
+
+                    b.HasIndex("RewardType")
+                        .HasDatabaseName("ix_rewards_reward_type");
 
                     b.ToTable("rewards", "goals");
                 });
@@ -1721,6 +2315,10 @@ namespace Aptiverse.Api.Migrations
                     b.Property<int>("AvailablePoints")
                         .HasColumnType("integer")
                         .HasColumnName("available_points");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<string>("CurrentRank")
                         .IsRequired()
@@ -1743,12 +2341,25 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("total_points");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.Property<int>("UsedPoints")
                         .HasColumnType("integer")
                         .HasColumnName("used_points");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_student_points");
+
+                    b.HasIndex("CurrentRank")
+                        .HasDatabaseName("ix_student_points_current_rank");
 
                     b.HasIndex("StudentId")
                         .HasDatabaseName("ix_student_points_student_id");
@@ -1769,6 +2380,10 @@ namespace Aptiverse.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("achievement_context");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<DateTime>("EarnedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1799,6 +2414,16 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("student_id");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_student_rewards");
 
@@ -1808,8 +2433,14 @@ namespace Aptiverse.Api.Migrations
                     b.HasIndex("RewardId")
                         .HasDatabaseName("ix_student_rewards_reward_id");
 
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_student_rewards_status");
+
                     b.HasIndex("StudentId")
                         .HasDatabaseName("ix_student_rewards_student_id");
+
+                    b.HasIndex("StudentId", "Status")
+                        .HasDatabaseName("ix_student_rewards_student_id_status");
 
                     b.ToTable("student_rewards", "goals");
                 });
@@ -1822,6 +2453,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_student_subjects");
@@ -1837,6 +2474,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_student_subject_topics");
@@ -1857,6 +2500,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("count");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
                     b.Property<string>("Grade")
                         .IsRequired()
                         .HasColumnType("text")
@@ -1865,6 +2512,16 @@ namespace Aptiverse.Api.Migrations
                     b.Property<long>("StudentSubjectId")
                         .HasColumnType("bigint")
                         .HasColumnName("student_subject_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_grade_distributions");
@@ -1884,6 +2541,10 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
                     b.Property<int>("Priority")
                         .HasColumnType("integer")
                         .HasColumnName("priority");
@@ -1901,6 +2562,16 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("tip");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_improvement_tips");
 
@@ -1909,6 +2580,9 @@ namespace Aptiverse.Api.Migrations
 
                     b.HasIndex("StudentSubjectTopicId")
                         .HasDatabaseName("ix_improvement_tips_student_subject_topic_id");
+
+                    b.HasIndex("StudentSubjectId", "Priority")
+                        .HasDatabaseName("ix_improvement_tips_student_subject_id_priority");
 
                     b.ToTable("improvement_tips", "insights");
                 });
@@ -1921,6 +2595,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_subjects");
@@ -1940,6 +2620,12 @@ namespace Aptiverse.Api.Migrations
                     b.Property<long?>("TutorId")
                         .HasColumnType("bigint")
                         .HasColumnName("tutor_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_tutor_availabilities");
@@ -1963,6 +2649,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("tutor_id");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_tutor_students");
 
@@ -1977,6 +2669,12 @@ namespace Aptiverse.Api.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("text")
                         .HasColumnName("id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_users");
@@ -2069,8 +2767,23 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("user_id");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_courses");
+
+                    b.HasIndex("IsPublished")
+                        .HasDatabaseName("ix_courses_is_published");
+
+                    b.HasIndex("Level")
+                        .HasDatabaseName("ix_courses_level");
+
+                    b.HasIndex("SubjectId")
+                        .HasDatabaseName("ix_courses_subject_id");
 
                     b.HasIndex("TutorId")
                         .HasDatabaseName("ix_courses_tutor_id");
@@ -2102,6 +2815,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("course_id");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
                     b.Property<DateTime>("EnrolledAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("enrolled_at");
@@ -2115,6 +2832,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("numeric")
                         .HasColumnName("progress");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.Property<long>("UserId")
                         .HasColumnType("bigint")
                         .HasColumnName("user_id");
@@ -2123,14 +2844,29 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("user_id1");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_course_enrollments");
 
                     b.HasIndex("CourseId")
                         .HasDatabaseName("ix_course_enrollments_course_id");
 
+                    b.HasIndex("PaymentStatus")
+                        .HasDatabaseName("ix_course_enrollments_payment_status");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_course_enrollments_user_id");
+
                     b.HasIndex("UserId1")
                         .HasDatabaseName("ix_course_enrollments_user_id1");
+
+                    b.HasIndex("UserId", "CourseId")
+                        .HasDatabaseName("ix_course_enrollments_user_id_course_id");
 
                     b.ToTable("course_enrollments", "marketplace");
                 });
@@ -2166,11 +2902,20 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("title");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_course_modules");
 
                     b.HasIndex("CourseId")
                         .HasDatabaseName("ix_course_modules_course_id");
+
+                    b.HasIndex("CourseId", "Order")
+                        .HasDatabaseName("ix_course_modules_course_id_order");
 
                     b.ToTable("course_modules", "marketplace");
                 });
@@ -2220,11 +2965,20 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("video_url");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_module_lessons");
 
                     b.HasIndex("ModuleId")
                         .HasDatabaseName("ix_module_lessons_module_id");
+
+                    b.HasIndex("ModuleId", "Order")
+                        .HasDatabaseName("ix_module_lessons_module_id_order");
 
                     b.ToTable("module_lessons", "marketplace");
                 });
@@ -2318,6 +3072,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("tutor_id");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.Property<long?>("UserId")
                         .HasColumnType("bigint")
                         .HasColumnName("user_id");
@@ -2326,17 +3084,41 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("user_id1");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_resources");
 
                     b.HasIndex("CourseId")
                         .HasDatabaseName("ix_resources_course_id");
 
+                    b.HasIndex("GradeLevel")
+                        .HasDatabaseName("ix_resources_grade_level");
+
+                    b.HasIndex("IsApproved")
+                        .HasDatabaseName("ix_resources_is_approved");
+
+                    b.HasIndex("IsFree")
+                        .HasDatabaseName("ix_resources_is_free");
+
+                    b.HasIndex("ResourceType")
+                        .HasDatabaseName("ix_resources_resource_type");
+
+                    b.HasIndex("SubjectId")
+                        .HasDatabaseName("ix_resources_subject_id");
+
                     b.HasIndex("SubjectId1")
                         .HasDatabaseName("ix_resources_subject_id1");
 
                     b.HasIndex("TutorId")
                         .HasDatabaseName("ix_resources_tutor_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_resources_user_id");
 
                     b.HasIndex("UserId1")
                         .HasDatabaseName("ix_resources_user_id1");
@@ -2370,14 +3152,26 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("user_id1");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_resource_downloads");
 
                     b.HasIndex("ResourceId")
                         .HasDatabaseName("ix_resource_downloads_resource_id");
 
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_resource_downloads_user_id");
+
                     b.HasIndex("UserId1")
                         .HasDatabaseName("ix_resource_downloads_user_id1");
+
+                    b.HasIndex("UserId", "ResourceId")
+                        .HasDatabaseName("ix_resource_downloads_user_id_resource_id");
 
                     b.ToTable("resource_downloads", "marketplace");
                 });
@@ -2431,6 +3225,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("total_reviews");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text")
@@ -2440,8 +3238,20 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("years_of_experience");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_tutors");
+
+                    b.HasIndex("IsVerified")
+                        .HasDatabaseName("ix_tutors_is_verified");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_tutors_user_id");
 
                     b.ToTable("tutors", "marketplace");
                 });
@@ -2476,14 +3286,26 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("tutor_id");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_tutor_subjects");
+
+                    b.HasIndex("SubjectId")
+                        .HasDatabaseName("ix_tutor_subjects_subject_id");
 
                     b.HasIndex("SubjectId1")
                         .HasDatabaseName("ix_tutor_subjects_subject_id1");
 
                     b.HasIndex("TutorId")
                         .HasDatabaseName("ix_tutor_subjects_tutor_id");
+
+                    b.HasIndex("TutorId", "SubjectId")
+                        .HasDatabaseName("ix_tutor_subjects_tutor_id_subject_id");
 
                     b.ToTable("tutor_subjects", "marketplace");
                 });
@@ -2496,6 +3318,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_student_subjects");
@@ -2511,6 +3339,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_student_subject_topics");
@@ -2532,6 +3366,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("concept");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
                     b.Property<DateTime>("LastTested")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_tested");
@@ -2549,14 +3387,30 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("topic_id");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_knowledge_gaps");
+
+                    b.HasIndex("Severity")
+                        .HasDatabaseName("ix_knowledge_gaps_severity");
 
                     b.HasIndex("StudentSubjectId")
                         .HasDatabaseName("ix_knowledge_gaps_student_subject_id");
 
                     b.HasIndex("TopicId")
                         .HasDatabaseName("ix_knowledge_gaps_topic_id");
+
+                    b.HasIndex("StudentSubjectId", "Severity")
+                        .HasDatabaseName("ix_knowledge_gaps_student_subject_id_severity");
 
                     b.ToTable("knowledge_gaps", "mastery");
                 });
@@ -2590,6 +3444,10 @@ namespace Aptiverse.Api.Migrations
                     b.Property<int>("Consistency")
                         .HasColumnType("integer")
                         .HasColumnName("consistency");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<int>("EveningPercentage")
                         .HasColumnType("integer")
@@ -2672,6 +3530,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("total_classes");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.Property<int>("VideoTutorials")
                         .HasColumnType("integer")
                         .HasColumnName("video_tutorials");
@@ -2679,6 +3541,12 @@ namespace Aptiverse.Api.Migrations
                     b.Property<double>("WorkloadThisWeek")
                         .HasColumnType("double precision")
                         .HasColumnName("workload_this_week");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_student_subject_analytics");
@@ -2688,6 +3556,9 @@ namespace Aptiverse.Api.Migrations
 
                     b.HasIndex("TopicId")
                         .HasDatabaseName("ix_student_subject_analytics_topic_id");
+
+                    b.HasIndex("StudentSubjectId", "TopicId")
+                        .HasDatabaseName("ix_student_subject_analytics_student_subject_id_topic_id");
 
                     b.ToTable("student_subject_analytics", "mastery");
                 });
@@ -2700,6 +3571,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<double>("MasteryLevel")
                         .HasColumnType("double precision")
@@ -2718,14 +3593,30 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("topic_id1");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_topic_masteries");
 
                     b.HasIndex("StudentSubjectId")
                         .HasDatabaseName("ix_topic_masteries_student_subject_id");
 
+                    b.HasIndex("TopicId")
+                        .HasDatabaseName("ix_topic_masteries_topic_id");
+
                     b.HasIndex("TopicId1")
                         .HasDatabaseName("ix_topic_masteries_topic_id1");
+
+                    b.HasIndex("StudentSubjectId", "TopicId")
+                        .HasDatabaseName("ix_topic_masteries_student_subject_id_topic_id");
 
                     b.ToTable("topic_masteries", "mastery");
                 });
@@ -2781,8 +3672,26 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_content_filters");
+
+                    b.HasIndex("Category")
+                        .HasDatabaseName("ix_content_filters_category");
+
+                    b.HasIndex("FilterType")
+                        .HasDatabaseName("ix_content_filters_filter_type");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("ix_content_filters_is_active");
+
+                    b.HasIndex("Severity")
+                        .HasDatabaseName("ix_content_filters_severity");
 
                     b.ToTable("content_filters", "moderation");
                 });
@@ -2849,8 +3758,32 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_content_reports");
+
+                    b.HasIndex("ReportedUserId")
+                        .HasDatabaseName("ix_content_reports_reported_user_id");
+
+                    b.HasIndex("ReporterUserId")
+                        .HasDatabaseName("ix_content_reports_reporter_user_id");
+
+                    b.HasIndex("Severity")
+                        .HasDatabaseName("ix_content_reports_severity");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_content_reports_status");
+
+                    b.HasIndex("ContentType", "ContentId")
+                        .HasDatabaseName("ix_content_reports_content_type_content_id");
+
+                    b.HasIndex("Status", "Severity")
+                        .HasDatabaseName("ix_content_reports_status_severity");
 
                     b.ToTable("content_reports", "moderation");
                 });
@@ -2900,11 +3833,27 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("reason");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_moderation_actions");
 
+                    b.HasIndex("ActionType")
+                        .HasDatabaseName("ix_moderation_actions_action_type");
+
                     b.HasIndex("ContentReportId")
                         .HasDatabaseName("ix_moderation_actions_content_report_id");
+
+                    b.HasIndex("ModeratorUserId")
+                        .HasDatabaseName("ix_moderation_actions_moderator_user_id");
 
                     b.ToTable("moderation_actions", "moderation");
                 });
@@ -2949,13 +3898,26 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("title");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("user_id");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_notifications");
+
+                    b.HasIndex("UserId", "Kind")
+                        .HasDatabaseName("ix_notifications_user_id_kind");
 
                     b.HasIndex("UserId", "Read")
                         .HasDatabaseName("ix_notifications_user_id_read");
@@ -2975,6 +3937,12 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_subjects");
 
@@ -2989,6 +3957,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_topics");
@@ -3005,6 +3979,12 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_students");
 
@@ -3019,6 +3999,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_generated_tests");
@@ -3035,6 +4021,20 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_answer_submissions");
 
@@ -3049,6 +4049,20 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_attempt_score_summaries");
@@ -3065,6 +4079,20 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_practice_attempts");
 
@@ -3080,6 +4108,20 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_practice_attempt_items");
 
@@ -3094,6 +4136,20 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_practice_tests");
@@ -3169,6 +4225,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("submitted_at");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_school_enquiries");
 
@@ -3188,6 +4250,12 @@ namespace Aptiverse.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("user_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_students");
@@ -3230,8 +4298,17 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("sort_order");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_support_categories");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("ix_support_categories_is_active");
 
                     b.HasIndex("ParentCategoryId")
                         .HasDatabaseName("ix_support_categories_parent_category_id");
@@ -3280,11 +4357,27 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("ticket_id");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_support_messages");
 
+                    b.HasIndex("SenderUserId")
+                        .HasDatabaseName("ix_support_messages_sender_user_id");
+
                     b.HasIndex("TicketId")
                         .HasDatabaseName("ix_support_messages_ticket_id");
+
+                    b.HasIndex("TicketId", "CreatedAt")
+                        .HasDatabaseName("ix_support_messages_ticket_id_created_at");
 
                     b.ToTable("support_messages", "support");
                 });
@@ -3361,11 +4454,32 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_support_tickets");
 
+                    b.HasIndex("AssignedToUserId")
+                        .HasDatabaseName("ix_support_tickets_assigned_to_user_id");
+
                     b.HasIndex("CategoryId")
                         .HasDatabaseName("ix_support_tickets_category_id");
+
+                    b.HasIndex("Priority")
+                        .HasDatabaseName("ix_support_tickets_priority");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_support_tickets_status");
+
+                    b.HasIndex("StudentId")
+                        .HasDatabaseName("ix_support_tickets_student_id");
+
+                    b.HasIndex("StudentId", "Status")
+                        .HasDatabaseName("ix_support_tickets_student_id_status");
 
                     b.ToTable("support_tickets", "support");
                 });
@@ -3384,8 +4498,17 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("user_id");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_students");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_students_user_id1");
 
                     b.ToTable("students", "wellbeing");
                 });
@@ -3476,8 +4599,29 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_diary_entries");
+
+                    b.HasIndex("EntryDate")
+                        .HasDatabaseName("ix_diary_entries_entry_date");
+
+                    b.HasIndex("EntryType")
+                        .HasDatabaseName("ix_diary_entries_entry_type");
+
+                    b.HasIndex("NeedsFollowUp")
+                        .HasDatabaseName("ix_diary_entries_needs_follow_up");
+
+                    b.HasIndex("StudentId")
+                        .HasDatabaseName("ix_diary_entries_student_id");
+
+                    b.HasIndex("StudentId", "EntryDate")
+                        .HasDatabaseName("ix_diary_entries_student_id_entry_date");
 
                     b.ToTable("diary_entries", "wellbeing");
                 });
@@ -3530,8 +4674,29 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_diary_goals");
+
+                    b.HasIndex("Category")
+                        .HasDatabaseName("ix_diary_goals_category");
+
+                    b.HasIndex("IsCompleted")
+                        .HasDatabaseName("ix_diary_goals_is_completed");
+
+                    b.HasIndex("StudentId")
+                        .HasDatabaseName("ix_diary_goals_student_id");
+
+                    b.HasIndex("TargetDate")
+                        .HasDatabaseName("ix_diary_goals_target_date");
+
+                    b.HasIndex("StudentId", "IsCompleted")
+                        .HasDatabaseName("ix_diary_goals_student_id_is_completed");
 
                     b.ToTable("diary_goals", "wellbeing");
                 });
@@ -3596,8 +4761,27 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("triggers");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_mood_trackings");
+
+                    b.HasIndex("StudentId")
+                        .HasDatabaseName("ix_mood_trackings_student_id");
+
+                    b.HasIndex("TrackedAt")
+                        .HasDatabaseName("ix_mood_trackings_tracked_at");
+
+                    b.HasIndex("StudentId", "TrackedAt")
+                        .HasDatabaseName("ix_mood_trackings_student_id_tracked_at");
 
                     b.ToTable("mood_trackings", "wellbeing");
                 });
@@ -3620,6 +4804,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("content");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
                     b.Property<string>("PanelKey")
                         .IsRequired()
                         .HasColumnType("text")
@@ -3633,6 +4821,12 @@ namespace Aptiverse.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("user_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_workspace_drafts");
@@ -3664,6 +4858,12 @@ namespace Aptiverse.Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)")
                         .HasColumnName("normalized_name");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("Id")
                         .HasName("pk_roles");
@@ -3697,6 +4897,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("role_id");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_role_claims");
 
@@ -3728,6 +4934,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("user_id");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_user_claims");
 
@@ -3756,6 +4968,12 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("user_id");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("LoginProvider", "ProviderKey")
                         .HasName("pk_user_logins");
 
@@ -3774,6 +4992,12 @@ namespace Aptiverse.Api.Migrations
                     b.Property<string>("RoleId")
                         .HasColumnType("text")
                         .HasColumnName("role_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("UserId", "RoleId")
                         .HasName("pk_user_roles");
@@ -3801,6 +5025,12 @@ namespace Aptiverse.Api.Migrations
                     b.Property<string>("Value")
                         .HasColumnType("text")
                         .HasColumnName("value");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("UserId", "LoginProvider", "Name")
                         .HasName("pk_user_tokens");

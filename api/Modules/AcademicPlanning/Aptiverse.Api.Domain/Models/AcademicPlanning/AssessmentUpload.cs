@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+
 namespace Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning
 {
     // A file attached to an assessment — typically a photo of handwritten
@@ -10,6 +12,8 @@ namespace Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning
     // without touching this entity. The row carries the metadata (where
     // the file lives, its original name, its size and content-type) so
     // the API doesn't need to stat the disk to list a student's uploads.
+    [Index(nameof(AssessmentId))]
+    [Index(nameof(StudentId))]
     public class AssessmentUpload
     {
         public long Id { get; set; }

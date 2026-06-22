@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aptiverse.Entitlements.Domain.Models
 {
@@ -7,6 +8,9 @@ namespace Aptiverse.Entitlements.Domain.Models
     // discovered name comes out singular. Override explicitly for
     // consistency with the rest of the schema (plans, plan_features).
     [Table("plan_quotas", Schema = "entitlements")]
+    // UsageMeter.GetLimitAsync filters by (PlanCode IN ..., QuotaKey),
+    // so a composite index on the FK + quota key serves the hot path.
+    [Index(nameof(PlanCode), nameof(QuotaKey))]
     // How much of a metered feature (AI calls, WhatsApp messages, etc.)
     // a Plan includes per calendar month. Seeded from the marketing
     // pricing page. -1 = unlimited.

@@ -1,9 +1,18 @@
 ﻿using Aptiverse.Marketplace.Domain.Models.External.AcademicPlanning;
 using Aptiverse.Marketplace.Domain.Models.External.Identity;
+using Aptiverse.Api.Data.Abstractions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aptiverse.Marketplace.Domain.Models.Marketplace
 {
-    public class Resource
+    [Index(nameof(UserId))]
+    [Index(nameof(CourseId))]
+    [Index(nameof(SubjectId))]
+    [Index(nameof(ResourceType))]
+    [Index(nameof(GradeLevel))]
+    [Index(nameof(IsApproved))]
+    [Index(nameof(IsFree))]
+    public class Resource : IEntityTimestamps
     {
         public long Id { get; set; }
         public string Title { get; set; }
@@ -23,6 +32,7 @@ namespace Aptiverse.Marketplace.Domain.Models.Marketplace
         public string GradeLevel { get; set; }
         public bool IsApproved { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         public virtual User User { get; set; }
         public virtual Course Course { get; set; }

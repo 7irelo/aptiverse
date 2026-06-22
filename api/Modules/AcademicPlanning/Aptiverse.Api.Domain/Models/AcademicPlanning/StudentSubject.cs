@@ -1,10 +1,16 @@
+using Microsoft.EntityFrameworkCore;
+using Aptiverse.Api.Data.Abstractions;
+
 namespace Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning
 {
     // A subject the student is currently enrolled in. Created when the
     // student clicks "Add subject" and picks from the canonical list for
     // their curriculum. Marks/predictions are derived from logged SBA
     // tasks (separate module — not stored here).
-    public class StudentSubject
+    [Index(nameof(StudentId))]
+    [Index(nameof(CurriculumSubjectId))]
+    [Index(nameof(StudentId), nameof(Grade))]
+    public class StudentSubject : IEntityTimestamps
     {
         public long Id { get; set; }
 

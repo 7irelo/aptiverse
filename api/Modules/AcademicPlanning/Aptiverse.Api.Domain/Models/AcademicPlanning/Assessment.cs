@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
+using Aptiverse.Api.Data.Abstractions;
 
 namespace Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning
 {
@@ -6,7 +8,14 @@ namespace Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning
     // logged by the student. Scoped per-user — students see only their own.
     // Marks (predicted + actual) are optional so students can log a future
     // assessment with no marks and fill them in as the term progresses.
-    public class Assessment
+    [Index(nameof(StudentId))]
+    [Index(nameof(SubjectId))]
+    [Index(nameof(StudentId), nameof(Status))]
+    [Index(nameof(StudentId), nameof(SubjectId))]
+    [Index(nameof(StudentId), nameof(DueDate))]
+    [Index(nameof(Status))]
+    [Index(nameof(Type))]
+    public class Assessment : IEntityTimestamps
     {
         public long Id { get; set; }
 

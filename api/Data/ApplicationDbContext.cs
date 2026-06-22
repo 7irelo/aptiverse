@@ -10,7 +10,9 @@
 // to the entity class — `ApplyConfigurationsFromAssembly` picks it up.
 
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq.Expressions;
 using System.Reflection;
+using Aptiverse.Api.Data.Abstractions;
 using Aptiverse.Domain.Models;
 using Humanizer;
 using Microsoft.AspNetCore.Identity;
@@ -127,6 +129,73 @@ namespace Aptiverse.Api.Data
             // Future: add IEntityTypeConfiguration<T> classes for custom
             // Fluent API — they'll be discovered here.
             modelBuilder.ApplyConfigurationsFromAssembly(assembly);
+
+            // ---------------------------------------------------------------
+            // Cross-cutting reflective conventions.
+            //
+            // These run AFTER all explicit / discovered configuration and apply
+            // uniformly to every mapped entity, so any entity a module agent
+            // adds or augments later is covered automatically — no per-entity
+            // wiring. They are purely additive: no PK/column-type changes, no
+            // new columns. (xmin is a system column; UseXminAsConcurrencyToken
+            // maps it, it does not add a column.)
+            // ---------------------------------------------------------------
+            ApplyCrossCuttingConventions(modelBuilder);
+        }
+
+        private static void ApplyCrossCuttingConventions(ModelBuilder modelBuilder)
+        {
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                var clr = entityType.ClrType;
+                if (clr is null) continue;
+
+                // Keyless entities (e.g. discovered join/view types) cannot
+                // carry a concurrency token or a query filter; skip those.
+                var isKeyless = entityType.FindPrimaryKey() is null;
+
+                // (1) Persist enums as text. For every CLR property whose type
+                //     is an enum or a nullable enum, force HasConversion<string>.
+                //     Compile-safe and a no-op for entities that expose no enum
+                //     today; future enum properties "just work".
+                foreach (var property in entityType.GetProperties())
+                {
+                    var propType = property.ClrType;
+                    var underlying = Nullable.GetUnderlyingType(propType) ?? propType;
+                    if (underlying.IsEnum)
+                    {
+                        modelBuilder.Entity(clr)
+                            .Property(property.Name)
+                            .HasConversion<string>();
+                    }
+                }
+
+                if (isKeyless) continue;
+
+                // (2) Npgsql optimistic concurrency via the system `xmin`
+                //     column. No new user column is added. This is exactly what
+                //     the generic UseXminAsConcurrencyToken() extension does
+                //     internally; we apply it through the metadata API because
+                //     here we only hold the non-generic EntityTypeBuilder
+                //     (CLR type known only at runtime).
+                var xmin = modelBuilder.Entity(clr).Property<uint>("xmin");
+                xmin.HasColumnName("xmin")
+                    .HasColumnType("xid")
+                    .ValueGeneratedOnAddOrUpdate()
+                    .IsConcurrencyToken();
+
+                // (3) Soft-delete global query filter `e => !e.IsDeleted` for
+                //     every entity implementing ISoftDelete. Built dynamically
+                //     because the CLR type is only known at runtime.
+                if (typeof(ISoftDelete).IsAssignableFrom(clr))
+                {
+                    var parameter = Expression.Parameter(clr, "e");
+                    var isDeleted = Expression.Property(parameter, nameof(ISoftDelete.IsDeleted));
+                    var notDeleted = Expression.Not(isDeleted);
+                    var filter = Expression.Lambda(notDeleted, parameter);
+                    modelBuilder.Entity(clr).HasQueryFilter(filter);
+                }
+            }
         }
 
         // Extract the module name from a type's namespace.

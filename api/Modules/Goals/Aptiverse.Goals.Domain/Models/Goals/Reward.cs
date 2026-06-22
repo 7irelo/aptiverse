@@ -1,8 +1,12 @@
-﻿using Aptiverse.Goals.Domain.Models.External.Entitlements;
+﻿using Aptiverse.Api.Data.Abstractions;
+using Aptiverse.Goals.Domain.Models.External.Entitlements;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aptiverse.Goals.Domain.Models.Goals
 {
-    public class Reward
+    [Index(nameof(RewardType))]
+    [Index(nameof(IsActive))]
+    public class Reward : IEntityTimestamps
     {
         public long Id { get; set; }
         public string Name { get; set; }
@@ -13,6 +17,7 @@ namespace Aptiverse.Goals.Domain.Models.Goals
         public bool IsActive { get; set; } = true;
         public int StockQuantity { get; set; } = -1;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         public virtual ICollection<RewardFeature> RewardFeatures { get; set; }
         public virtual ICollection<StudentReward> StudentRewards { get; set; }

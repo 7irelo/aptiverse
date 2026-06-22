@@ -1,8 +1,12 @@
 ﻿using Aptiverse.Marketplace.Domain.Models.External.Booking;
+using Aptiverse.Api.Data.Abstractions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aptiverse.Marketplace.Domain.Models.Marketplace
 {
-    public class Tutor
+    [Index(nameof(UserId))]
+    [Index(nameof(IsVerified))]
+    public class Tutor : IEntityTimestamps
     {
         public long Id { get; set; }
         public string UserId { get; set; }
@@ -16,6 +20,7 @@ namespace Aptiverse.Marketplace.Domain.Models.Marketplace
         public double Rating { get; set; }
         public int TotalReviews { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         public virtual ICollection<TutorSubject> TutorSubjects { get; set; }
         public virtual ICollection<TutorStudent> TutorStudents { get; set; }

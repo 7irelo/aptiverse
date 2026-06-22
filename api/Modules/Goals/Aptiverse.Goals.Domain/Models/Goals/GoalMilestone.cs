@@ -1,6 +1,11 @@
+using Aptiverse.Api.Data.Abstractions;
+using Microsoft.EntityFrameworkCore;
+
 namespace Aptiverse.Goals.Domain.Models.Goals
 {
-    public class GoalMilestone
+    [Index(nameof(GoalId))]
+    [Index(nameof(IsCompleted))]
+    public class GoalMilestone : IEntityTimestamps
     {
         public long Id { get; set; }
         public long GoalId { get; set; }
