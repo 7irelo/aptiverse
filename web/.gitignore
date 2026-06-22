@@ -1,0 +1,29 @@
+node_modules/
+.next/
+out/
+dist/
+
+.env
+.env.*
+!.env.example
+!.env.sample
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Playwright / E2E artefacts
+tests/e2e/.env
+tests/e2e/.auth/
+test-results/
+playwright-report/
+.playwright/
+.features-gen/
+
+# E2E test output logs (per-suite runs land in tests/e2e/<name>-run.log)
+e2e-run.log
+tests/e2e/*.log

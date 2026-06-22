@@ -1,0 +1,38 @@
+# Local-dev stack: Postgres + Redis only.
+# The .NET API runs natively on the host (`dotnet run` in the api repo).
+# The frontend runs on Vercel (and `npm run dev` for local work).
+#
+# The override file (`docker-compose.override.yml`) re-exposes both
+# services to localhost so the host-native API/UI can reach them.
+services:
+  postgres:
+    image: postgres:16
+    container_name: aptiverse-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: aptiverse
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: aptiverse-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:

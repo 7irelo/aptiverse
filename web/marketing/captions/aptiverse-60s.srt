@@ -1,0 +1,61 @@
+1
+00:00:04,000 --> 00:00:07,500
+Every parent wants
+the answer to one question.
+
+2
+00:00:09,000 --> 00:00:12,500
+Is my child on track?
+
+3
+00:00:13,000 --> 00:00:17,000
+We built an AI tutor that knows
+the South African syllabus.
+
+4
+00:00:17,500 --> 00:00:21,000
+NSC. IEB. Cambridge.
+Cites the textbook.
+
+5
+00:00:22,000 --> 00:00:26,500
+Past papers are marked
+the way an examiner would.
+
+6
+00:00:27,000 --> 00:00:31,500
+Not generic.
+Markscheme-aware.
+
+7
+00:00:32,500 --> 00:00:37,500
+Real-time feedback on SBA drafts
+against the rubric.
+
+8
+00:00:38,000 --> 00:00:41,500
+Not a writing tip generator.
+A coach.
+
+9
+00:00:42,500 --> 00:00:45,500
+And when the load gets heavy,
+the app knows.
+
+10
+00:00:45,500 --> 00:00:48,000
+Stress trends. A real counsellor.
+
+11
+00:00:48,500 --> 00:00:52,500
+Aptiverse.
+A calmer matric. Genuinely.
+
+12
+00:00:53,000 --> 00:00:55,000
+Built in South Africa,
+for South Africa.
+
+13
+00:00:55,500 --> 00:00:59,500
+Book a demo at aptiverse.co.za.

@@ -1,0 +1,29 @@
+# .NET build artifacts
+bin/
+obj/
+*.user
+*.suo
+*.dll
+*.pdb
+*.exe
+.vs/
+**/Properties/launchSettings.json
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.p8
+*.key
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Logs
+*.log

@@ -1,0 +1,70 @@
+[project]
+name = "aptiverse-ai"
+version = "0.1.0"
+description = "Aptiverse AI services — background ML workers that turn raw student signals into analytics. One LLM surface (chatbot, OpenAI); everything else is classical/statistical ML."
+requires-python = ">=3.12"
+dependencies = [
+    # --- web / control surface ---
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    # --- jobs / scheduling ---
+    "arq>=0.26",                 # async Redis task queue (reuses existing Redis)
+    "apscheduler>=3.10",         # cron-like nightly batch
+    # --- data access ---
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.30",
+    "redis>=5.2",
+    # --- dataframes / numerics ---
+    "polars>=1.12",
+    "pandas>=2.2",
+    "numpy>=2.1",
+    # --- classical / statistical ML ---
+    "scikit-learn>=1.5",
+    "lightgbm>=4.5",
+    "statsmodels>=0.14",
+    "pyBKT>=1.4",                # Bayesian Knowledge Tracing (mastery)
+    "shap>=0.46",                # explainability for at-risk model
+    # --- NLP (local, no LLM) ---
+    "vaderSentiment>=3.3",       # cheap lexicon sentiment for diary fast-path
+    "sentence-transformers>=3.2",# embeddings for diary theme clustering
+    "pgvector>=0.3",             # store embeddings next to the data
+    # --- chatbot (the ONLY paid LLM dependency) ---
+    "openai>=1.54",
+    # --- ops ---
+    "structlog>=24.4",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.7",
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]

@@ -1,0 +1,48 @@
+# Production stack on the free-tier EC2.
+#   - api:   pulled from GHCR; listens on :80 (mapped from container :5100)
+#   - redis: in-process cache for the API; ephemeral state is fine
+#
+# Postgres comes from RDS — set DB_CONNECTION_STRING in .env to the
+# RDS endpoint terraform outputs.
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: aptiverse-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: ghcr.io/aptiverse-labs/api:latest
+    container_name: aptiverse-api
+    restart: unless-stopped
+    ports:
+      - "80:5100"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://0.0.0.0:5100
+      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
+      ConnectionStrings__Redis: redis:6379,abortConnect=false
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      EmailSettings__Server: ${EMAIL_SMTP_HOST}
+      EmailSettings__Port: ${EMAIL_SMTP_PORT}
+      EmailSettings__Username: ${EMAIL_SMTP_USER}
+      EmailSettings__Password: ${EMAIL_SMTP_PASSWORD}
+      EmailSettings__SenderEmail: ${EMAIL_FROM_ADDRESS}
+      EmailSettings__SenderName: Aptiverse
+      Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID:-}
+      Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
+      Authentication__Apple__ClientId: ${APPLE_CLIENT_ID:-}
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  redis_data:

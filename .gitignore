@@ -1,0 +1,47 @@
+# ---- Secrets (NEVER commit) ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+**/alkebulan_accessKeys.csv
+**/*accessKeys*.csv
+state.json
+
+# ---- .NET ----
+bin/
+obj/
+.vs/
+*.user
+
+# ---- Node / Next.js ----
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+.turbo/
+
+# ---- Python (ai/) ----
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+ai/app/models/*.pkl
+ai/app/models/*.joblib
+ai/app/models/*.bin
+
+# ---- Terraform ----
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+*.log
