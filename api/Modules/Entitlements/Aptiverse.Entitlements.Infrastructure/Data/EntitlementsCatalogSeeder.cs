@@ -8,7 +8,7 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
     // per-plan monthly quotas. Mirrors the public pricing page (see
     // web/src/app/(marketing)/pricing).
     //
-    // Tier strategy is Claude-style — within a group (student / family /
+    // Tier strategy is Claude-style — within a group (student / parent /
     // tutor) features grow as you climb, and quotas grow with them. The
     // Tutor track has a marketplace commission that *tapers down* as
     // subscription goes up: 15% → 10% → 0%. That gives a free on-ramp
@@ -67,25 +67,48 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                     Kind = "paid",
                 },
 
-                // --- Family track ---------------------------------------
+                // --- Parent track ---------------------------------------
+                // Billed by number of children: one child equals a base student
+                // (Student Pro) plus the parent tooling layer, then combo
+                // pricing as children are added. Every tier grants the same
+                // features; tiers differ only by child count and shared quotas.
                 new Plan
                 {
-                    Code = "family",
-                    Name = "Family",
-                    Description = "Up to 2 learners on one bill. Parent dashboard, realtime activity, mastery forecast per child.",
-                    MonthlyPriceZar = 299m,
-                    AnnualPriceZar = 2990m,
+                    Code = "parent",
+                    Name = "Parent (1 child)",
+                    Description = "One child on Student Pro, plus the parent dashboard, wellbeing view, and mark forecast.",
+                    MonthlyPriceZar = 159m,
+                    AnnualPriceZar = 1590m,
+                    MaxMembers = 1,
+                    Kind = "paid",
+                },
+                new Plan
+                {
+                    Code = "parent.2",
+                    Name = "Parent (2 children)",
+                    Description = "Two children on Student Pro with a shared AI pool, plus the full parent toolkit. Combo pricing.",
+                    MonthlyPriceZar = 269m,
+                    AnnualPriceZar = 2690m,
                     MaxMembers = 2,
                     Kind = "paid",
                 },
-                // --- Family Plus (the top family tier offered on /pricing) ---
                 new Plan
                 {
-                    Code = "family.plus",
-                    Name = "Family Plus",
-                    Description = "Up to 4 learners on one bill. Everything in Family, plus higher shared AI limits and per-child goal and progress tracking.",
-                    MonthlyPriceZar = 499m,
-                    AnnualPriceZar = 4990m,
+                    Code = "parent.3",
+                    Name = "Parent (3 children)",
+                    Description = "Three children on Student Pro with a shared AI pool, plus the full parent toolkit. Combo pricing.",
+                    MonthlyPriceZar = 379m,
+                    AnnualPriceZar = 3790m,
+                    MaxMembers = 3,
+                    Kind = "paid",
+                },
+                new Plan
+                {
+                    Code = "parent.4",
+                    Name = "Parent (4 children)",
+                    Description = "Four children on Student Pro with a shared AI pool, plus the full parent toolkit. Combo pricing.",
+                    MonthlyPriceZar = 489m,
+                    AnnualPriceZar = 4890m,
                     MaxMembers = 4,
                     Kind = "paid",
                 },
@@ -198,12 +221,19 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 ("student.max",  "ai.deep",   100),
                 ("student.max",  "whatsapp",  200),
 
-                ("family",       "ai.quick",  200),
-                ("family",       "ai.deep",    15),
-                ("family",       "whatsapp",   40),
-                ("family.plus",  "ai.quick", 1600),
-                ("family.plus",  "ai.deep",   150),
-                ("family.plus",  "whatsapp",  350),
+                // Parent tiers pool one Student-Pro allowance per child.
+                ("parent",       "ai.quick",  300),
+                ("parent",       "ai.deep",    30),
+                ("parent",       "whatsapp",   50),
+                ("parent.2",     "ai.quick",  600),
+                ("parent.2",     "ai.deep",    60),
+                ("parent.2",     "whatsapp",  100),
+                ("parent.3",     "ai.quick",  900),
+                ("parent.3",     "ai.deep",    90),
+                ("parent.3",     "whatsapp",  150),
+                ("parent.4",     "ai.quick", 1200),
+                ("parent.4",     "ai.deep",   120),
+                ("parent.4",     "whatsapp",  200),
 
                 ("tutor.free",   "ai.quick",   15),
                 ("tutor.free",   "ai.deep",     0),
@@ -225,8 +255,10 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 ("free",         "practice.generate",   3),
                 ("student.pro",  "practice.generate",  40),
                 ("student.max",  "practice.generate", 150),
-                ("family",       "practice.generate",  40),
-                ("family.plus",  "practice.generate", 150),
+                ("parent",       "practice.generate",  40),
+                ("parent.2",     "practice.generate",  80),
+                ("parent.3",     "practice.generate", 120),
+                ("parent.4",     "practice.generate", 160),
                 ("tutor.free",   "practice.generate",   5),
                 ("tutor.pro",    "practice.generate",  60),
                 ("tutor.premium","practice.generate", 200),
@@ -371,9 +403,10 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 "whatsapp.contextual",       // WhatsApp tutor that remembers you
             ];
 
-            // ----- Family track -----------------------------------------
-            // Entry — multi-child dashboard + forecast.
-            string[] familyEntryAdds =
+            // ----- Parent track -----------------------------------------
+            // The full parent tooling layer, granted on every parent tier
+            // (tiers differ only by child count + shared quotas, not features).
+            string[] parentAdds =
             [
                 "parent.dashboard",
                 "parent.realtime_feed",
@@ -382,9 +415,13 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 "parent.forecast",           // matric mark prediction per child
                 "parent.billing",
                 "family.linked_children",
+                "parent.uni_readiness",      // university match probability
+                "family.shared_calendar",
+                "family.whatsapp_recap",     // weekly WhatsApp recap to parent
             ];
 
-            // Pro — university pipelines + counselling.
+            // School-only parent extras (a real counselling session + the
+            // concierge/coach features). Kept out of the paid parent tiers.
             string[] familyProAdds =
             [
                 "parent.uni_readiness",      // university match probability
@@ -476,20 +513,20 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
             foreach (var f in studentProAdds) rows.Add(("student.max", f));
             foreach (var f in studentMaxAdds) rows.Add(("student.max", f));
 
-            // Family track — each tier strictly includes the one below.
-            // Family.* inherits everything from Student Pro (every learner
-            // in the household gets the moat features), plus parent tooling.
-            void AddFamily(string code)
+            // Parent track — every tier grants the same features: each child
+            // gets the Student Pro moat, and the parent gets the full toolkit.
+            // The four tiers differ only in child count and shared quotas.
+            void AddParent(string code)
             {
                 foreach (var f in freeFeatures) rows.Add((code, f));
                 foreach (var f in studentEntry) rows.Add((code, f));
                 foreach (var f in studentProAdds) rows.Add((code, f));
-                foreach (var f in familyEntryAdds) rows.Add((code, f));
+                foreach (var f in parentAdds) rows.Add((code, f));
             }
-            AddFamily("family");
-            // Family Plus (the offered top tier) mirrors Family Pro's grants.
-            AddFamily("family.plus");
-            foreach (var f in familyProAdds) rows.Add(("family.plus", f));
+            AddParent("parent");
+            AddParent("parent.2");
+            AddParent("parent.3");
+            AddParent("parent.4");
 
             // Tutor track — each tier strictly includes the one below.
             // Tutor tiers also get free baseline so they can use the
@@ -512,7 +549,7 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
             foreach (var f in studentEntry) rows.Add(("school", f));
             foreach (var f in studentProAdds) rows.Add(("school", f));
             foreach (var f in studentMaxAdds) rows.Add(("school", f));
-            foreach (var f in familyEntryAdds) rows.Add(("school", f));
+            foreach (var f in parentAdds) rows.Add(("school", f));
             foreach (var f in familyProAdds) rows.Add(("school", f));
             foreach (var f in familyMaxAdds) rows.Add(("school", f));
             foreach (var f in schoolExtras) rows.Add(("school", f));
