@@ -41,6 +41,13 @@ namespace Aptiverse.Entitlements.Domain.Models
         // entirely as the carrot for committing to a subscription.
         public decimal? CommissionPercent { get; set; }
 
+        // Paystack recurring Plan codes (PLN_...), one per billing interval,
+        // minted by PaystackPlanSyncer on startup and stored here so
+        // checkout can start a real auto-renewing subscription. Null until
+        // synced, and always null for free/custom plans (never charged).
+        public string? PaystackPlanCodeMonthly { get; set; }
+        public string? PaystackPlanCodeAnnual { get; set; }
+
         public virtual ICollection<PlanFeature> PlanFeatures { get; set; } = [];
     }
 }

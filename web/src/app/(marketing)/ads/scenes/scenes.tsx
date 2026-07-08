@@ -168,7 +168,7 @@ function UserBubble({ children }: { children: React.ReactNode }) {
       >
         <Typography variant="body2">{children}</Typography>
       </Box>
-      <Avatar sx={{ bgcolor: "secondary.light", width: 32, height: 32 }}>
+      <Avatar sx={{ bgcolor: "secondary.light", color: "secondary.contrastText", width: 32, height: 32 }}>
         <PersonIcon fontSize="small" />
       </Avatar>
     </Stack>

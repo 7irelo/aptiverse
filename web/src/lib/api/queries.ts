@@ -2,9 +2,8 @@
 
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient, openEventStream } from "@/lib/api/fetcher";
+import { apiClient, openEventStream, ApiError } from "@/lib/api/fetcher";
 import {
-  BURSARIES,
   CHILDREN,
   CLASSES,
   NOTIFICATIONS,
@@ -14,8 +13,6 @@ import {
   type Subject,
   type PracticeTest,
   type Tutor,
-  type Course,
-  type Bursary,
   type Child,
   type ClassRecord,
   type Notification,
@@ -28,6 +25,8 @@ import {
   type Curriculum,
   type CatalogSubject,
   type AcademicProfile,
+  type Institution,
+  type EnrolledCourse,
 } from "@/lib/mockData";
 
 export type Counsellor = {
@@ -141,11 +140,12 @@ export const queryKeys = {
   goals: () => ["goals"] as const,
   practiceTests: () => ["practice-tests"] as const,
   practiceTest: (id: string) => ["practice-test", id] as const,
+  topicMastery: (subjectId?: string) => ["mastery", "topics", subjectId ?? "all"] as const,
+  termPredictions: () => ["mastery", "predictions"] as const,
   tutors: () => ["tutors"] as const,
   tutor: (id: string) => ["tutor", id] as const,
-  courses: () => ["courses"] as const,
-  course: (id: string) => ["course", id] as const,
-  bursaries: () => ["bursaries"] as const,
+  tutorConnections: () => ["tutor", "connections"] as const,
+  tutorReviews: () => ["tutor", "reviews"] as const,
   children: () => ["children"] as const,
   classes: () => ["classes"] as const,
   notifications: () => ["notifications"] as const,
@@ -166,6 +166,9 @@ export const queryKeys = {
   curricula: () => ["curricula"] as const,
   curriculumSubjects: (curriculumId: string) => ["curriculum-subjects", curriculumId] as const,
   academicProfile: () => ["academic-profile"] as const,
+  institutions: (type?: string) => ["institutions", type ?? "all"] as const,
+  courses: () => ["courses"] as const,
+  institutionCourses: (institutionId: string) => ["institution-courses", institutionId] as const,
   schoolEnquiries: (contacted?: boolean) =>
     contacted === undefined
       ? (["school-enquiries"] as const)
@@ -215,6 +218,8 @@ export type UpdateAcademicProfileInput = {
   curriculumId?: string;
   grade?: number;
   school?: string;
+  educationLevel?: "highschool" | "tertiary";
+  institutionId?: string;
 };
 
 export const useUpdateAcademicProfile = () => {
@@ -242,6 +247,152 @@ export const useAddSubject = () => {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.subjects() });
       void qc.invalidateQueries({ queryKey: queryKeys.academicProfile() });
+    },
+  });
+};
+
+// --- Institutions + courses (tertiary) ---------------------------------
+
+export const useInstitutions = (type?: string) =>
+  useQuery<Institution[]>({
+    queryKey: queryKeys.institutions(type),
+    queryFn: () =>
+      apiClient.get<Institution[]>(
+        `/api/academic-planning/institutions${type ? `?type=${encodeURIComponent(type)}` : ""}`,
+      ),
+    staleTime: 1000 * 60 * 60, // institution catalog is static within a session
+  });
+
+export const useCourses = () =>
+  useQuery<EnrolledCourse[]>({
+    queryKey: queryKeys.courses(),
+    queryFn: () => apiClient.get<EnrolledCourse[]>("/api/academic-planning/courses"),
+  });
+
+// A student's academic units, unified across education levels: high-school
+// students bind work to their CAPS subjects, tertiary students to their
+// institution courses. Everything that used to assume "subjects" (assessments,
+// filters, name resolution) reads this instead. The `id` is what gets stored on
+// an assessment's subjectId, a subject slug for high-school, a course
+// practiceKey for tertiary. Queries are gated by level so a high-schooler never
+// calls the courses endpoint and vice versa.
+export type AcademicUnit = { id: string; name: string; kind: "subject" | "course" };
+
+export function useAcademicUnits() {
+  const profileQuery = useAcademicProfile();
+  const isTertiary = profileQuery.data?.educationLevel === "tertiary";
+
+  const subjectsQuery = useQuery<Subject[]>({
+    queryKey: queryKeys.subjects(),
+    queryFn: () => apiClient.get<Subject[]>("/api/academic-planning/subjects"),
+    enabled: profileQuery.isSuccess && !isTertiary,
+  });
+  const coursesQuery = useQuery<EnrolledCourse[]>({
+    queryKey: queryKeys.courses(),
+    queryFn: () => apiClient.get<EnrolledCourse[]>("/api/academic-planning/courses"),
+    enabled: profileQuery.isSuccess && isTertiary,
+  });
+
+  const units: AcademicUnit[] = isTertiary
+    ? (coursesQuery.data ?? []).map((c) => ({ id: c.practiceKey, name: c.name, kind: "course" as const }))
+    : (subjectsQuery.data ?? []).map((s) => ({ id: s.subjectId, name: s.name, kind: "subject" as const }));
+
+  return {
+    units,
+    isTertiary,
+    // Singular/plural nouns + the page to add more, so shared UI reads correctly.
+    unitNoun: isTertiary ? "course" : "subject",
+    unitNounPlural: isTertiary ? "courses" : "subjects",
+    addHref: isTertiary ? "/dashboard/courses" : "/dashboard/subjects",
+    isLoading: profileQuery.isLoading || (isTertiary ? coursesQuery.isLoading : subjectsQuery.isLoading),
+    isReady: profileQuery.isSuccess && (isTertiary ? coursesQuery.isSuccess : subjectsQuery.isSuccess),
+    nameFor: (id: string | null | undefined) =>
+      id ? units.find((u) => u.id === id)?.name : undefined,
+  };
+}
+
+export type UnitSignal = {
+  // Soonest not-yet-graded assessment for this unit, or null.
+  nextAssessment: Assessment | null;
+  // Weighted average of graded marks (TermPrediction.currentTerm), or null when
+  // nothing has been graded. Never fabricated.
+  currentMark: number | null;
+  predictedMark: number | null;
+  // Average topic mastery + how many topics have been practised, or null.
+  mastery: { avg: number; topics: number } | null;
+};
+
+// Real per-unit academic signal, composed from the student's assessments, term
+// predictions, and topic mastery. Keyed by unit id (subject slug for
+// high-school, course practiceKey for tertiary), so one hook serves both. Every
+// field is best-effort: a unit with no graded work has null marks/mastery
+// rather than an invented number. This replaces the empty legacy aggregate
+// fields on the Subject payload that made cards read as "-".
+export function useAcademicSignals() {
+  const assessmentsQuery = useAssessments();
+  const predictionsQuery = useTermPredictions();
+  const masteryQuery = useTopicMastery();
+
+  const assessments = assessmentsQuery.data ?? [];
+  const predictions = predictionsQuery.data ?? [];
+  const mastery = masteryQuery.data ?? [];
+
+  // "Upcoming" keeps today's still-due items (grace of one day) and sorts soonest first.
+  const cutoff = Date.now() - 86_400_000;
+  const upcoming = assessments
+    .filter((a) => a.status !== "graded" && Number(new Date(a.dueDate)) >= cutoff)
+    .sort((a, b) => Number(new Date(a.dueDate)) - Number(new Date(b.dueDate)));
+
+  const signalsFor = (unitId: string): UnitSignal => {
+    const prediction = predictions.find((p) => p.subjectId === unitId);
+    const topics = mastery.filter((m) => m.subjectId === unitId);
+    return {
+      nextAssessment: upcoming.find((a) => a.subjectId === unitId) ?? null,
+      currentMark: prediction && prediction.currentTerm > 0 ? Math.round(prediction.currentTerm) : null,
+      predictedMark:
+        prediction && prediction.predictedNextTerm > 0 ? Math.round(prediction.predictedNextTerm) : null,
+      mastery: topics.length
+        ? {
+            avg: Math.round(topics.reduce((s, t) => s + t.mastery, 0) / topics.length),
+            topics: topics.length,
+          }
+        : null,
+    };
+  };
+
+  const marked = predictions.filter((p) => p.currentTerm > 0);
+
+  return {
+    signalsFor,
+    nextAssessmentOverall: upcoming[0] ?? null,
+    upcomingCount: upcoming.length,
+    // Average current mark across units that actually have graded work.
+    avgCurrentMark: marked.length
+      ? Math.round(marked.reduce((s, p) => s + p.currentTerm, 0) / marked.length)
+      : null,
+    topicsPracticed: mastery.length,
+    isLoading: assessmentsQuery.isLoading,
+  };
+}
+
+export type AddCourseInput = { name: string; code?: string; lecturer?: string };
+
+export const useAddCourse = () => {
+  const qc = useQueryClient();
+  return useMutation<EnrolledCourse, ApiError, AddCourseInput>({
+    mutationFn: (input) => apiClient.post<EnrolledCourse>("/api/academic-planning/courses", input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.courses() });
+    },
+  });
+};
+
+export const useDeleteCourse = () => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (id) => apiClient.delete<void>(`/api/academic-planning/courses/${id}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.courses() });
     },
   });
 };
@@ -476,6 +627,19 @@ export const useDeleteGoal = () => {
   });
 };
 
+// Persist a drag-to-reorder of the student's goals. The array of goal ids, in
+// their new order, becomes the server-side SortOrder so the priority sticks.
+export const useReorderGoals = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (goalIds: string[]) =>
+      apiClient.patch<void>("/api/goals/reorder", { goalIds }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.goals() });
+    },
+  });
+};
+
 export const usePracticeTests = () =>
   useQuery<PracticeTest[]>({
     queryKey: queryKeys.practiceTests(),
@@ -487,6 +651,150 @@ export const usePracticeTest = (id: string) =>
     queryKey: queryKeys.practiceTest(id),
     queryFn: () => apiClient.get<PracticeTest>(`/api/practice/tests/${id}`),
     enabled: !!id,
+  });
+
+// ── Practice test-taking flow ─────────────────────────────────────────
+// The runner loads questions, starts an attempt, then PATCHes it with
+// per-question answers + timing. The submit writes AttemptScoreSummary
+// (per-topic correctness) server-side, which is exactly what the Mastery
+// engine reads — so a submitted attempt feeds topic-mastery + predictions.
+
+export type PracticeQuestion = {
+  id: string;
+  question: string;
+  options: string[];
+  answerIdx: number;
+  explanation?: string | null;
+  topic?: string | null;
+};
+
+export type PracticeTopicScore = {
+  topic: string;
+  correct: number;
+  total: number;
+  percent: number;
+};
+
+export type PracticeScoreSummary = {
+  totalQuestions: number;
+  correctCount: number;
+  incorrectCount: number;
+  unansweredCount: number;
+  scorePercent: number;
+  totalTimeMs: number;
+  perTopic: PracticeTopicScore[];
+};
+
+export type PracticeAnswerItem = {
+  questionId: string;
+  selectedIdx: number;
+  timeMs: number;
+};
+
+export type PracticeAttemptResult = {
+  id: string;
+  testId: string;
+  studentId: string;
+  status: string;
+  startedAt: string;
+  submittedAt?: string | null;
+  score?: number | null;
+  answers: number[];
+  answerItems: PracticeAnswerItem[];
+  summary?: PracticeScoreSummary | null;
+};
+
+export const usePracticeQuestions = (testId: string) =>
+  useQuery<PracticeQuestion[]>({
+    queryKey: ["practice-questions", testId],
+    queryFn: () =>
+      apiClient.get<PracticeQuestion[]>(`/api/practice/tests/${testId}/questions`),
+    enabled: !!testId,
+    // Questions are stable for a test; don't refetch mid-attempt.
+    staleTime: Infinity,
+  });
+
+export const useStartAttempt = () =>
+  useMutation<PracticeAttemptResult, Error, string>({
+    mutationFn: (testId) =>
+      apiClient.post<PracticeAttemptResult>(`/api/practice/tests/${testId}/attempts`, {}),
+  });
+
+export const useSubmitAttempt = () => {
+  const qc = useQueryClient();
+  return useMutation<
+    PracticeAttemptResult,
+    Error,
+    { attemptId: string; answerItems: PracticeAnswerItem[] }
+  >({
+    mutationFn: ({ attemptId, answerItems }) =>
+      apiClient.patch<PracticeAttemptResult>(`/api/practice/attempts/${attemptId}`, {
+        answerItems,
+      }),
+    onSuccess: () => {
+      // A scored attempt moves practice best-scores, mastery, and predictions.
+      void qc.invalidateQueries({ queryKey: queryKeys.practiceTests() });
+      void qc.invalidateQueries({ queryKey: ["mastery"] });
+    },
+  });
+};
+
+// Generate a private practice test with Claude. Topics are optional — pass
+// the student's weakest (from useTopicMastery) to target them, or omit for a
+// general test. Metered server-side by the practice.generate quota; a 402
+// ApiError means the monthly allowance is spent.
+export type GenerateTestInput = {
+  subjectId: string;
+  topics?: string[];
+  difficulty?: "foundation" | "core" | "challenge";
+  questionCount?: number;
+};
+
+export const useGenerateTest = () => {
+  const qc = useQueryClient();
+  return useMutation<PracticeTest, ApiError, GenerateTestInput>({
+    mutationFn: (input) =>
+      apiClient.post<PracticeTest>("/api/practice/tests/generate", input),
+    onSuccess: (test) => {
+      void qc.invalidateQueries({ queryKey: queryKeys.practiceTests() });
+      // The generated test is immediately fetchable by id in the runner.
+      qc.setQueryData(queryKeys.practiceTest(String(test.id)), test);
+    },
+  });
+};
+
+// Mastery — computed on read by the API from real practice + graded-SBA
+// signals (no ML, no fake fields). Both return [] until the student has
+// practice attempts / graded assessments, so callers render empty states.
+export type TopicMastery = {
+  subjectId: string;
+  subject: string;
+  topic: string;
+  mastery: number; // 0-100 cumulative correctness for this topic
+  trend: number; // points, latest attempt minus first (+/-)
+};
+
+export type TermPrediction = {
+  subjectId: string;
+  subject: string;
+  currentTerm: number; // 0-100 weighted average of graded marks
+  predictedNextTerm: number; // 0-100 projection
+  confidence: number; // 0-1, grows with evidence
+};
+
+export const useTopicMastery = (subjectId?: string) =>
+  useQuery<TopicMastery[]>({
+    queryKey: queryKeys.topicMastery(subjectId),
+    queryFn: () =>
+      apiClient.get<TopicMastery[]>(
+        `/api/mastery/topic-mastery${subjectId ? `?subjectId=${encodeURIComponent(subjectId)}` : ""}`,
+      ),
+  });
+
+export const useTermPredictions = () =>
+  useQuery<TermPrediction[]>({
+    queryKey: queryKeys.termPredictions(),
+    queryFn: () => apiClient.get<TermPrediction[]>("/api/mastery/predictions"),
   });
 
 export const useTutors = () =>
@@ -502,10 +810,137 @@ export const useTutor = (id: string) =>
     enabled: !!id,
   });
 
-export const useCourses = () =>
-  useQuery<Course[]>({
-    queryKey: queryKeys.courses(),
-    queryFn: () => apiClient.get<Course[]>("/api/marketplace/courses"),
+// Public reviews for a specific tutor (student-facing detail page).
+export const useTutorReviewsById = (id: string) =>
+  useQuery<TutorReview[]>({
+    queryKey: ["tutor", "reviews", id],
+    queryFn: () => apiClient.get<TutorReview[]>(`/api/marketplace/tutors/${id}/reviews`),
+    enabled: !!id,
+  });
+
+// The reshaped tutor track: Aptiverse does not facilitate paid sessions or take
+// commission. A tutor showcases a profile, connects with students/parents, and
+// collects reviews; the tutoring arrangement happens directly, off-platform.
+export type TutorConnection = {
+  id: string;
+  studentId: string;
+  student: string;
+  subject: string;
+  status: "active" | "paused";
+  connectedAt: string;
+};
+
+export type TutorReview = {
+  id: string;
+  student: string;
+  rating: number;
+  body: string;
+  when: string;
+};
+
+export const useTutorConnections = () =>
+  useQuery<TutorConnection[]>({
+    queryKey: queryKeys.tutorConnections(),
+    queryFn: () => apiClient.get<TutorConnection[]>("/api/booking/connections"),
+  });
+
+export const useTutorReviews = () =>
+  useQuery<TutorReview[]>({
+    queryKey: queryKeys.tutorReviews(),
+    queryFn: () => apiClient.get<TutorReview[]>("/api/marketplace/tutor/reviews"),
+  });
+
+// Student/parent actions on a tutor. Both notify the tutor server-side (in-app
+// always, email gated on the tutor's notification preferences).
+export const useConnectWithTutor = () => {
+  const qc = useQueryClient();
+  return useMutation<TutorConnection, ApiError, { tutorUserId: string; subject?: string }>({
+    mutationFn: (body) => apiClient.post<TutorConnection>("/api/booking/connections", body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.tutorConnections() });
+    },
+  });
+};
+
+export const useCreateTutorReview = () => {
+  const qc = useQueryClient();
+  return useMutation<TutorReview, ApiError, { tutorUserId: string; rating: number; body?: string }>({
+    mutationFn: ({ tutorUserId, ...rest }) =>
+      apiClient.post<TutorReview>(`/api/marketplace/tutors/${tutorUserId}/reviews`, rest),
+    onSuccess: (_data, variables) => {
+      void qc.invalidateQueries({ queryKey: queryKeys.tutorReviews() });
+      void qc.invalidateQueries({ queryKey: ["tutor", "reviews", variables.tutorUserId] });
+      void qc.invalidateQueries({ queryKey: queryKeys.tutor(variables.tutorUserId) });
+    },
+  });
+};
+
+export type TutorProfile = {
+  id: string;
+  qualification: string;
+  specialization: string;
+  bio: string;
+  yearsOfExperience: number;
+  teachingStyle: string;
+  isVerified: boolean;
+  rating: number;
+  totalReviews: number;
+  acceptingStudents: boolean;
+  availableDays: string;
+  earliestHour: number;
+  latestHour: number;
+  subjects: string;
+  notifyOnConnection: boolean;
+  notifyOnReview: boolean;
+  weeklySummary: boolean;
+};
+
+// The tutor's own public profile. 404s until they set one up; the profile page
+// treats a null result as the "not set up yet" empty state.
+export const useTutorProfile = () =>
+  useQuery<TutorProfile | null>({
+    queryKey: ["tutor", "profile"],
+    queryFn: async () => {
+      try {
+        return await apiClient.get<TutorProfile>("/api/marketplace/tutor/me");
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) return null;
+        throw err;
+      }
+    },
+  });
+
+export type UpdateTutorProfileInput = {
+  qualification?: string;
+  specialization?: string;
+  bio?: string;
+  teachingStyle?: string;
+  yearsOfExperience?: number;
+  acceptingStudents?: boolean;
+  availableDays?: string;
+  earliestHour?: number;
+  latestHour?: number;
+  subjects?: string;
+  notifyOnConnection?: boolean;
+  notifyOnReview?: boolean;
+  weeklySummary?: boolean;
+};
+
+// Upsert the tutor's public profile and settings. Rating, review count and
+// verification are system-managed and not part of the payload.
+export const useUpdateTutorProfile = () => {
+  const qc = useQueryClient();
+  return useMutation<TutorProfile, ApiError, UpdateTutorProfileInput>({
+    mutationFn: (input) => apiClient.put<TutorProfile>("/api/marketplace/tutor/me", input),
+    onSuccess: (data) => {
+      qc.setQueryData(["tutor", "profile"], data);
+    },
+  });
+};
+
+export const useChangePassword = () =>
+  useMutation<void, ApiError, { currentPassword: string; newPassword: string }>({
+    mutationFn: (body) => apiClient.post<void>("/api/auth/change-password", body),
   });
 
 export const useDiaryEntries = () =>
@@ -540,10 +975,60 @@ export const useMoodTrend = (days = 14) =>
     staleTime: 60_000,
   });
 
+// ── Wellbeing check-ins (the write path the page was missing) ──────────
+// Logging a mood/diary entry is what makes the summary + trend populate.
+
+export type LogMoodInput = {
+  mood: number; // 1-5
+  stressLevel?: string;
+  sleepHours?: number;
+  notes?: string;
+};
+
+export const useLogMood = () => {
+  const qc = useQueryClient();
+  return useMutation<MoodPoint, Error, LogMoodInput>({
+    mutationFn: (input) => apiClient.post<MoodPoint>("/api/wellbeing/mood", input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.wellbeingSummary() });
+      void qc.invalidateQueries({ queryKey: ["wellbeing", "mood-trend"] });
+    },
+  });
+};
+
+export type LogDiaryInput = {
+  mood: number; // 1-5
+  content: string;
+  tags?: string[];
+};
+
+export const useLogDiary = () => {
+  const qc = useQueryClient();
+  return useMutation<DiaryEntry, Error, LogDiaryInput>({
+    mutationFn: (input) => apiClient.post<DiaryEntry>("/api/wellbeing/diary", input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.diary() });
+      void qc.invalidateQueries({ queryKey: queryKeys.wellbeingSummary() });
+      void qc.invalidateQueries({ queryKey: ["wellbeing", "mood-trend"] });
+    },
+  });
+};
+
 export const useRewards = () =>
   useQuery<Reward[]>({
     queryKey: queryKeys.rewards(),
     queryFn: () => apiClient.get<Reward[]>("/api/goals/rewards"),
+  });
+
+// ── AI tutor (the /dashboard/chatbot academic assistant) ───────────────
+export type AiChatMessage = { role: "user" | "assistant"; content: string };
+export type AiTutorReply = { reply: string; remaining: number; limit: number; used: number };
+
+// Sends the running conversation to the tutor endpoint and returns its reply.
+// Throws ApiError on 402 (quota) / 503 (not configured) so the UI can explain.
+export const useAiTutor = () =>
+  useMutation<AiTutorReply, ApiError, AiChatMessage[]>({
+    mutationFn: (messages) => apiClient.post<AiTutorReply>("/api/ai/tutor", { messages }),
   });
 
 export const useCareers = () =>
@@ -552,17 +1037,112 @@ export const useCareers = () =>
     queryFn: () => apiClient.get<Career[]>("/api/careers"),
   });
 
-export const useBursaries = () =>
-  useQuery<Bursary[]>({
-    queryKey: queryKeys.bursaries(),
-    queryFn: () => apiClient.get<Bursary[]>("/api/bursaries"),
-  });
-
 export const useChildren = () =>
   useQuery<Child[]>({
     queryKey: queryKeys.children(),
     queryFn: () => apiClient.get<Child[]>("/api/entitlements/children"),
   });
+
+// --- Parent <-> student links -------------------------------------------
+// A parent invites a student by email; the student accepts from their
+// Connections hub. Additive link model (identity.parent_links), no change to
+// the users table. Parent gets a read-only window onto a linked student.
+
+export type ParentLink = {
+  id: string;
+  studentEmail: string;
+  studentName: string | null;
+  studentUserId: string | null;
+  status: "pending" | "accepted" | string;
+  createdAt: string;
+  respondedAt: string | null;
+};
+
+export type LinkedParent = {
+  id: string;
+  parentName: string;
+  status: string;
+  since: string;
+};
+
+export type IncomingParentInvite = {
+  id: string;
+  token: string;
+  parentName: string;
+  invitedAt: string;
+};
+
+export type StudentOverview = {
+  studentUserId: string;
+  name: string;
+  educationLevel: string;
+  upcomingCount: number;
+  upcoming: { id: string; title: string; subjectId: string; dueDate: string; status: string }[];
+};
+
+// Parent side
+export const useMyParentLinks = () =>
+  useQuery<ParentLink[]>({
+    queryKey: ["parent-links", "mine"],
+    queryFn: () => apiClient.get<ParentLink[]>("/api/parent-links/mine"),
+  });
+
+export const useInviteStudent = () => {
+  const qc = useQueryClient();
+  return useMutation<ParentLink, ApiError, { studentEmail: string }>({
+    mutationFn: (body) => apiClient.post<ParentLink>("/api/parent-links/invites", body),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["parent-links", "mine"] }),
+  });
+};
+
+export const useRemoveParentLink = () => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (id) => apiClient.delete<void>(`/api/parent-links/${id}`),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["parent-links", "mine"] }),
+  });
+};
+
+export const useLinkedStudentOverview = (studentUserId: string) =>
+  useQuery<StudentOverview>({
+    queryKey: ["parent-links", "overview", studentUserId],
+    queryFn: () =>
+      apiClient.get<StudentOverview>(`/api/parent-links/students/${studentUserId}/overview`),
+    enabled: !!studentUserId,
+  });
+
+// Student side
+export const useIncomingParentInvites = () =>
+  useQuery<IncomingParentInvite[]>({
+    queryKey: ["parent-links", "incoming"],
+    queryFn: () => apiClient.get<IncomingParentInvite[]>("/api/parent-links/invites/incoming"),
+  });
+
+export const useLinkedParents = () =>
+  useQuery<LinkedParent[]>({
+    queryKey: ["parent-links", "parents"],
+    queryFn: () => apiClient.get<LinkedParent[]>("/api/parent-links/parents"),
+  });
+
+export const useRespondToParentInvite = () => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, { token: string; accept: boolean }>({
+    mutationFn: ({ token, accept }) =>
+      apiClient.post<void>(`/api/parent-links/invites/${token}/${accept ? "accept" : "decline"}`, {}),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["parent-links", "incoming"] });
+      void qc.invalidateQueries({ queryKey: ["parent-links", "parents"] });
+    },
+  });
+};
+
+export const useUnlinkParent = () => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (id) => apiClient.delete<void>(`/api/parent-links/parents/${id}`),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["parent-links", "parents"] }),
+  });
+};
 
 export const useClasses = () =>
   useQuery<ClassRecord[]>({
@@ -589,6 +1169,33 @@ export const useUnreadNotificationsCount = () =>
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
+
+export type NotificationPreferences = {
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  studyGroupEmailReminders: boolean;
+  wellbeingCheckinReminders: boolean;
+  assessmentDueReminders: boolean;
+  assessmentDueEmailReminders: boolean;
+  weeklyStudySummary: boolean;
+};
+
+export const useNotificationPreferences = () =>
+  useQuery<NotificationPreferences>({
+    queryKey: ["notifications", "preferences"],
+    queryFn: () => apiClient.get<NotificationPreferences>("/api/notifications/preferences"),
+  });
+
+// Partial patch: send only the toggled field. The server applies just what's
+// present and returns the full, updated set.
+export const useUpdateNotificationPreferences = () => {
+  const qc = useQueryClient();
+  return useMutation<NotificationPreferences, ApiError, Partial<NotificationPreferences>>({
+    mutationFn: (body) =>
+      apiClient.patch<NotificationPreferences>("/api/notifications/preferences", body),
+    onSuccess: (data) => qc.setQueryData(["notifications", "preferences"], data),
+  });
+};
 
 // Mark a single notification as read. Optimistic so the bold + dot
 // disappear immediately while the PATCH is in flight.
@@ -643,6 +1250,82 @@ export const useStudyGroups = () =>
     queryKey: queryKeys.studyGroups(),
     queryFn: () => apiClient.get<StudyGroup[]>("/api/study-groups"),
   });
+
+export type CreateStudyGroupInput = {
+  name: string;
+  subjectId: string;
+  description?: string;
+  privacy: "open" | "invite";
+};
+
+export const useCreateStudyGroup = () => {
+  const qc = useQueryClient();
+  return useMutation<StudyGroup, ApiError, CreateStudyGroupInput>({
+    mutationFn: (body) => apiClient.post<StudyGroup>("/api/study-groups", body),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: queryKeys.studyGroups() }),
+  });
+};
+
+export const useJoinStudyGroup = () => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (id) => apiClient.post<void>(`/api/study-groups/${id}/join`, {}),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: queryKeys.studyGroups() }),
+  });
+};
+
+export const useLeaveStudyGroup = () => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (id) => apiClient.post<void>(`/api/study-groups/${id}/leave`, {}),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: queryKeys.studyGroups() }),
+  });
+};
+
+export type StudyGroupSession = {
+  id: string;
+  title: string;
+  startsAt: string;
+  durationMinutes: number;
+  location: string;
+  canManage: boolean;
+};
+
+export const useStudyGroupSessions = (groupId: string, enabled = true) =>
+  useQuery<StudyGroupSession[]>({
+    queryKey: ["study-groups", groupId, "sessions"],
+    queryFn: () => apiClient.get<StudyGroupSession[]>(`/api/study-groups/${groupId}/sessions`),
+    enabled: enabled && !!groupId,
+  });
+
+export type ScheduleSessionInput = {
+  title: string;
+  startsAt: string;
+  durationMinutes?: number;
+  location?: string;
+};
+
+export const useScheduleSession = (groupId: string) => {
+  const qc = useQueryClient();
+  return useMutation<StudyGroupSession, ApiError, ScheduleSessionInput>({
+    mutationFn: (body) => apiClient.post<StudyGroupSession>(`/api/study-groups/${groupId}/sessions`, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["study-groups", groupId, "sessions"] });
+      void qc.invalidateQueries({ queryKey: queryKeys.studyGroups() });
+    },
+  });
+};
+
+export const useCancelSession = (groupId: string) => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (sessionId) => apiClient.delete<void>(`/api/study-groups/${groupId}/sessions/${sessionId}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["study-groups", groupId, "sessions"] });
+      void qc.invalidateQueries({ queryKey: queryKeys.studyGroups() });
+    },
+  });
+};
 
 export const useLiveActivity = (take = 30) =>
   useQuery<LiveActivity[]>({
@@ -790,3 +1473,147 @@ export const usePlans = () =>
     queryFn: () => apiClient.get<PlanDto[]>("/api/entitlements/plans"),
     staleTime: 5 * 60_000, // 5 minutes
   });
+
+// --- Navigation (server-driven, entitlement-dependent) ------------------
+// Mirrors api/Controllers/NavigationController.NavSectionDto / NavItemDto.
+// The sidebar is computed from the signed-in user's real role + live
+// features, so it reflects exactly what they can access.
+export type NavItemDto = {
+  label: string;
+  href: string;
+  icon: string; // key resolved via components/dashboard/nav-icons
+  badge: string | null;
+};
+
+export type NavSectionDto = {
+  heading: string;
+  items: NavItemDto[];
+};
+
+export const useNavigation = () =>
+  useQuery<NavSectionDto[]>({
+    queryKey: ["navigation"],
+    queryFn: () => apiClient.get<NavSectionDto[]>("/api/navigation"),
+    staleTime: 60_000,
+    refetchOnWindowFocus: true,
+  });
+
+// --- Billing (the signed-in user's own subscription) --------------------
+// Mirrors api/Controllers/PaymentsController.BillingSummaryDto / TransactionDto.
+export type BillingSummaryDto = {
+  hasSubscription: boolean;
+  isOwner: boolean;
+  managedByOther: boolean;
+  subscriptionId: string | null;
+  planCode: string;
+  planName: string;
+  status: string; // active | past_due | cancelled | ""
+  monthlyPriceZar: number | null;
+  annualPriceZar: number | null;
+  chargeAmountZar: number | null;
+  maxMembers: number;
+  nextChargeDate: string | null;
+  cancelledAt: string | null;
+  canManage: boolean;
+  cardBrand: string | null;
+  cardLast4: string | null;
+  cardExpMonth: number | null;
+  cardExpYear: number | null;
+  pendingPlanCode: string | null;
+  pendingPlanName: string | null;
+  changeEffectiveDate: string | null;
+};
+
+export type BillingTransactionDto = {
+  reference: string;
+  amountZar: number;
+  currency: string;
+  status: string;
+  paidAt: string | null;
+};
+
+export const useBillingSummary = () =>
+  useQuery<BillingSummaryDto>({
+    queryKey: ["billing", "subscription"],
+    queryFn: () => apiClient.get<BillingSummaryDto>("/api/payments/subscription"),
+    staleTime: 30_000,
+  });
+
+export const useBillingTransactions = () =>
+  useQuery<BillingTransactionDto[]>({
+    queryKey: ["billing", "transactions"],
+    queryFn: () => apiClient.get<BillingTransactionDto[]>("/api/payments/transactions"),
+    staleTime: 60_000,
+  });
+
+// Confirms a checkout by its Paystack reference on return from the hosted
+// page, activating the subscription server-side (no webhook needed).
+export const useVerifyPayment = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (reference: string) =>
+      apiClient.post<{ status: string; planCode?: string }>("/api/payments/verify", { reference }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["billing"] });
+      qc.invalidateQueries({ queryKey: ["entitlements", "me"] });
+    },
+  });
+};
+
+// Cancels the user's subscription (stops renewal; access stays until the
+// paid-through date). Refreshes billing + entitlements after.
+export const useCancelSubscription = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiClient.post<{ status: string; validUntil: string | null }>("/api/payments/subscription/cancel"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["billing"] });
+      qc.invalidateQueries({ queryKey: ["entitlements", "me"] });
+    },
+  });
+};
+
+export type ChangePlanInput = {
+  targetPlanCode: string;
+  billing?: "monthly" | "annual";
+  email?: string;
+  callbackUrl?: string;
+};
+
+export type ChangePlanResult = {
+  mode: "checkout" | "scheduled" | "noop";
+  authorizationUrl?: string;
+  planCode?: string;
+  effectiveDate?: string | null;
+};
+
+// Changes plan. Upgrades return mode "checkout" (redirect to Paystack);
+// downgrades return mode "scheduled" (takes effect at period end).
+export const useChangePlan = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ChangePlanInput) =>
+      apiClient.post<ChangePlanResult>("/api/payments/subscription/change", input),
+    onSuccess: (res) => {
+      // Only invalidate for a scheduled change; a checkout redirects away.
+      if (res.mode !== "checkout") {
+        qc.invalidateQueries({ queryKey: ["billing"] });
+        qc.invalidateQueries({ queryKey: ["entitlements", "me"] });
+      }
+    },
+  });
+};
+
+// Cancels a scheduled downgrade before it takes effect.
+export const useCancelChange = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiClient.post<{ status: string; planCode: string }>("/api/payments/subscription/cancel-change"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["billing"] });
+      qc.invalidateQueries({ queryKey: ["entitlements", "me"] });
+    },
+  });
+};

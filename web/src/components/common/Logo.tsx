@@ -9,6 +9,9 @@ export type LogoProps = {
   size?: number;
   showWordmark?: boolean;
   variant?: "default" | "compact";
+  // Overrides the wordmark and mark stroke colour. Defaults to text.primary
+  // so the mark reads on light surfaces; pass a light value on dark panels.
+  color?: string;
 };
 
 /**
@@ -22,7 +25,7 @@ export type LogoProps = {
  * the product for earned milestones. The apex is the symbolic
  * achievement, so the logo carries the rule wherever it goes.
  */
-export function LogoMark({ size = 28 }: { size?: number }) {
+export function LogoMark({ size = 28, color }: { size?: number; color?: string }) {
   const theme = useTheme();
   const apex = theme.palette.achievement.main;
   const surface = theme.palette.background.paper;
@@ -37,7 +40,7 @@ export function LogoMark({ size = 28 }: { size?: number }) {
       xmlns="http://www.w3.org/2000/svg"
       role="img"
       aria-label="Aptiverse"
-      sx={{ flexShrink: 0, color: "text.primary" }}
+      sx={{ flexShrink: 0, color: color ?? "text.primary" }}
     >
       <g fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round">
         <line x1={30} y1={130} x2={80} y2={30} />
@@ -52,23 +55,23 @@ export function LogoMark({ size = 28 }: { size?: number }) {
   );
 }
 
-export function Logo({ size = 28, showWordmark = true }: LogoProps) {
+export function Logo({ size = 28, showWordmark = true, color }: LogoProps) {
   return (
-    <Stack direction="row" spacing={1.25} alignItems="center" sx={{ color: "text.primary" }}>
-      <LogoMark size={size} />
+    <Stack direction="row" spacing={1.25} alignItems="center" sx={{ color: color ?? "text.primary" }}>
+      <LogoMark size={size} color={color} />
       {showWordmark && (
         <Typography
           component="span"
           sx={{
-            fontFamily: 'Inter, "Helvetica Neue", Arial, sans-serif',
-            fontWeight: 500,
+            fontFamily: '"Frygia", "Roboto", -apple-system, "Segoe UI", sans-serif',
+            fontWeight: 600,
             letterSpacing: "-0.02em",
             fontSize: size > 28 ? "1.4rem" : "1.1rem",
             lineHeight: 1,
-            color: "text.primary",
+            color: color ?? "text.primary",
           }}
         >
-          aptiverse
+          Aptiverse
         </Typography>
       )}
     </Stack>

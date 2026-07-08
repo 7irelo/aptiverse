@@ -154,7 +154,7 @@ function GoalBody({
               title: "No milestones yet",
               description: "Break this goal into 3–5 milestones so progress feels real on the way to the finish.",
               action: (
-                <Button variant="contained" startIcon={<AddIcon />}>
+                <Button variant="contained" color="secondary" startIcon={<AddIcon />}>
                   Add first milestone
                 </Button>
               ),

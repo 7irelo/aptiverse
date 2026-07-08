@@ -34,7 +34,7 @@ export function Section({
     bg === "paper" ? "background.paper" : bg === "muted" ? "action.hover" : "transparent";
 
   return (
-    <Box component="section" sx={{ py: { xs: py * 0.6, md: py }, bgcolor, ...sx }}>
+    <Box component="section" sx={{ py: { xs: py * 0.5, md: py }, bgcolor, ...sx }}>
       <Box
         sx={{
           maxWidth: 1240,

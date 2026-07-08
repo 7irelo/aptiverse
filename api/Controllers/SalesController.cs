@@ -77,6 +77,28 @@ namespace Aptiverse.Sales.Controllers
                     entry.SchoolName, entry.Email, entry.Id);
             }
 
+            // Best-effort acknowledgement to the person who enquired. Non-fatal.
+            try
+            {
+                await _emailSender.SendTemplateEmailAsync(
+                    entry.Email,
+                    "We got your enquiry",
+                    "contact_received",
+                    new
+                    {
+                        FirstName = entry.ContactName,
+                        Message = string.IsNullOrWhiteSpace(entry.Notes)
+                            ? $"Enquiry about {entry.SchoolName}"
+                            : entry.Notes,
+                    });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "School-enquiry acknowledgement to {Email} failed (enquiry {Id}) — non-fatal.",
+                    entry.Email, entry.Id);
+            }
+
             return Accepted(new { id = entry.Id });
         }
 

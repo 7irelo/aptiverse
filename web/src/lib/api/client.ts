@@ -4,6 +4,7 @@
 // explicitly.
 
 import { getSession } from "next-auth/react";
+import { humanizeApiError } from "@/lib/api/errors";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5100";
 
@@ -14,8 +15,10 @@ export type RegisterInput = {
   firstName: string;
   lastName: string;
   role: string;
-  school?: string;
-  grade?: string;
+  educationLevel?: string;
+  curriculumId?: string;
+  grade?: number;
+  institutionId?: string;
 };
 export type ForgotPasswordInput = { email: string };
 // Shape matches the API's ResetPasswordDto(UserId, ResetToken, NewPassword).
@@ -36,6 +39,12 @@ export type ContactInput = {
   reason: string;
   message: string;
 };
+export type CheckoutInput = {
+  planCode: string;
+  email: string;
+  billing?: "monthly" | "annual";
+  callbackUrl?: string;
+};
 
 async function authHeaders(): Promise<HeadersInit> {
   if (typeof window === "undefined") return { "Content-Type": "application/json" };
@@ -54,7 +63,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`HTTP ${res.status}: ${body || res.statusText}`);
+    throw new Error(humanizeApiError(res.status, body || res.statusText));
   }
   return (await res.json()) as T;
 }
@@ -118,5 +127,15 @@ export const api = {
       method: "POST",
       body: JSON.stringify(input),
     });
+  },
+  // Starts a Paystack checkout for a paid plan on behalf of the current
+  // signed-in user. Returns the hosted-checkout URL to redirect to. The
+  // caller must be authenticated (the Bearer token is attached by
+  // authHeaders), which is why signup signs the user in first.
+  async checkout(input: CheckoutInput) {
+    return request<{ authorizationUrl: string; reference: string; subscriptionId: string }>(
+      "/api/payments/checkout",
+      { method: "POST", body: JSON.stringify(input) },
+    );
   },
 };

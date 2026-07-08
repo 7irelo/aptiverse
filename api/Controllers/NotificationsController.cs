@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json.Serialization;
 using Aptiverse.Api.Data;
+using Aptiverse.Domain.Models;
 using Aptiverse.Notifications.Domain.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -101,6 +102,77 @@ namespace Aptiverse.Notifications.Controllers
 
             return Ok(new MarkAllReadDto { Marked = marked });
         }
+
+        // Notification preferences. In-app notifications are always on; these
+        // gate the optional channels + which categories fire.
+        [HttpGet("preferences")]
+        public async Task<ActionResult<NotificationPreferencesDto>> GetPreferences(CancellationToken ct)
+        {
+            var userId = CurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var user = await _db.Set<User>().AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId, ct);
+            if (user is null) return Unauthorized();
+
+            return Ok(ToDto(user));
+        }
+
+        // Partial update: only fields present in the body are changed, so
+        // toggling one preference never clobbers the others.
+        [HttpPatch("preferences")]
+        public async Task<ActionResult<NotificationPreferencesDto>> UpdatePreferences(
+            [FromBody] UpdateNotificationPreferencesDto body, CancellationToken ct)
+        {
+            var userId = CurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var user = await _db.Set<User>().FirstOrDefaultAsync(u => u.Id == userId, ct);
+            if (user is null) return Unauthorized();
+
+            if (body.EmailNotifications is { } email) user.EmailNotifications = email;
+            if (body.PushNotifications is { } push) user.PushNotifications = push;
+            if (body.StudyGroupEmailReminders is { } sg) user.StudyGroupEmailReminders = sg;
+            if (body.WellbeingCheckinReminders is { } wb) user.WellbeingCheckinReminders = wb;
+            if (body.AssessmentDueReminders is { } ad) user.AssessmentDueReminders = ad;
+            if (body.AssessmentDueEmailReminders is { } ade) user.AssessmentDueEmailReminders = ade;
+            if (body.WeeklyStudySummary is { } ws) user.WeeklyStudySummary = ws;
+
+            await _db.SaveChangesAsync(ct);
+            return Ok(ToDto(user));
+        }
+
+        private static NotificationPreferencesDto ToDto(User u) => new()
+        {
+            EmailNotifications = u.EmailNotifications,
+            PushNotifications = u.PushNotifications,
+            StudyGroupEmailReminders = u.StudyGroupEmailReminders,
+            WellbeingCheckinReminders = u.WellbeingCheckinReminders,
+            AssessmentDueReminders = u.AssessmentDueReminders,
+            AssessmentDueEmailReminders = u.AssessmentDueEmailReminders,
+            WeeklyStudySummary = u.WeeklyStudySummary,
+        };
+    }
+
+    public record NotificationPreferencesDto
+    {
+        [JsonPropertyName("emailNotifications")] public bool EmailNotifications { get; init; }
+        [JsonPropertyName("pushNotifications")] public bool PushNotifications { get; init; }
+        [JsonPropertyName("studyGroupEmailReminders")] public bool StudyGroupEmailReminders { get; init; }
+        [JsonPropertyName("wellbeingCheckinReminders")] public bool WellbeingCheckinReminders { get; init; }
+        [JsonPropertyName("assessmentDueReminders")] public bool AssessmentDueReminders { get; init; }
+        [JsonPropertyName("assessmentDueEmailReminders")] public bool AssessmentDueEmailReminders { get; init; }
+        [JsonPropertyName("weeklyStudySummary")] public bool WeeklyStudySummary { get; init; }
+    }
+
+    public record UpdateNotificationPreferencesDto
+    {
+        [JsonPropertyName("emailNotifications")] public bool? EmailNotifications { get; init; }
+        [JsonPropertyName("pushNotifications")] public bool? PushNotifications { get; init; }
+        [JsonPropertyName("studyGroupEmailReminders")] public bool? StudyGroupEmailReminders { get; init; }
+        [JsonPropertyName("wellbeingCheckinReminders")] public bool? WellbeingCheckinReminders { get; init; }
+        [JsonPropertyName("assessmentDueReminders")] public bool? AssessmentDueReminders { get; init; }
+        [JsonPropertyName("assessmentDueEmailReminders")] public bool? AssessmentDueEmailReminders { get; init; }
+        [JsonPropertyName("weeklyStudySummary")] public bool? WeeklyStudySummary { get; init; }
     }
 
     public record FrontendNotificationDto

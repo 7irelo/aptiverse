@@ -27,7 +27,8 @@ namespace Aptiverse.Practice.Application.Practice.Services
             var testRows = (await _tests.GetManyAsync(
                 predicate: t =>
                     (string.IsNullOrEmpty(subjectId) || t.SubjectId == subjectId) &&
-                    (string.IsNullOrEmpty(difficulty) || t.Difficulty == difficulty),
+                    (string.IsNullOrEmpty(difficulty) || t.Difficulty == difficulty) &&
+                    (t.OwnerStudentId == null || t.OwnerStudentId == studentId),
                 orderBy: q => q.OrderBy(t => t.SubjectId).ThenBy(t => t.Title),
                 cancellationToken: cancellationToken)).ToList();
 
@@ -64,7 +65,9 @@ namespace Aptiverse.Practice.Application.Practice.Services
             string studentId,
             CancellationToken cancellationToken = default)
         {
-            var test = await _tests.GetAsync(t => t.Id == testId, cancellationToken: cancellationToken);
+            var test = await _tests.GetAsync(
+                t => t.Id == testId && (t.OwnerStudentId == null || t.OwnerStudentId == studentId),
+                cancellationToken: cancellationToken);
             if (test is null)
                 return null;
 

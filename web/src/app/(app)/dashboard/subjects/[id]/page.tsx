@@ -1,6 +1,7 @@
 "use client";
 
 import { use } from "react";
+import { useTheme } from "@mui/material/styles";
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -40,7 +41,7 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
           { label: "Subjects", href: "/dashboard/subjects" },
           { label: subjectQuery.data?.name ?? "Subject" },
         ]}
-        actions={<Button variant="contained">Generate practice</Button>}
+        actions={<Button variant="contained" color="secondary">Generate practice</Button>}
       />
 
       <QueryStates
@@ -78,6 +79,7 @@ function SubjectView({
   assessments: Assessment[];
   practiceTests: PracticeTest[];
 }) {
+  const theme = useTheme();
   const topics = subject.topics ?? [];
   const termAverages = subject.termAverages ?? [];
   const masteryAvg =
@@ -113,7 +115,7 @@ function SubjectView({
                 <LineChart
                   height={260}
                   xAxis={[{ data: termAverages.map((t) => t.term), scaleType: "point" }]}
-                  series={[{ data: termAverages.map((t) => t.mark), label: "Average", color: "#0F6963" }]}
+                  series={[{ data: termAverages.map((t) => t.mark), label: "Average", color: theme.palette.primary.main }]}
                   margin={{ top: 16, right: 24, bottom: 24, left: 40 }}
                 />
               ) : (

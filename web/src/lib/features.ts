@@ -13,7 +13,6 @@ export type FeatureKey =
   | "ai_practice.basic"
   | "diary"
   | "wellbeing.basic"
-  | "bursaries.read"
   | "past_papers.read"
   | "universities.read"
   | "calendar"
@@ -26,7 +25,6 @@ export type FeatureKey =
   | "goals.unlimited"
   | "ai_practice.unlimited"
   | "mastery.snapshot"
-  | "courses.enrol"
   | "psychologist.read"
 
   // -------- Student Pro (the AI moat) --------
@@ -38,9 +36,8 @@ export type FeatureKey =
   | "sba.coach"
   | "mastery.predictions"
   | "career_navigator"
-  | "bursaries.checklist"
   | "rewards.redeem"
-  | "tutor_marketplace.book"
+  | "tutor.connect"
   | "study_groups"
   | "workspace"
   | "support.priority"
@@ -62,7 +59,6 @@ export type FeatureKey =
   | "family.linked_children"
 
   // -------- Family Pro --------
-  | "parent.bursary_pipeline"
   | "parent.uni_readiness"
   | "family.shared_calendar"
   | "family.whatsapp_recap"
@@ -76,9 +72,8 @@ export type FeatureKey =
 
   // -------- Tutor entry (Tutor Free) --------
   | "tutor.dashboard"
-  | "tutor.marketplace_listing"
+  | "tutor.discoverable"
   | "tutor.scheduling"
-  | "tutor.payments"
   | "tutor.client_tracker"
   | "tutor.messaging"
 
@@ -87,14 +82,12 @@ export type FeatureKey =
   | "tutor.mastery_per_client"
   | "tutor.parent_reports_auto"
   | "tutor.worksheets_ai"
-  | "tutor.marketplace_featured"
 
   // -------- Tutor Max (white-glove) --------
   | "tutor.sba_marker_ai"
   | "tutor.parent_reports_whitelabel"
   | "tutor.sars_export"
   | "tutor.group_mode"
-  | "tutor.marketplace_top"
 
   // -------- School --------
   | "teacher.dashboard"
@@ -111,21 +104,18 @@ export type FeatureKey =
   | "school_admin.teachers"
   | "school_admin.students"
   | "school_admin.classes"
-  | "school.bursary_partners"
   | "school.sso"
   | "school.success_manager";
 
 export type PlanCode =
   | "free"
-  | "student"
   | "student.pro"
   | "student.max"
   | "family"
-  | "family.pro"
-  | "family.max"
+  | "family.plus"
   | "tutor.free"
   | "tutor.pro"
-  | "tutor.max"
+  | "tutor.premium"
   | "school";
 
 // Cheapest plan that unlocks each feature. Used by FeatureGuard's fallback
@@ -139,7 +129,6 @@ export const FEATURE_MIN_PLAN: Record<FeatureKey, PlanCode> = {
   "ai_practice.basic": "free",
   diary: "free",
   "wellbeing.basic": "free",
-  "bursaries.read": "free",
   "past_papers.read": "free",
   "universities.read": "free",
   calendar: "free",
@@ -147,13 +136,12 @@ export const FEATURE_MIN_PLAN: Record<FeatureKey, PlanCode> = {
   settings: "free",
   help: "free",
 
-  // Student entry
-  "subjects.unlimited": "student",
-  "goals.unlimited": "student",
-  "ai_practice.unlimited": "student",
-  "mastery.snapshot": "student",
-  "courses.enrol": "student",
-  "psychologist.read": "student",
+  // Student entry (student.pro is the cheapest student tier sold)
+  "subjects.unlimited": "student.pro",
+  "goals.unlimited": "student.pro",
+  "ai_practice.unlimited": "student.pro",
+  "mastery.snapshot": "student.pro",
+  "psychologist.read": "student.pro",
 
   // Student Pro
   "goals.milestones": "student.pro",
@@ -164,9 +152,8 @@ export const FEATURE_MIN_PLAN: Record<FeatureKey, PlanCode> = {
   "sba.coach": "student.pro",
   "mastery.predictions": "student.pro",
   career_navigator: "student.pro",
-  "bursaries.checklist": "student.pro",
   "rewards.redeem": "student.pro",
-  "tutor_marketplace.book": "student.pro",
+  "tutor.connect": "student.pro",
   study_groups: "student.pro",
   workspace: "student.pro",
   "support.priority": "student.pro",
@@ -187,24 +174,24 @@ export const FEATURE_MIN_PLAN: Record<FeatureKey, PlanCode> = {
   "parent.billing": "family",
   "family.linked_children": "family",
 
-  // Family Pro
-  "parent.bursary_pipeline": "family.pro",
-  "parent.uni_readiness": "family.pro",
-  "family.shared_calendar": "family.pro",
-  "family.whatsapp_recap": "family.pro",
-  "counselling.session_included": "family.pro",
+  // Family Plus
+  "parent.uni_readiness": "family.plus",
+  "family.shared_calendar": "family.plus",
+  "family.whatsapp_recap": "family.plus",
+  "counselling.session_included": "family.plus",
 
-  // Family Max
-  "parent.ai_coach": "family.max",
-  "parent.interventions": "family.max",
-  "parent.tutor_concierge": "family.max",
-  "family.wellbeing_dashboard": "family.max",
+  // Parent-premium extras. The seeder currently grants these only to the
+  // School plan (no Family tier does), so they surface as Family Plus here
+  // as the intended upgrade target; revisit if a Family Plus grant is added.
+  "parent.ai_coach": "family.plus",
+  "parent.interventions": "family.plus",
+  "parent.tutor_concierge": "family.plus",
+  "family.wellbeing_dashboard": "family.plus",
 
   // Tutor entry (Free with commission)
   "tutor.dashboard": "tutor.free",
-  "tutor.marketplace_listing": "tutor.free",
+  "tutor.discoverable": "tutor.free",
   "tutor.scheduling": "tutor.free",
-  "tutor.payments": "tutor.free",
   "tutor.client_tracker": "tutor.free",
   "tutor.messaging": "tutor.free",
 
@@ -213,14 +200,12 @@ export const FEATURE_MIN_PLAN: Record<FeatureKey, PlanCode> = {
   "tutor.mastery_per_client": "tutor.pro",
   "tutor.parent_reports_auto": "tutor.pro",
   "tutor.worksheets_ai": "tutor.pro",
-  "tutor.marketplace_featured": "tutor.pro",
 
-  // Tutor Max
-  "tutor.sba_marker_ai": "tutor.max",
-  "tutor.parent_reports_whitelabel": "tutor.max",
-  "tutor.sars_export": "tutor.max",
-  "tutor.group_mode": "tutor.max",
-  "tutor.marketplace_top": "tutor.max",
+  // Tutor Premium
+  "tutor.sba_marker_ai": "tutor.premium",
+  "tutor.parent_reports_whitelabel": "tutor.premium",
+  "tutor.sars_export": "tutor.premium",
+  "tutor.group_mode": "tutor.premium",
 
   // School
   "teacher.dashboard": "school",
@@ -237,21 +222,18 @@ export const FEATURE_MIN_PLAN: Record<FeatureKey, PlanCode> = {
   "school_admin.teachers": "school",
   "school_admin.students": "school",
   "school_admin.classes": "school",
-  "school.bursary_partners": "school",
   "school.sso": "school",
   "school.success_manager": "school",
 };
 
 export const PLAN_LABELS: Record<PlanCode, string> = {
   free: "Free",
-  student: "Student",
   "student.pro": "Student Pro",
   "student.max": "Student Max",
   family: "Family",
-  "family.pro": "Family Pro",
-  "family.max": "Family Max",
+  "family.plus": "Family Plus",
   "tutor.free": "Tutor Free",
   "tutor.pro": "Tutor Pro",
-  "tutor.max": "Tutor Max",
+  "tutor.premium": "Tutor Premium",
   school: "School",
 };

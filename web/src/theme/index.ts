@@ -6,13 +6,15 @@ import {
   wellbeingDark,
   achievementLight,
   achievementDark,
+  brandSurfaceLight,
+  brandSurfaceDark,
 } from "./palette";
 import { typography } from "./typography";
 import { componentOverrides } from "./components";
 
 export type ColorMode = "light" | "dark";
 
-const baseShape = { borderRadius: 8 };
+const baseShape = { borderRadius: 10 };
 
 // Module augmentation — adds `wellbeing` and `achievement` to MUI's
 // palette type so theme.palette.wellbeing.main works like a first-class
@@ -21,10 +23,12 @@ declare module "@mui/material/styles" {
   interface Palette {
     wellbeing: Palette["primary"];
     achievement: Palette["primary"];
+    brandSurface: Palette["primary"];
   }
   interface PaletteOptions {
     wellbeing?: PaletteOptions["primary"];
     achievement?: PaletteOptions["primary"];
+    brandSurface?: PaletteOptions["primary"];
   }
 }
 
@@ -35,6 +39,7 @@ export function buildTheme(mode: ColorMode): Theme {
       ...(isDark ? darkPalette : lightPalette),
       wellbeing: isDark ? wellbeingDark : wellbeingLight,
       achievement: isDark ? achievementDark : achievementLight,
+      brandSurface: isDark ? brandSurfaceDark : brandSurfaceLight,
     },
     typography,
     shape: baseShape,

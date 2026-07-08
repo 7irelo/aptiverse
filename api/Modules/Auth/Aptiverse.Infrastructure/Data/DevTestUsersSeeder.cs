@@ -36,6 +36,21 @@ namespace Aptiverse.Infrastructure.Data
                 return;
             }
 
+            // Opt-in only. The seeded fixtures (per-role test logins +
+            // pre-provisioned paid subscriptions) are OFF by default so a
+            // wiped dev DB stays empty and every user/subscription is created
+            // through the real signup + Paystack flow. Set SEED_DEV_USERS=true
+            // to bring them back (e.g. for the e2e suite).
+            var optIn = string.Equals(
+                Environment.GetEnvironmentVariable("SEED_DEV_USERS"), "true",
+                StringComparison.OrdinalIgnoreCase);
+            if (!optIn)
+            {
+                logger.LogInformation(
+                    "Dev test users seeder skipped — set SEED_DEV_USERS=true to seed test logins + subscriptions.");
+                return;
+            }
+
             // admin.test gets Superuser (strict superset of Admin) so it
             // can access every admin page including the Superuser-only
             // /admin/impersonate and /admin/settings.
@@ -67,9 +82,9 @@ namespace Aptiverse.Infrastructure.Data
 
             if (parentId is not null)
             {
-                await EnsureSubscriptionAsync(db, parentId, "family.pro", "Parent Test family", logger);
-                await CancelLegacySubsAsync(db, parentId, kept: "family.pro",
-                    superseded: ["family", "family.max"], logger);
+                await EnsureSubscriptionAsync(db, parentId, "family.plus", "Parent Test family", logger);
+                await CancelLegacySubsAsync(db, parentId, kept: "family.plus",
+                    superseded: ["family", "family.pro", "family.max"], logger);
             }
 
             if (tutorId is not null)
@@ -148,7 +163,6 @@ namespace Aptiverse.Infrastructure.Data
             ParentSampleNotifications() =>
             [
                 ("celebration", "Brian hit a study streak", "Your son completed his goals 5 days running. Sending him a quick 'proud of you' goes a long way.", TimeSpan.FromHours(3), "/parent/celebrations", false),
-                ("reminder", "Bursary deadline in 14 days", "ISFAP applications close on 30 May. Brian qualifies — checklist is ready to walk through together.", TimeSpan.FromHours(8), "/parent/children", false),
                 ("info", "Weekly family recap is in", "Your weekly mastery + wellbeing recap for both learners is ready to read.", TimeSpan.FromDays(1), "/parent", true),
                 ("alert", "Amara missed yesterday's check-in", "Two days in a row now. Nothing alarming — just worth a low-pressure chat at dinner.", TimeSpan.FromDays(2), "/parent/wellbeing", true),
             ];

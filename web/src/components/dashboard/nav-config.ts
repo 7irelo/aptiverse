@@ -6,7 +6,6 @@ import QuizIcon from "@mui/icons-material/QuizOutlined";
 import InsightsIcon from "@mui/icons-material/Insights";
 import SmartToyIcon from "@mui/icons-material/SmartToyOutlined";
 import GroupsIcon from "@mui/icons-material/GroupsOutlined";
-import StorefrontIcon from "@mui/icons-material/StorefrontOutlined";
 import EventNoteIcon from "@mui/icons-material/EventNoteOutlined";
 import FavoriteIcon from "@mui/icons-material/FavoriteBorder";
 import RouteIcon from "@mui/icons-material/RouteOutlined";
@@ -48,7 +47,7 @@ export type NavSection = {
 
 export const STUDENT_NAV: NavSection[] = [
   {
-    heading: "Today",
+    heading: "Overview",
     items: [
       { label: "Dashboard", href: "/dashboard", icon: HomeIcon },
       { label: "Workspace", href: "/dashboard/workspace", icon: WorkspacesIcon },
@@ -78,16 +77,13 @@ export const STUDENT_NAV: NavSection[] = [
   {
     heading: "Future",
     items: [
-      { label: "Universities", href: "/dashboard/universities", icon: SchoolIcon },
-      { label: "Bursaries", href: "/dashboard/bursaries", icon: VolunteerActivismIcon },
       { label: "Career navigator", href: "/dashboard/career", icon: LightbulbIcon },
     ],
   },
   {
     heading: "Community",
     items: [
-      { label: "Tutors", href: "/dashboard/tutors", icon: GroupsIcon },
-      { label: "Courses", href: "/dashboard/courses", icon: StorefrontIcon },
+      { label: "Find a tutor", href: "/dashboard/tutors", icon: GroupsIcon },
       { label: "Study groups", href: "/dashboard/study-groups", icon: ForumIcon },
       { label: "Rewards", href: "/dashboard/rewards", icon: EmojiEventsIcon },
     ],
@@ -138,16 +134,7 @@ export const PARENT_NAV: NavSection[] = [
     heading: "Overview",
     items: [
       { label: "Dashboard", href: "/parent", icon: HomeIcon },
-      { label: "Live activity", href: "/parent/live", icon: HubIcon, badge: "Live" },
-    ],
-  },
-  {
-    heading: "Family",
-    items: [
-      { label: "Children", href: "/parent/children", icon: ChildCareIcon },
-      { label: "How can I help?", href: "/parent/help", icon: LightbulbIcon },
-      { label: "Celebrations", href: "/parent/celebrations", icon: CelebrationIcon },
-      { label: "Wellbeing summary", href: "/parent/wellbeing", icon: FavoriteIcon },
+      { label: "Students", href: "/parent/students", icon: ChildCareIcon },
     ],
   },
   {
@@ -174,7 +161,6 @@ export const SCHOOL_ADMIN_NAV: NavSection[] = [
       { label: "Teachers", href: "/school-admin/teachers", icon: GroupsIcon },
       { label: "Classes", href: "/school-admin/classes", icon: SchoolIcon },
       { label: "Students", href: "/school-admin/students", icon: ChildCareIcon },
-      { label: "Bursary partners", href: "/school-admin/bursary-partners", icon: VolunteerActivismIcon },
     ],
   },
   {
@@ -190,13 +176,11 @@ export const TUTOR_NAV: NavSection[] = [
     heading: "Overview",
     items: [
       { label: "Dashboard", href: "/tutor", icon: HomeIcon },
-      { label: "Earnings", href: "/tutor/earnings", icon: PaymentsIcon },
     ],
   },
   {
     heading: "Teaching",
     items: [
-      { label: "Courses", href: "/tutor/courses", icon: StorefrontIcon },
       { label: "Sessions", href: "/tutor/sessions", icon: CalendarMonthIcon },
       { label: "Students", href: "/tutor/students", icon: SchoolIcon },
       { label: "Reviews", href: "/tutor/reviews", icon: EmojiEventsIcon },
@@ -205,6 +189,7 @@ export const TUTOR_NAV: NavSection[] = [
   {
     heading: "Account",
     items: [
+      { label: "Billing", href: "/tutor/billing", icon: PaymentsIcon },
       { label: "Settings", href: "/tutor/settings", icon: SettingsIcon },
     ],
   },
@@ -232,8 +217,6 @@ export const ADMIN_NAV: NavSection[] = [
   {
     heading: "Content",
     items: [
-      { label: "Courses", href: "/admin/courses", icon: StorefrontIcon },
-      { label: "Bursaries", href: "/admin/bursaries", icon: VolunteerActivismIcon },
       { label: "Moderation queue", href: "/admin/moderation", icon: ForumIconNav },
     ],
   },

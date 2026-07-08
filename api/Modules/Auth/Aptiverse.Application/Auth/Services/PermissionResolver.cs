@@ -55,7 +55,7 @@ namespace Aptiverse.Application.Auth.Services
 
         private static readonly string[] StudentPerms =
         [
-            "courses.read", "tutors.read", "bursaries.read",
+            "tutors.read",
             "subscriptions.read", "billing.read",
         ];
 
@@ -69,7 +69,7 @@ namespace Aptiverse.Application.Auth.Services
         [
             "classes.read", "classes.write",
             "students.read", "students.write",
-            "courses.read", "audit.read",
+            "audit.read",
         ];
 
         private static readonly string[] SchoolAdminPerms =
@@ -77,13 +77,12 @@ namespace Aptiverse.Application.Auth.Services
             .. TeacherPerms,
             "classes.manage", "students.manage",
             "schools.read", "schools.write",
-            "users.read", "bursaries.read",
+            "users.read",
             "billing.read", "billing.write",
         ];
 
         private static readonly string[] TutorPerms =
         [
-            "courses.read", "courses.write",
             "students.read", "billing.read",
         ];
 
@@ -94,8 +93,6 @@ namespace Aptiverse.Application.Auth.Services
             "classes.read", "classes.write", "classes.manage",
             "students.read", "students.write", "students.manage",
             "tutors.read", "tutors.write", "tutors.manage", "tutors.verify",
-            "courses.read", "courses.write", "courses.manage",
-            "bursaries.read", "bursaries.write", "bursaries.manage",
             "subscriptions.read", "subscriptions.write", "subscriptions.manage",
             "payments.read", "payments.refund", "payments.manage",
             "billing.read", "billing.write", "billing.manage",

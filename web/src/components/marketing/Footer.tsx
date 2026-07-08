@@ -7,34 +7,29 @@ import Divider from "@mui/material/Divider";
 import Link from "next/link";
 import { Logo } from "@/components/common/Logo";
 
-const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
+type Column = {
+  title: string;
+  links: { label: string; href: string }[];
+  // These duplicate the top menu, so they are hidden on mobile.
+  hideOnMobile?: boolean;
+};
+
+const COLUMNS: Column[] = [
   {
     title: "Product",
+    hideOnMobile: true,
     links: [
       { label: "Features", href: "/features" },
       { label: "Pricing", href: "/pricing" },
-      { label: "Demo", href: "/demo" },
-      { label: "Roadmap", href: "/roadmap" },
     ],
   },
   {
     title: "For",
+    hideOnMobile: true,
     links: [
       { label: "Students", href: "/for-students" },
-      { label: "Parents", href: "/for-parents" },
-      { label: "Teachers", href: "/for-teachers" },
-      { label: "Schools", href: "/for-schools" },
+      { label: "Families", href: "/for-families" },
       { label: "Tutors", href: "/for-tutors" },
-    ],
-  },
-  {
-    title: "Resources",
-    links: [
-      { label: "Bursaries & NSFAS", href: "/bursaries" },
-      { label: "Universities", href: "/universities" },
-      { label: "Careers Guide", href: "/careers" },
-      { label: "Blog", href: "/blog" },
-      { label: "Help centre", href: "/help" },
     ],
   },
   {
@@ -42,9 +37,6 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     links: [
       { label: "About", href: "/about" },
       { label: "Contact", href: "/contact" },
-      { label: "Press", href: "/press" },
-      { label: "Privacy", href: "/privacy" },
-      { label: "Terms", href: "/terms" },
     ],
   },
 ];
@@ -57,33 +49,33 @@ export function Footer() {
         borderTop: 1,
         borderColor: "divider",
         bgcolor: "background.paper",
-        py: { xs: 6, md: 10 },
+        py: { xs: 4, md: 9 },
       }}
     >
       <Box sx={{ maxWidth: 1240, mx: "auto", px: { xs: 2.5, sm: 4, lg: 6 } }}>
         <Stack
           direction={{ xs: "column", md: "row" }}
-          spacing={{ xs: 5, md: 8 }}
+          spacing={{ xs: 3.5, md: 8 }}
           justifyContent="space-between"
           alignItems="flex-start"
         >
-          <Box sx={{ maxWidth: 320 }}>
-            <Logo size={36} />
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              The holistic student success partner — built for South African FET-phase learners (Grades 10–12). Grow with confidence.
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 2 }}>
-              Made with care in South Africa.
-            </Typography>
-          </Box>
+          <Logo size={28} />
 
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={{ xs: 4, sm: 8 }}
-            sx={{ flex: 1, flexWrap: "wrap" }}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(4, auto)" },
+              columnGap: { xs: 3, sm: 6 },
+              rowGap: 3,
+              width: { xs: "100%", md: "auto" },
+            }}
           >
             {COLUMNS.map((c) => (
-              <Stack key={c.title} spacing={1.25} sx={{ minWidth: 140 }}>
+              <Stack
+                key={c.title}
+                spacing={1}
+                sx={c.hideOnMobile ? { display: { xs: "none", md: "flex" } } : undefined}
+              >
                 <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700 }}>
                   {c.title}
                 </Typography>
@@ -104,19 +96,21 @@ export function Footer() {
                 ))}
               </Stack>
             ))}
-          </Stack>
+          </Box>
         </Stack>
 
-        <Divider sx={{ my: 5 }} />
+        <Divider sx={{ my: { xs: 3, md: 5 } }} />
 
         <Stack
-          direction={{ xs: "column", sm: "row" }}
+          direction="row"
           spacing={2}
           justifyContent="space-between"
           alignItems="center"
+          flexWrap="wrap"
+          useFlexGap
         >
           <Typography variant="caption" color="text.secondary">
-            © {new Date().getFullYear()} Aptiverse. All rights reserved.
+            © {new Date().getFullYear()} Aptiverse
           </Typography>
           <Stack direction="row" spacing={3}>
             <Box component={Link} href="/privacy" sx={{ fontSize: "0.8125rem", color: "text.secondary" }}>
@@ -124,9 +118,6 @@ export function Footer() {
             </Box>
             <Box component={Link} href="/terms" sx={{ fontSize: "0.8125rem", color: "text.secondary" }}>
               Terms
-            </Box>
-            <Box component={Link} href="/cookies" sx={{ fontSize: "0.8125rem", color: "text.secondary" }}>
-              Cookies
             </Box>
           </Stack>
         </Stack>

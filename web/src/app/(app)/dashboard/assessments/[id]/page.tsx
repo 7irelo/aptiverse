@@ -19,7 +19,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { StatusChip } from "@/components/common/StatusChip";
 import { QueryStates } from "@/components/common/QueryStates";
 import { TasksEditor } from "@/components/workspace/TasksEditor";
-import { useAssessment, useSubjects } from "@/lib/api/queries";
+import { useAssessment, useAcademicUnits } from "@/lib/api/queries";
 import type { Assessment } from "@/lib/mockData";
 import { formatDate } from "@/lib/format";
 import { enter, enterStagger } from "@/lib/motion";
@@ -27,11 +27,9 @@ import { enter, enterStagger } from "@/lib/motion";
 export default function AssessmentDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const assessmentQuery = useAssessment(id);
-  const subjectsQuery = useSubjects();
+  const academic = useAcademicUnits();
 
-  const subject = (subjectsQuery.data ?? []).find(
-    (s) => s.subjectId === assessmentQuery.data?.subjectId,
-  );
+  const unitName = academic.nameFor(assessmentQuery.data?.subjectId);
 
   return (
     <>
@@ -39,7 +37,7 @@ export default function AssessmentDetail({ params }: { params: Promise<{ id: str
         title={assessmentQuery.data?.title ?? "Assessment"}
         description={
           assessmentQuery.data
-            ? `${subject?.name ?? ""} · ${assessmentQuery.data.type} · weighting ${assessmentQuery.data.weight}%`
+            ? `${unitName ?? ""} · ${assessmentQuery.data.type} · weighting ${assessmentQuery.data.weight}%`
             : undefined
         }
         breadcrumbs={[
@@ -52,7 +50,7 @@ export default function AssessmentDetail({ params }: { params: Promise<{ id: str
             <Button component={Link} href="/dashboard/practice" variant="outlined">
               Generate practice
             </Button>
-            <Button component={Link} href="/dashboard/workspace" variant="contained">
+            <Button component={Link} href="/dashboard/workspace" variant="contained" color="secondary">
               Open in workspace
             </Button>
           </>
@@ -97,7 +95,9 @@ export default function AssessmentDetail({ params }: { params: Promise<{ id: str
           ),
         }}
       >
-        {(a) => <AssessmentBody assessment={a} subjectName={subject?.name} />}
+        {(a) => (
+          <AssessmentBody assessment={a} subjectName={unitName} isTertiary={academic.isTertiary} />
+        )}
       </QueryStates>
     </>
   );
@@ -106,9 +106,11 @@ export default function AssessmentDetail({ params }: { params: Promise<{ id: str
 function AssessmentBody({
   assessment: a,
   subjectName,
+  isTertiary,
 }: {
   assessment: Assessment;
   subjectName?: string;
+  isTertiary: boolean;
 }) {
   const dueAt = dayjs(a.dueDate);
   const daysLeft = Math.ceil((+dueAt.toDate() - Date.now()) / 86400000);
@@ -156,7 +158,7 @@ function AssessmentBody({
           <Stack spacing={3}>
             <RubricCard rubric={a.rubric} />
             {a.notes && <NotesCard notes={a.notes} />}
-            <RelatedCard subjectName={subjectName} subjectId={a.subjectId} />
+            <RelatedCard unitName={subjectName} unitId={a.subjectId} isTertiary={isTertiary} />
           </Stack>
         </Grid>
       </Grid>
@@ -291,10 +293,26 @@ function NotesCard({ notes }: { notes: string }) {
   );
 }
 
-// ─── Subject link ───────────────────────────────────────────────────
+// ─── Subject / course link ──────────────────────────────────────────
 
-function RelatedCard({ subjectName, subjectId }: { subjectName?: string; subjectId: string }) {
-  if (!subjectName) return null;
+function RelatedCard({
+  unitName,
+  unitId,
+  isTertiary,
+}: {
+  unitName?: string;
+  unitId: string;
+  isTertiary: boolean;
+}) {
+  if (!unitName) return null;
+  // High-school subjects have a detail page that groups their assessments.
+  // Tertiary courses don't, so we point at practice scoped to the course.
+  const href = isTertiary
+    ? `/dashboard/practice?subject=${encodeURIComponent(unitId)}`
+    : `/dashboard/subjects/${unitId}`;
+  const blurb = isTertiary
+    ? "Jump into practice tailored to this course."
+    : "Open the subject to see every assessment grouped together.";
   return (
     <motion.div {...enter}>
       <Card>
@@ -303,19 +321,19 @@ function RelatedCard({ subjectName, subjectId }: { subjectName?: string; subject
             Context
           </Typography>
           <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-            {subjectName}
+            {unitName}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Open the subject to see every assessment grouped together.
+            {blurb}
           </Typography>
           <Button
             component={Link}
-            href={`/dashboard/subjects/${subjectId}`}
+            href={href}
             variant="outlined"
             size="small"
             endIcon={<ArrowForwardIcon />}
           >
-            Open {subjectName}
+            {isTertiary ? "Practice" : `Open ${unitName}`}
           </Button>
         </CardContent>
       </Card>

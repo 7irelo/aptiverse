@@ -34,7 +34,8 @@ namespace Aptiverse.Goals.Controllers
             var goals = await _db.Set<Goal>()
                 .AsNoTracking()
                 .Where(g => g.StudentId == userId)
-                .OrderBy(g => g.DueDate)
+                .OrderBy(g => g.SortOrder)
+                .ThenBy(g => g.DueDate)
                 .Select(g => new FrontendGoalDto
                 {
                     Id = g.Id.ToString(),
@@ -162,6 +163,38 @@ namespace Aptiverse.Goals.Controllers
             return NoContent();
         }
 
+        // Persist a drag-to-reorder of the student's goals. The supplied id
+        // order becomes the SortOrder (0-based), so the list keeps the priority
+        // the student set. Ids not owned by the caller are ignored.
+        [HttpPatch("reorder")]
+        public async Task<IActionResult> ReorderGoals([FromBody] ReorderGoalsDto body)
+        {
+            var userId = CurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+            if (body?.GoalIds is null || body.GoalIds.Length == 0) return NoContent();
+
+            var ids = body.GoalIds
+                .Select(s => long.TryParse(s, out var v) ? v : (long?)null)
+                .Where(v => v.HasValue)
+                .Select(v => v!.Value)
+                .ToList();
+
+            var byId = await _db.Set<Goal>()
+                .Where(g => g.StudentId == userId && ids.Contains(g.Id))
+                .ToDictionaryAsync(g => g.Id);
+
+            for (var i = 0; i < body.GoalIds.Length; i++)
+            {
+                if (!long.TryParse(body.GoalIds[i], out var gId)) continue;
+                if (!byId.TryGetValue(gId, out var goal)) continue;
+                goal.SortOrder = i;
+                goal.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _db.SaveChangesAsync();
+            return NoContent();
+        }
+
         [HttpGet("rewards")]
         public ActionResult<IEnumerable<FrontendRewardDto>> GetRewards()
             => Ok(Array.Empty<FrontendRewardDto>());
@@ -272,6 +305,11 @@ namespace Aptiverse.Goals.Controllers
     public record ReorderMilestonesDto
     {
         [JsonPropertyName("milestoneIds")] public string[] MilestoneIds { get; init; } = Array.Empty<string>();
+    }
+
+    public record ReorderGoalsDto
+    {
+        [JsonPropertyName("goalIds")] public string[] GoalIds { get; init; } = Array.Empty<string>();
     }
 
     public record CreateGoalDto

@@ -20,10 +20,8 @@ import { api } from "@/lib/api/client";
 
 const REASONS = [
   { value: "general", label: "General enquiry" },
-  { value: "school", label: "School / district sales" },
-  { value: "teacher", label: "Teacher pilot" },
-  { value: "tutor", label: "Become a tutor" },
-  { value: "bursary", label: "Bursary partnership" },
+  { value: "parent", label: "Parent enquiry" },
+  { value: "partnership", label: "Partnership" },
   { value: "press", label: "Press" },
 ];
 
@@ -47,7 +45,7 @@ export default function Page() {
   return (
     <>
       <GradientBackdrop variant="soft">
-        <Box sx={{ maxWidth: 1240, mx: "auto", px: { xs: 2.5, sm: 4, lg: 6 }, py: { xs: 8, md: 12 } }}>
+        <Box sx={{ maxWidth: 1240, mx: "auto", px: { xs: 2.5, sm: 4, lg: 6 }, py: { xs: 6, md: 12 } }}>
           <Stack spacing={2} sx={{ maxWidth: 760 }}>
             <Typography variant="overline" color="primary.main">
               Contact
@@ -56,7 +54,7 @@ export default function Page() {
               Let's talk.
             </Typography>
             <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400 }}>
-              Schools, parents, partners and press — drop us a note and we'll be back within one working day.
+              Students, parents, partners and press. Drop us a note and we will be back within one working day.
             </Typography>
           </Stack>
         </Box>
@@ -116,23 +114,11 @@ export default function Page() {
             <Stack spacing={3}>
               <Card>
                 <CardContent sx={{ p: 3 }}>
-                  <Typography variant="overline" color="text.secondary">For schools</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>schools@aptiverse.co.za</Typography>
-                  <Typography variant="body2" color="text.secondary">Demos, pricing, pilot programmes.</Typography>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent sx={{ p: 3 }}>
-                  <Typography variant="overline" color="text.secondary">Bursary partners</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>partners@aptiverse.co.za</Typography>
-                  <Typography variant="body2" color="text.secondary">Funder pipelines and analytics.</Typography>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent sx={{ p: 3 }}>
-                  <Typography variant="overline" color="text.secondary">Press</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>press@aptiverse.co.za</Typography>
-                  <Typography variant="body2" color="text.secondary">Stories, features, interviews.</Typography>
+                  <Typography variant="overline" color="text.secondary">Email us</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>support@aptiverse.co.za</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Questions about your account, a plan, a partnership, or anything else. We reply within one working day.
+                  </Typography>
                 </CardContent>
               </Card>
             </Stack>

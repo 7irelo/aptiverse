@@ -80,14 +80,21 @@ export const authOptions: AuthOptions = {
     async signIn({ user, account }) {
       if (account?.provider === "google") {
         const idToken = account.id_token;
-        if (!idToken) return false;
+        if (!idToken) return "/login?error=OAuthFailed";
         try {
           const res = await fetch(`${API_URL}/api/auth/oauth-exchange`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ provider: account.provider, idToken }),
           });
-          if (!res.ok) return false;
+          if (!res.ok) {
+            // Invite-only: the API returns 404 when no Aptiverse account is
+            // linked to this Google email. Redirect with a specific code so
+            // the login page can explain it, versus a generic failure.
+            return res.status === 404
+              ? "/login?error=OAuthNoAccount"
+              : "/login?error=OAuthFailed";
+          }
           const data = await res.json();
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (user as any).aptiverseToken = data.token;
@@ -95,7 +102,7 @@ export const authOptions: AuthOptions = {
           (user as any).aptiverseUser = data.user;
           return true;
         } catch {
-          return false;
+          return "/login?error=OAuthFailed";
         }
       }
       return true;

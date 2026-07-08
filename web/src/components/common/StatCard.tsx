@@ -78,7 +78,13 @@ export function StatCard({
                 borderRadius: 2,
                 display: "grid",
                 placeItems: "center",
-                color: theme.palette[color].main,
+                // Use a shade that contrasts with the pale tinted badge in both
+                // modes — the raw .main goes low-contrast when the colour is
+                // light (e.g. citron secondary) on the light-mode tint.
+                color:
+                  theme.palette.mode === "dark"
+                    ? theme.palette[color].light
+                    : theme.palette[color].dark,
                 bgcolor: alpha(theme.palette[color].main, 0.12),
               }}
             >

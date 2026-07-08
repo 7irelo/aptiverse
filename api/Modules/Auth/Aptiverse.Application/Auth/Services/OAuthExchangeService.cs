@@ -43,12 +43,16 @@ namespace Aptiverse.Application.Auth.Services
             var user = await userManager.FindByEmailAsync(email);
             if (user is null)
             {
+                // Google sign-up: provision a new Student account. Google has
+                // verified the email, so it's confirmed. The academic profile
+                // (student type + curriculum/institution) is captured in the
+                // onboarding step on first sign-in.
                 user = new User
                 {
                     UserName = email,
                     Email = email,
                     EmailConfirmed = true,
-                    FirstName = firstName ?? string.Empty,
+                    FirstName = string.IsNullOrWhiteSpace(firstName) ? email.Split('@')[0] : firstName,
                     LastName = lastName ?? string.Empty,
                     CreatedAt = DateTime.UtcNow,
                 };
@@ -56,23 +60,20 @@ namespace Aptiverse.Application.Auth.Services
                 if (!result.Succeeded)
                 {
                     var error = string.Join(", ", result.Errors.Select(e => e.Description));
-                    throw new UserRegistrationException($"Failed to create user from {request.Provider}: {error}");
+                    logger.LogWarning("Google sign-up failed for {Email}: {Errors}", email, error);
+                    throw new UserRegistrationException(
+                        $"Failed to create your account from {request.Provider}: {error}");
                 }
 
-                // Default new social-login users to Student role; admins
-                // can promote later.
                 await userManager.AddToRoleAsync(user, "Student");
-
-                // Track the external login so the user can sign in with
-                // either email/password or the social provider afterwards.
                 await userManager.AddLoginAsync(user, new UserLoginInfo(
                     request.Provider, externalId, request.Provider));
                 logger.LogInformation("Created user {Email} via {Provider}", email, request.Provider);
             }
             else
             {
-                // Make sure the social login is linked even if the user
-                // originally registered with email/password.
+                // Link the social login even if they originally registered with
+                // email/password, so future logins resolve cleanly.
                 var existingLogins = await userManager.GetLoginsAsync(user);
                 if (!existingLogins.Any(l => l.LoginProvider == request.Provider))
                 {

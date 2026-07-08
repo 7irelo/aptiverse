@@ -74,12 +74,36 @@ namespace Aptiverse.Api.Data
             services.AddSingleton<EmailQueue>();
             services.AddHostedService<EmailDispatcher>();
 
+            // Sends tutors connection/review notifications, gating the email on
+            // their Settings preferences. Scoped — uses ApplicationDbContext.
+            services.AddScoped<Aptiverse.Api.Data.Notifications.TutorNotifier>();
+
             // Calendar reminder scheduler (BackgroundService). Polls due,
             // unsent Calendar.Reminder rows and fires a user-scoped
             // Notification via INotificationService. Singleton hosted service —
             // it resolves scoped ApplicationDbContext/INotificationService via
             // IServiceScopeFactory per poll iteration (never injects them).
             services.AddHostedService<Aptiverse.Calendar.Application.Reminders.Scheduling.ReminderSchedulerService>();
+
+            // Study-group session reminders (BackgroundService). Polls upcoming
+            // sessions and notifies every member ~30 min before start. Same
+            // scope-per-iteration model as the Calendar scheduler.
+            services.AddHostedService<Aptiverse.StudyGroups.Application.Reminders.StudyGroupSessionReminderService>();
+
+            // Assessment due-soon reminders (BackgroundService). Polls hourly
+            // and notifies the owner 3 days before an open assessment is due,
+            // gated on their AssessmentDueReminders preference.
+            services.AddHostedService<Aptiverse.AcademicPlanning.Application.Reminders.AssessmentDueReminderService>();
+
+            // Daily wellbeing check-in nudge (BackgroundService). Each evening
+            // (SAST) reminds opted-in students who haven't logged a mood
+            // check-in that day. Gated on WellbeingCheckinReminders.
+            services.AddHostedService<Aptiverse.Wellbeing.Application.Reminders.WellbeingCheckinReminderService>();
+
+            // Billing schedule (BackgroundService). Executes scheduled plan
+            // downgrades at period end. Singleton hosted service — resolves
+            // scoped ApplicationDbContext + IPaystackClient per poll.
+            services.AddHostedService<Data.Billing.SubscriptionScheduleService>();
 
             // Auth's repository contract (Aptiverse.Domain.Interfaces.IRepository<T>).
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));

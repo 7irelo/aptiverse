@@ -16,8 +16,8 @@ output and the corrections that fix them. Run it as a sanity sweep.
 - The product is **honest**. Numbers are real, names are anonymised
   appropriately, "AI" is named only where it adds clarity (per the privacy
   rule).
-- The product is **specifically South African**. NSC, IEB, SBA, FET, NSFAS,
-  bursaries by name. Not "Tier 1 universities" — we name UCT, Wits, Stellies.
+- The product is **specifically South African**. NSC, IEB, SBA, FET, NSFAS
+  by name. Not "Tier 1 universities" — we name UCT, Wits, Stellies.
 - The product is **for students, parents, teachers, schools**. Not for
   investors. No "synergy", no "AI-powered everything", no "platform".
 

@@ -129,12 +129,20 @@ using (var scope = app.Services.CreateScope())
     // the public pricing page (free / student / family / school).
     await Aptiverse.Entitlements.Infrastructure.Data.EntitlementsCatalogSeeder.SeedAsync(db);
 
-    // Development-only: ensure the privileged test accounts exist so the
-    // admin / school-admin dashboards are testable without raw SQL. Skipped
-    // entirely outside Development.
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<Aptiverse.Domain.Models.User>>();
-    var seedLogger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DevTestUsersSeeder");
-    await AuthDb.DevTestUsersSeeder.SeedAsync(userManager, db, app.Environment, seedLogger);
+    // Test-user seeding is intentionally DISABLED — accounts are created only
+    // through the real signup flow. (Re-enable DevTestUsersSeeder here only if
+    // you explicitly want throwaway dev accounts.)
+
+    // Paystack recurring billing: mint a PLN_ plan per paid tier + interval
+    // and store the codes on the Plan rows so checkout can start a real
+    // auto-renewing subscription. Idempotent + best-effort; a no-op when
+    // no secret key is configured.
+    var paystackClient = scope.ServiceProvider
+        .GetRequiredService<Aptiverse.Entitlements.Infrastructure.Paystack.IPaystackClient>();
+    var paystackLogger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
+        .CreateLogger("PaystackPlanSyncer");
+    await Aptiverse.Entitlements.Infrastructure.Data.PaystackPlanSyncer.SyncAsync(
+        db, paystackClient, paystackLogger);
 }
 
 // Trust Cloudflare's X-Forwarded-Proto / X-Forwarded-For so Request.Scheme

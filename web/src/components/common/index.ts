@@ -7,7 +7,6 @@ export * from "./GradientBackdrop";
 export * from "./FeatureCard";
 export * from "./ProgressRing";
 export * from "./StatusChip";
-export * from "./ColorModeToggle";
 export * from "./Dot";
 export * from "./LoadingScreen";
 export * from "./ComingSoon";

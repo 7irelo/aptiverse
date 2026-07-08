@@ -19,7 +19,6 @@ Feature: Marketing pages smoke tests
       | for-parents      | /for-parents      | For parents                                   |
       | for-tutors       | /for-tutors       | Teach more. Hustle less                       |
       | for-schools      | /for-schools      | Whole-school                                  |
-      | bursaries        | /bursaries        | Bursaries                                     |
       | universities     | /universities     | Universities                                  |
       | careers          | /careers          | Careers                                       |
       | contact          | /contact          | Contact                                       |

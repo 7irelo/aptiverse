@@ -10,23 +10,21 @@ export type GradientBackdropProps = {
   children?: React.ReactNode;
 };
 
+// Calm, on-brand background wash. No dot-grid or slate glow: a single soft
+// pine bloom on the warm ground for hero sections, flat ground for soft
+// sections, and a pine drench for inverted panels.
 export function GradientBackdrop({ variant = "soft", sx, children }: GradientBackdropProps) {
   const theme = useTheme();
   const dark = theme.palette.mode === "dark";
 
-  // Subtle dot grid — common in pro SaaS landings (Linear, Vercel)
-  const gridColor = dark
-    ? "rgba(255,255,255,0.04)"
-    : "rgba(15,23,42,0.05)";
-  const gridPattern = `radial-gradient(${gridColor} 1px, transparent 1px)`;
+  const bloom = `radial-gradient(720px 420px at 82% -8%, ${alpha(
+    theme.palette.primary.main,
+    dark ? 0.16 : 0.1,
+  )}, transparent 62%)`;
 
   const gradients: Record<NonNullable<GradientBackdropProps["variant"]>, string> = {
-    hero: `${gridPattern}, ${
-      dark
-        ? `radial-gradient(700px 400px at 80% 0%, ${alpha(theme.palette.primary.main, 0.18)}, transparent 60%)`
-        : `radial-gradient(700px 400px at 80% 0%, ${alpha(theme.palette.primary.main, 0.10)}, transparent 60%)`
-    }, linear-gradient(180deg, ${theme.palette.background.default}, ${theme.palette.background.default})`,
-    soft: `${gridPattern}, linear-gradient(180deg, ${theme.palette.background.default}, ${theme.palette.background.default})`,
+    hero: `${bloom}, ${theme.palette.background.default}`,
+    soft: theme.palette.background.default,
     vivid: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
   };
 
@@ -36,8 +34,6 @@ export function GradientBackdrop({ variant = "soft", sx, children }: GradientBac
         position: "relative",
         overflow: "hidden",
         background: gradients[variant],
-        backgroundSize:
-          variant === "vivid" ? "auto" : "24px 24px, auto, auto",
         ...sx,
       }}
     >

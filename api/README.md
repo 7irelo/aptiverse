@@ -1,6 +1,6 @@
 # Aptiverse
 
-An AI-powered student success platform for South African Grade 11 & 12 learners. Aptiverse turns matric prep from anxiety into momentum — AI-aligned SBA practice, predictive mastery, integrated wellbeing, bursary navigation, and verified rewards, all framed around growth instead of toxic comparison.
+An AI-powered student success platform for South African Grade 11 & 12 learners. Aptiverse turns matric prep from anxiety into momentum — AI-aligned SBA practice, predictive mastery, integrated wellbeing, and verified rewards, all framed around growth instead of toxic comparison.
 
 This repository is a monorepo. The .NET back end is a **modular monolith**: one host process (`Aptiverse.Api`) running auth + 14 bounded-context modules. A small number of supporting services (Python AI, Rails payments, Go events) stay separate for genuine technical reasons.
 
@@ -110,7 +110,7 @@ Seven roles, normalised lowercase snake_case in API responses. Permissions are c
 | `parent` | `Parent` | Parent / guardian — read-only on linked children |
 | `student` | `Student` | Grade 11 / 12 learner — the primary persona |
 
-Permission strings: `users.*`, `schools.*`, `classes.*`, `students.*`, `tutors.*`, `courses.*`, `bursaries.*`, `subscriptions.*`, `payments.*`, `billing.*`, `content.*`, `audit.*`, `flags.*`, `system.*`. Source of truth: `auth-provider/src/Aptiverse.Application/Auth/Services/PermissionResolver.cs`. UI mirror: `ui/src/lib/rbac.ts`.
+Permission strings: `users.*`, `schools.*`, `classes.*`, `students.*`, `tutors.*`, `courses.*`, `subscriptions.*`, `payments.*`, `billing.*`, `content.*`, `audit.*`, `flags.*`, `system.*`. Source of truth: `auth-provider/src/Aptiverse.Application/Auth/Services/PermissionResolver.cs`. UI mirror: `ui/src/lib/rbac.ts`.
 
 ## Tech stack
 
@@ -238,7 +238,6 @@ Key explanations and AI-tutor replies in isiZulu, Afrikaans, isiXhosa rolling ou
 ### University & career
 - Dream-course planner
 - Live APS calculator
-- Bursary navigator (NSFAS + private) with deadline reminders + document checklists
 - Career match based on performance + interests
 - Financial literacy basics (loans, budgeting, cost of living)
 
@@ -249,9 +248,9 @@ Key explanations and AI-tutor replies in isiZulu, Afrikaans, isiXhosa rolling ou
 | **Student** | Workspace (notes, essays, scratchpad, files), practice tests, goals, mastery, AI tutor, tutors, courses, diary, wellbeing, career, rewards, study groups, calendar |
 | **Parent** | "How can I help" dashboard, realtime activity (with consent), celebrations, wellbeing summary, billing |
 | **Teacher** | Class-wide gap analysis, differentiated assignments, one-click goal verification, realtime class engagement |
-| **School Admin** | Whole-school analytics, university readiness reports, teacher + class management, bursary partnership pipeline |
+| **School Admin** | Whole-school analytics, university readiness reports, teacher + class management |
 | **Tutor** | Course catalog, bookings, sessions, students, earnings, reviews |
-| **Admin / Super Admin** | Users, schools, tutors, courses, bursaries, moderation, subscriptions, payments, refunds, invoices, feature flags, audit log, system health, impersonate, settings |
+| **Admin / Super Admin** | Users, schools, tutors, courses, moderation, subscriptions, payments, refunds, invoices, feature flags, audit log, system health, impersonate, settings |
 
 ## Quick start
 

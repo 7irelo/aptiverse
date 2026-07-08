@@ -1,0 +1,260 @@
+@font-face {
+    font-family: 'Frygia';
+    src: url('Frygia-Bold.eot');
+    src: local('Frygia Bold'), local('Frygia-Bold'),
+        url('Frygia-Bold.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-Bold.woff2') format('woff2'),
+        url('Frygia-Bold.woff') format('woff'),
+        url('Frygia-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia';
+    src: url('Frygia-BlackItalic.eot');
+    src: local('Frygia Black Italic'), local('Frygia-BlackItalic'),
+        url('Frygia-BlackItalic.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-BlackItalic.woff2') format('woff2'),
+        url('Frygia-BlackItalic.woff') format('woff'),
+        url('Frygia-BlackItalic.ttf') format('truetype');
+    font-weight: 900;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia';
+    src: url('Frygia-Black.eot');
+    src: local('Frygia Black'), local('Frygia-Black'),
+        url('Frygia-Black.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-Black.woff2') format('woff2'),
+        url('Frygia-Black.woff') format('woff'),
+        url('Frygia-Black.ttf') format('truetype');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia Book';
+    src: url('Frygia-Book.eot');
+    src: local('Frygia Book'), local('Frygia-Book'),
+        url('Frygia-Book.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-Book.woff2') format('woff2'),
+        url('Frygia-Book.woff') format('woff'),
+        url('Frygia-Book.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia';
+    src: url('Frygia-BoldItalic.eot');
+    src: local('Frygia Bold Italic'), local('Frygia-BoldItalic'),
+        url('Frygia-BoldItalic.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-BoldItalic.woff2') format('woff2'),
+        url('Frygia-BoldItalic.woff') format('woff'),
+        url('Frygia-BoldItalic.ttf') format('truetype');
+    font-weight: bold;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia Book';
+    src: url('Frygia-BookItalic.eot');
+    src: local('Frygia Book Italic'), local('Frygia-BookItalic'),
+        url('Frygia-BookItalic.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-BookItalic.woff2') format('woff2'),
+        url('Frygia-BookItalic.woff') format('woff'),
+        url('Frygia-BookItalic.ttf') format('truetype');
+    font-weight: normal;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia Hairline';
+    src: url('Frygia-HairlineItalic.eot');
+    src: local('Frygia Hairline Italic'), local('Frygia-HairlineItalic'),
+        url('Frygia-HairlineItalic.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-HairlineItalic.woff2') format('woff2'),
+        url('Frygia-HairlineItalic.woff') format('woff'),
+        url('Frygia-HairlineItalic.ttf') format('truetype');
+    font-weight: normal;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia Hairline';
+    src: url('Frygia-Hairline.eot');
+    src: local('Frygia Hairline'), local('Frygia-Hairline'),
+        url('Frygia-Hairline.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-Hairline.woff2') format('woff2'),
+        url('Frygia-Hairline.woff') format('woff'),
+        url('Frygia-Hairline.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia';
+    src: url('Frygia-Heavy.eot');
+    src: local('Frygia Heavy'), local('Frygia-Heavy'),
+        url('Frygia-Heavy.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-Heavy.woff2') format('woff2'),
+        url('Frygia-Heavy.woff') format('woff'),
+        url('Frygia-Heavy.ttf') format('truetype');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia';
+    src: url('Frygia-HeavyItalic.eot');
+    src: local('Frygia Heavy Italic'), local('Frygia-HeavyItalic'),
+        url('Frygia-HeavyItalic.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-HeavyItalic.woff2') format('woff2'),
+        url('Frygia-HeavyItalic.woff') format('woff'),
+        url('Frygia-HeavyItalic.ttf') format('truetype');
+    font-weight: 900;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia';
+    src: url('Frygia-Light.eot');
+    src: local('Frygia Light'), local('Frygia-Light'),
+        url('Frygia-Light.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-Light.woff2') format('woff2'),
+        url('Frygia-Light.woff') format('woff'),
+        url('Frygia-Light.ttf') format('truetype');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia';
+    src: url('Frygia-Italic.eot');
+    src: local('Frygia Italic'), local('Frygia-Italic'),
+        url('Frygia-Italic.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-Italic.woff2') format('woff2'),
+        url('Frygia-Italic.woff') format('woff'),
+        url('Frygia-Italic.ttf') format('truetype');
+    font-weight: normal;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia';
+    src: url('Frygia-Regular.eot');
+    src: local('Frygia Regular'), local('Frygia-Regular'),
+        url('Frygia-Regular.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-Regular.woff2') format('woff2'),
+        url('Frygia-Regular.woff') format('woff'),
+        url('Frygia-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia';
+    src: url('Frygia-Medium.eot');
+    src: local('Frygia Medium'), local('Frygia-Medium'),
+        url('Frygia-Medium.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-Medium.woff2') format('woff2'),
+        url('Frygia-Medium.woff') format('woff'),
+        url('Frygia-Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia';
+    src: url('Frygia-LightItalic.eot');
+    src: local('Frygia Light Italic'), local('Frygia-LightItalic'),
+        url('Frygia-LightItalic.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-LightItalic.woff2') format('woff2'),
+        url('Frygia-LightItalic.woff') format('woff'),
+        url('Frygia-LightItalic.ttf') format('truetype');
+    font-weight: 300;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia';
+    src: url('Frygia-MediumItalic.eot');
+    src: local('Frygia Medium Italic'), local('Frygia-MediumItalic'),
+        url('Frygia-MediumItalic.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-MediumItalic.woff2') format('woff2'),
+        url('Frygia-MediumItalic.woff') format('woff'),
+        url('Frygia-MediumItalic.ttf') format('truetype');
+    font-weight: 500;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia XLight';
+    src: url('Frygia-XLight.eot');
+    src: local('Frygia XLight'), local('Frygia-XLight'),
+        url('Frygia-XLight.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-XLight.woff2') format('woff2'),
+        url('Frygia-XLight.woff') format('woff'),
+        url('Frygia-XLight.ttf') format('truetype');
+    font-weight: 200;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia';
+    src: url('Frygia-Thin.eot');
+    src: local('Frygia Thin'), local('Frygia-Thin'),
+        url('Frygia-Thin.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-Thin.woff2') format('woff2'),
+        url('Frygia-Thin.woff') format('woff'),
+        url('Frygia-Thin.ttf') format('truetype');
+    font-weight: 100;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia';
+    src: url('Frygia-ThinItalic.eot');
+    src: local('Frygia Thin Italic'), local('Frygia-ThinItalic'),
+        url('Frygia-ThinItalic.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-ThinItalic.woff2') format('woff2'),
+        url('Frygia-ThinItalic.woff') format('woff'),
+        url('Frygia-ThinItalic.ttf') format('truetype');
+    font-weight: 100;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Frygia XLight';
+    src: url('Frygia-XLightItalic.eot');
+    src: local('Frygia XLight Italic'), local('Frygia-XLightItalic'),
+        url('Frygia-XLightItalic.eot?#iefix') format('embedded-opentype'),
+        url('Frygia-XLightItalic.woff2') format('woff2'),
+        url('Frygia-XLightItalic.woff') format('woff'),
+        url('Frygia-XLightItalic.ttf') format('truetype');
+    font-weight: 200;
+    font-style: italic;
+    font-display: swap;
+}
+

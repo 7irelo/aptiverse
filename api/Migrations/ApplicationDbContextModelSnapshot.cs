@@ -43,6 +43,14 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("due_date");
 
+                    b.Property<bool>("DueReminderSent")
+                        .HasColumnType("boolean")
+                        .HasColumnName("due_reminder_sent");
+
+                    b.Property<DateTime?>("DueReminderSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("due_reminder_sent_at");
+
                     b.Property<string>("Notes")
                         .HasColumnType("text")
                         .HasColumnName("notes");
@@ -180,6 +188,61 @@ namespace Aptiverse.Api.Migrations
                     b.ToTable("assessment_uploads", "academic_planning");
                 });
 
+            modelBuilder.Entity("Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning.Course", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Code")
+                        .HasColumnType("text")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("InstitutionId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("institution_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("slug");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_courses");
+
+                    b.HasIndex("InstitutionId")
+                        .HasDatabaseName("ix_courses_institution_id");
+
+                    b.HasIndex("InstitutionId", "Slug")
+                        .IsUnique()
+                        .HasDatabaseName("ix_courses_institution_id_slug");
+
+                    b.ToTable("courses", "academic_planning");
+                });
+
             modelBuilder.Entity("Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning.Curriculum", b =>
                 {
                     b.Property<string>("Id")
@@ -259,6 +322,97 @@ namespace Aptiverse.Api.Migrations
                         .HasDatabaseName("ix_curriculum_subjects_curriculum_id_subject_id");
 
                     b.ToTable("curriculum_subjects", "academic_planning");
+                });
+
+            modelBuilder.Entity("Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning.Institution", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Province")
+                        .HasColumnType("text")
+                        .HasColumnName("province");
+
+                    b.Property<string>("ShortName")
+                        .HasColumnType("text")
+                        .HasColumnName("short_name");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("type");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_institutions");
+
+                    b.HasIndex("Type")
+                        .HasDatabaseName("ix_institutions_type");
+
+                    b.ToTable("institutions", "academic_planning");
+                });
+
+            modelBuilder.Entity("Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning.StudentCourse", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("CourseId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("course_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Lecturer")
+                        .HasColumnType("text")
+                        .HasColumnName("lecturer");
+
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("student_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_student_courses");
+
+                    b.HasIndex("CourseId")
+                        .HasDatabaseName("ix_student_courses_course_id");
+
+                    b.HasIndex("StudentId")
+                        .HasDatabaseName("ix_student_courses_student_id");
+
+                    b.HasIndex("StudentId", "CourseId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_student_courses_student_id_course_id");
+
+                    b.ToTable("student_courses", "academic_planning");
                 });
 
             modelBuilder.Entity("Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning.StudentSubject", b =>
@@ -345,6 +499,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("name");
 
+                    b.Property<string>("OwnerStudentId")
+                        .HasColumnType("text")
+                        .HasColumnName("owner_student_id");
+
                     b.Property<uint>("xmin")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -357,7 +515,57 @@ namespace Aptiverse.Api.Migrations
                     b.HasIndex("Category")
                         .HasDatabaseName("ix_subjects_category");
 
+                    b.HasIndex("OwnerStudentId")
+                        .HasDatabaseName("ix_subjects_owner_student_id");
+
                     b.ToTable("subjects", "academic_planning");
+                });
+
+            modelBuilder.Entity("Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning.Topic", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("slug");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("subject_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_topics");
+
+                    b.HasIndex("SubjectId")
+                        .HasDatabaseName("ix_topics_subject_id");
+
+                    b.HasIndex("SubjectId", "Slug")
+                        .IsUnique()
+                        .HasDatabaseName("ix_topics_subject_id_slug");
+
+                    b.ToTable("topics", "academic_planning");
                 });
 
             modelBuilder.Entity("Aptiverse.Audit.Domain.Models.Audit.AuditAction", b =>
@@ -578,6 +786,70 @@ namespace Aptiverse.Api.Migrations
                         .HasDatabaseName("ix_tutor_availabilities_tutor_id_is_available");
 
                     b.ToTable("tutor_availabilities", "booking");
+                });
+
+            modelBuilder.Entity("Aptiverse.Booking.Domain.Models.Booking.TutorConnection", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("ConnectedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("connected_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("student_id");
+
+                    b.Property<string>("StudentName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("student_name");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("subject");
+
+                    b.Property<string>("TutorUserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("tutor_user_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_tutor_connections");
+
+                    b.HasIndex("StudentId")
+                        .HasDatabaseName("ix_tutor_connections_student_id");
+
+                    b.HasIndex("TutorUserId")
+                        .HasDatabaseName("ix_tutor_connections_tutor_user_id");
+
+                    b.ToTable("tutor_connections", "booking");
                 });
 
             modelBuilder.Entity("Aptiverse.Booking.Domain.Models.Booking.TutorStudent", b =>
@@ -1029,6 +1301,81 @@ namespace Aptiverse.Api.Migrations
                     b.ToTable("parents", "auth");
                 });
 
+            modelBuilder.Entity("Aptiverse.Domain.Models.ParentLink", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("ParentName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("parent_name");
+
+                    b.Property<string>("ParentUserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("parent_user_id");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("responded_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StudentEmail")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("student_email");
+
+                    b.Property<string>("StudentUserId")
+                        .HasColumnType("text")
+                        .HasColumnName("student_user_id");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("token");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_parent_links");
+
+                    b.HasIndex("ParentUserId")
+                        .HasDatabaseName("ix_parent_links_parent_user_id");
+
+                    b.HasIndex("StudentEmail")
+                        .HasDatabaseName("ix_parent_links_student_email");
+
+                    b.HasIndex("StudentUserId")
+                        .HasDatabaseName("ix_parent_links_student_user_id");
+
+                    b.HasIndex("Token")
+                        .IsUnique()
+                        .HasDatabaseName("ix_parent_links_token");
+
+                    b.ToTable("parent_links", "auth");
+                });
+
             modelBuilder.Entity("Aptiverse.Domain.Models.Student", b =>
                 {
                     b.Property<long>("Id")
@@ -1237,6 +1584,14 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("access_failed_count");
 
+                    b.Property<bool>("AssessmentDueEmailReminders")
+                        .HasColumnType("boolean")
+                        .HasColumnName("assessment_due_email_reminders");
+
+                    b.Property<bool>("AssessmentDueReminders")
+                        .HasColumnType("boolean")
+                        .HasColumnName("assessment_due_reminders");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("text")
@@ -1250,6 +1605,11 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("curriculum_id");
 
+                    b.Property<string>("EducationLevel")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("education_level");
+
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)")
@@ -1258,6 +1618,10 @@ namespace Aptiverse.Api.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean")
                         .HasColumnName("email_confirmed");
+
+                    b.Property<bool>("EmailNotifications")
+                        .HasColumnType("boolean")
+                        .HasColumnName("email_notifications");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
@@ -1268,10 +1632,18 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("grade");
 
+                    b.Property<string>("InstitutionId")
+                        .HasColumnType("text")
+                        .HasColumnName("institution_id");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("last_name");
+
+                    b.Property<DateTime?>("LastWellbeingReminderAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_wellbeing_reminder_at");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean")
@@ -1303,6 +1675,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("phone_number_confirmed");
 
+                    b.Property<bool>("PushNotifications")
+                        .HasColumnType("boolean")
+                        .HasColumnName("push_notifications");
+
                     b.Property<string>("School")
                         .HasColumnType("text")
                         .HasColumnName("school");
@@ -1310,6 +1686,10 @@ namespace Aptiverse.Api.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text")
                         .HasColumnName("security_stamp");
+
+                    b.Property<bool>("StudyGroupEmailReminders")
+                        .HasColumnType("boolean")
+                        .HasColumnName("study_group_email_reminders");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean")
@@ -1323,6 +1703,14 @@ namespace Aptiverse.Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)")
                         .HasColumnName("user_name");
+
+                    b.Property<bool>("WeeklyStudySummary")
+                        .HasColumnType("boolean")
+                        .HasColumnName("weekly_study_summary");
+
+                    b.Property<bool>("WellbeingCheckinReminders")
+                        .HasColumnType("boolean")
+                        .HasColumnName("wellbeing_checkin_reminders");
 
                     b.Property<uint>("xmin")
                         .IsConcurrencyToken()
@@ -1429,6 +1817,14 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("name");
 
+                    b.Property<string>("PaystackPlanCodeAnnual")
+                        .HasColumnType("text")
+                        .HasColumnName("paystack_plan_code_annual");
+
+                    b.Property<string>("PaystackPlanCodeMonthly")
+                        .HasColumnType("text")
+                        .HasColumnName("paystack_plan_code_monthly");
+
                     b.Property<uint>("xmin")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -1528,13 +1924,42 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("Billing")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("billing");
+
+                    b.Property<string>("BillingEmail")
+                        .HasColumnType("text")
+                        .HasColumnName("billing_email");
+
                     b.Property<DateTime?>("CancelledAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("cancelled_at");
 
+                    b.Property<string>("CardBrand")
+                        .HasColumnType("text")
+                        .HasColumnName("card_brand");
+
+                    b.Property<int?>("CardExpMonth")
+                        .HasColumnType("integer")
+                        .HasColumnName("card_exp_month");
+
+                    b.Property<int?>("CardExpYear")
+                        .HasColumnType("integer")
+                        .HasColumnName("card_exp_year");
+
+                    b.Property<string>("CardLast4")
+                        .HasColumnType("text")
+                        .HasColumnName("card_last4");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("LastChargeAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_charge_at");
 
                     b.Property<string>("Name")
                         .HasColumnType("text")
@@ -1545,18 +1970,38 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("owner_user_id");
 
+                    b.Property<string>("PaystackAuthorizationCode")
+                        .HasColumnType("text")
+                        .HasColumnName("paystack_authorization_code");
+
                     b.Property<string>("PaystackCustomerCode")
                         .HasColumnType("text")
                         .HasColumnName("paystack_customer_code");
+
+                    b.Property<long?>("PaystackCustomerId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("paystack_customer_id");
 
                     b.Property<string>("PaystackSubscriptionCode")
                         .HasColumnType("text")
                         .HasColumnName("paystack_subscription_code");
 
+                    b.Property<string>("PendingBilling")
+                        .HasColumnType("text")
+                        .HasColumnName("pending_billing");
+
+                    b.Property<string>("PendingPlanCode")
+                        .HasColumnType("text")
+                        .HasColumnName("pending_plan_code");
+
                     b.Property<string>("PlanCode")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("plan_code");
+
+                    b.Property<int>("RenewalFailureCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("renewal_failure_count");
 
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("timestamp with time zone")
@@ -2016,6 +2461,10 @@ namespace Aptiverse.Api.Migrations
                     b.Property<long?>("RewardId")
                         .HasColumnType("bigint")
                         .HasColumnName("reward_id");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -3221,6 +3670,65 @@ namespace Aptiverse.Api.Migrations
                     b.ToTable("resource_downloads", "marketplace");
                 });
 
+            modelBuilder.Entity("Aptiverse.Marketplace.Domain.Models.Marketplace.Review", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("body");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer")
+                        .HasColumnName("rating");
+
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("student_id");
+
+                    b.Property<string>("StudentName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("student_name");
+
+                    b.Property<string>("TutorUserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("tutor_user_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_reviews");
+
+                    b.HasIndex("StudentId")
+                        .HasDatabaseName("ix_reviews_student_id");
+
+                    b.HasIndex("TutorUserId")
+                        .HasDatabaseName("ix_reviews_tutor_user_id");
+
+                    b.ToTable("reviews", "marketplace");
+                });
+
             modelBuilder.Entity("Aptiverse.Marketplace.Domain.Models.Marketplace.Tutor", b =>
                 {
                     b.Property<long>("Id")
@@ -3229,6 +3737,15 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("AcceptingStudents")
+                        .HasColumnType("boolean")
+                        .HasColumnName("accepting_students");
+
+                    b.Property<string>("AvailableDays")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("available_days");
 
                     b.Property<string>("Bio")
                         .IsRequired()
@@ -3239,6 +3756,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<int>("EarliestHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("earliest_hour");
+
                     b.Property<decimal>("HourlyRate")
                         .HasColumnType("numeric")
                         .HasColumnName("hourly_rate");
@@ -3246,6 +3767,18 @@ namespace Aptiverse.Api.Migrations
                     b.Property<bool>("IsVerified")
                         .HasColumnType("boolean")
                         .HasColumnName("is_verified");
+
+                    b.Property<int>("LatestHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("latest_hour");
+
+                    b.Property<bool>("NotifyOnConnection")
+                        .HasColumnType("boolean")
+                        .HasColumnName("notify_on_connection");
+
+                    b.Property<bool>("NotifyOnReview")
+                        .HasColumnType("boolean")
+                        .HasColumnName("notify_on_review");
 
                     b.Property<string>("Qualification")
                         .IsRequired()
@@ -3260,6 +3793,11 @@ namespace Aptiverse.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("specialization");
+
+                    b.Property<string>("Subjects")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("subjects");
 
                     b.Property<string>("TeachingStyle")
                         .IsRequired()
@@ -3278,6 +3816,10 @@ namespace Aptiverse.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("user_id");
+
+                    b.Property<bool>("WeeklySummary")
+                        .HasColumnType("boolean")
+                        .HasColumnName("weekly_summary");
 
                     b.Property<int>("YearsOfExperience")
                         .HasColumnType("integer")
@@ -4355,6 +4897,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("duration_minutes");
 
+                    b.Property<string>("OwnerStudentId")
+                        .HasColumnType("text")
+                        .HasColumnName("owner_student_id");
+
                     b.Property<string>("Questions")
                         .IsRequired()
                         .HasColumnType("jsonb")
@@ -4387,6 +4933,9 @@ namespace Aptiverse.Api.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_practice_tests");
+
+                    b.HasIndex("OwnerStudentId")
+                        .HasDatabaseName("ix_practice_tests_owner_student_id");
 
                     b.HasIndex("SubjectId")
                         .HasDatabaseName("ix_practice_tests_subject_id");
@@ -4537,6 +5086,197 @@ namespace Aptiverse.Api.Migrations
                         .HasName("pk_school_enquiries");
 
                     b.ToTable("school_enquiries", "sales");
+                });
+
+            modelBuilder.Entity("Aptiverse.StudyGroups.Domain.Models.StudyGroup", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime?>("NextSession")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_session");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("owner_id");
+
+                    b.Property<string>("Privacy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("privacy");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("subject_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_study_groups");
+
+                    b.HasIndex("OwnerId")
+                        .HasDatabaseName("ix_study_groups_owner_id");
+
+                    b.HasIndex("SubjectId")
+                        .HasDatabaseName("ix_study_groups_subject_id");
+
+                    b.ToTable("study_groups", "study_groups");
+                });
+
+            modelBuilder.Entity("Aptiverse.StudyGroups.Domain.Models.StudyGroupMember", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("joined_at");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("role");
+
+                    b.Property<long>("StudyGroupId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("study_group_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("user_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_study_group_members");
+
+                    b.HasIndex("StudyGroupId")
+                        .HasDatabaseName("ix_study_group_members_study_group_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_study_group_members_user_id");
+
+                    b.HasIndex("StudyGroupId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_study_group_members_study_group_id_user_id");
+
+                    b.ToTable("study_group_members", "study_groups");
+                });
+
+            modelBuilder.Entity("Aptiverse.StudyGroups.Domain.Models.StudyGroupSession", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedByUserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_minutes");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("location");
+
+                    b.Property<bool>("RemindersSent")
+                        .HasColumnType("boolean")
+                        .HasColumnName("reminders_sent");
+
+                    b.Property<DateTime?>("RemindersSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reminders_sent_at");
+
+                    b.Property<DateTime>("StartsAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("starts_at");
+
+                    b.Property<long>("StudyGroupId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("study_group_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("title");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_study_group_sessions");
+
+                    b.HasIndex("StartsAt")
+                        .HasDatabaseName("ix_study_group_sessions_starts_at");
+
+                    b.HasIndex("StudyGroupId")
+                        .HasDatabaseName("ix_study_group_sessions_study_group_id");
+
+                    b.ToTable("study_group_sessions", "study_groups");
                 });
 
             modelBuilder.Entity("Aptiverse.Support.Domain.Models.External.Identity.Student", b =>
@@ -5375,6 +6115,18 @@ namespace Aptiverse.Api.Migrations
                     b.Navigation("Curriculum");
 
                     b.Navigation("Subject");
+                });
+
+            modelBuilder.Entity("Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning.StudentCourse", b =>
+                {
+                    b.HasOne("Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning.Course", "Course")
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_student_courses_courses_course_id");
+
+                    b.Navigation("Course");
                 });
 
             modelBuilder.Entity("Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning.StudentSubject", b =>

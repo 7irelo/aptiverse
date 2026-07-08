@@ -45,7 +45,15 @@ export default function PsychologistPage() {
               Trained counsellors. Anonymous. Free.
             </Typography>
           </Box>
-          <Button color="secondary" variant="contained" size="large">
+          <Button
+            variant="contained"
+            size="large"
+            sx={{
+              bgcolor: "wellbeing.main",
+              color: "wellbeing.contrastText",
+              "&:hover": { bgcolor: "wellbeing.dark" },
+            }}
+          >
             Send me the number
           </Button>
         </Stack>

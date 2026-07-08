@@ -18,7 +18,6 @@ Feature: School-admin page smoke tests
       | name             | path                          | text                  |
       | dashboard home   | /school-admin                 | School dashboard      |
       | analytics        | /school-admin/analytics       | Analytics             |
-      | bursary partners | /school-admin/bursary-partners | Bursary partners     |
       | classes          | /school-admin/classes         | Classes               |
       | readiness        | /school-admin/readiness       | University readiness  |
       | settings         | /school-admin/settings        | School settings       |

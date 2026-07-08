@@ -68,6 +68,24 @@ namespace Aptiverse.Sales.Controllers
                     entry.FirstName, entry.LastName, entry.Email, entry.Id);
             }
 
+            // Best-effort acknowledgement back to the submitter so they know the
+            // message landed. Non-fatal: the enquiry is saved and the team is
+            // already notified regardless of whether this send succeeds.
+            try
+            {
+                await _emailSender.SendTemplateEmailAsync(
+                    entry.Email,
+                    "We got your message",
+                    "contact_received",
+                    new { entry.FirstName, entry.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Contact-enquiry acknowledgement to {Email} failed (enquiry {Id}) — non-fatal.",
+                    entry.Email, entry.Id);
+            }
+
             return Accepted(new { id = entry.Id });
         }
 

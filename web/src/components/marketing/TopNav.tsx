@@ -13,20 +13,17 @@ import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import Divider from "@mui/material/Divider";
-import MenuIcon from "@mui/icons-material/Menu";
-import CloseIcon from "@mui/icons-material/Close";
+import { Menu as MenuIcon, X as CloseIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/common/Logo";
-import { ColorModeToggle } from "@/components/common/ColorModeToggle";
 
 const NAV_LINKS: { label: string; href: string }[] = [
   { label: "Features", href: "/features" },
-  { label: "For Students", href: "/for-students" },
-  { label: "For Schools", href: "/for-schools" },
-  { label: "Bursaries", href: "/bursaries" },
+  { label: "Students", href: "/for-students" },
+  { label: "Families", href: "/for-families" },
+  { label: "Tutors", href: "/for-tutors" },
   { label: "Pricing", href: "/pricing" },
-  { label: "About", href: "/about" },
 ];
 
 export function TopNav() {
@@ -92,7 +89,6 @@ export function TopNav() {
           <Box sx={{ flex: 1 }} />
 
           <Stack direction="row" spacing={1} alignItems="center">
-            <ColorModeToggle />
             <Button
               component={Link}
               href="/login"
@@ -123,8 +119,7 @@ export function TopNav() {
         sx={{ display: { md: "none" } }}
       >
         <Box sx={{ width: { xs: "min(320px, 88vw)", sm: 320 }, p: 2 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-            <Logo />
+          <Stack direction="row" justifyContent="flex-end" alignItems="center" sx={{ mb: 1 }}>
             <IconButton onClick={() => setOpen(false)} aria-label="Close menu">
               <CloseIcon />
             </IconButton>

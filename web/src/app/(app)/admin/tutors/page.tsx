@@ -13,7 +13,7 @@ import { PermissionGuard } from "@/components/common/PermissionGuard";
 import { QueryStates } from "@/components/common/QueryStates";
 import { useTutors } from "@/lib/api/queries";
 import type { Tutor } from "@/lib/mockData";
-import { initials, formatCurrency } from "@/lib/format";
+import { initials } from "@/lib/format";
 
 export default function AdminTutorsPage() {
   const query = useTutors();
@@ -52,7 +52,7 @@ function TutorsTable({ tutors }: { tutors: Tutor[] }) {
           sortable: true,
           render: (r) => (
             <Stack direction="row" spacing={1.5} alignItems="center">
-              <Avatar sx={{ width: 32, height: 32, fontSize: "0.75rem", bgcolor: r.avatarColor }}>{initials(r.name)}</Avatar>
+              <Avatar sx={{ width: 32, height: 32, fontSize: "0.75rem", bgcolor: "primary.main" }}>{initials(r.name)}</Avatar>
               <Stack>
                 <Stack direction="row" spacing={0.5} alignItems="center">
                   <Typography variant="body2" sx={{ fontWeight: 500 }}>
@@ -61,16 +61,16 @@ function TutorsTable({ tutors }: { tutors: Tutor[] }) {
                   {r.verified && <VerifiedIcon sx={{ color: "primary.main", fontSize: 14 }} />}
                 </Stack>
                 <Typography variant="caption" color="text.secondary">
-                  {r.city}
+                  {r.qualification || "—"}
                 </Typography>
               </Stack>
             </Stack>
           ),
         },
-        { key: "subjects", header: "Subjects", render: (r) => r.subjects.join(", ") },
-        { key: "rating", header: "Rating", sortable: true, render: (r) => `★ ${r.rating}` },
+        { key: "subjects", header: "Subjects", render: (r) => r.subjects.join(", ") || "—" },
+        { key: "rating", header: "Rating", sortable: true, render: (r) => `★ ${r.rating.toFixed(1)}` },
         { key: "reviewCount", header: "Reviews", sortable: true, align: "right" },
-        { key: "hourlyRate", header: "Rate", sortable: true, align: "right", render: (r) => formatCurrency(r.hourlyRate) },
+        { key: "yearsOfExperience", header: "Experience", sortable: true, align: "right", render: (r) => (r.yearsOfExperience ? `${r.yearsOfExperience} yrs` : "—") },
         { key: "verified", header: "Verified", render: (r) => <Chip label={r.verified ? "Yes" : "Pending"} size="small" color={r.verified ? "success" : "warning"} /> },
       ]}
       rowActions={(r) => (

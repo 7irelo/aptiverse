@@ -47,6 +47,11 @@ namespace Aptiverse.Goals.Domain.Models.Goals
         // Optional reward label shown next to the goal card.
         public string? Reward { get; set; }
 
+        // Manual priority rank within the student's list (lower = higher up).
+        // Drag-to-reorder on the goals page writes this; defaults to 0 so
+        // existing rows keep their date ordering until the student reorders.
+        public int SortOrder { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

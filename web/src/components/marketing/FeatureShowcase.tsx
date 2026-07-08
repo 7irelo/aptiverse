@@ -5,11 +5,11 @@ import Card from "@mui/material/Card";
 import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import CheckCircleIcon from "@mui/icons-material/CheckCircleOutline";
+import { CheckCircle2, Globe } from "lucide-react";
 
 // Big text-on-one-side, demo-on-the-other block. Alternates left/right
 // via the `reverse` prop. The demo slot is whatever React node makes
-// sense for the feature — a chat UI, a chart, an annotated essay.
+// sense for the feature: a chat UI, a chart, a check-in.
 export type FeatureShowcaseProps = {
   eyebrow: string;
   title: string;
@@ -32,16 +32,12 @@ export function FeatureShowcase({
       sx={{
         display: "grid",
         gridTemplateColumns: { xs: "1fr", md: "5fr 7fr" },
-        gap: { xs: 4, md: 8 },
+        gap: { xs: 3.5, md: 8 },
         alignItems: "center",
-        py: { xs: 6, md: 8 },
+        py: { xs: 5, md: 8 },
       }}
     >
-      <Box
-        sx={{
-          order: { xs: 1, md: reverse ? 2 : 1 },
-        }}
-      >
+      <Box sx={{ order: { xs: 1, md: reverse ? 2 : 1 } }}>
         <Stack spacing={2.5}>
           <Typography variant="overline" color="primary.main">
             {eyebrow}
@@ -55,7 +51,9 @@ export function FeatureShowcase({
           <Stack spacing={1.25}>
             {bullets.map((b) => (
               <Stack key={b} direction="row" spacing={1.25} alignItems="flex-start">
-                <CheckCircleIcon sx={{ color: "primary.main", fontSize: 20, mt: 0.25, flexShrink: 0 }} />
+                <Box sx={{ color: "primary.main", mt: 0.25, flexShrink: 0, display: "flex" }}>
+                  <CheckCircle2 size={18} />
+                </Box>
                 <Typography variant="body2">{b}</Typography>
               </Stack>
             ))}
@@ -63,12 +61,7 @@ export function FeatureShowcase({
         </Stack>
       </Box>
 
-      <Box
-        sx={{
-          order: { xs: 2, md: reverse ? 1 : 2 },
-          minWidth: 0,
-        }}
-      >
+      <Box sx={{ order: { xs: 2, md: reverse ? 1 : 2 }, minWidth: 0 }}>
         <Box
           sx={{
             position: "relative",
@@ -79,8 +72,8 @@ export function FeatureShowcase({
               borderRadius: 4,
               background: (t) =>
                 t.palette.mode === "dark"
-                  ? "radial-gradient(60% 60% at 50% 50%, rgba(63,157,149,0.22) 0%, rgba(63,157,149,0) 70%)"
-                  : "radial-gradient(60% 60% at 50% 50%, rgba(15,105,99,0.12) 0%, rgba(15,105,99,0) 70%)",
+                  ? "radial-gradient(60% 60% at 50% 50%, rgba(114,177,163,0.20) 0%, rgba(114,177,163,0) 70%)"
+                  : "radial-gradient(60% 60% at 50% 50%, rgba(15,110,92,0.12) 0%, rgba(15,110,92,0) 70%)",
               filter: "blur(20px)",
               pointerEvents: "none",
               zIndex: 0,
@@ -94,9 +87,8 @@ export function FeatureShowcase({
   );
 }
 
-// Reusable mock-app frame used by the demos below. Adds the rounded
-// border, soft shadow, and the three traffic-light dots that signal
-// "this is a screenshot of the app".
+// Reusable mock-app frame used by the demos. A clean browser-style frame:
+// a small globe glyph plus the URL, no macOS traffic-light dots.
 export function MockAppFrame({
   title,
   badge,
@@ -115,7 +107,7 @@ export function MockAppFrame({
         boxShadow: (t) =>
           t.palette.mode === "dark"
             ? "0 20px 50px -20px rgba(0,0,0,0.5)"
-            : "0 20px 50px -20px rgba(15,105,99,0.25)",
+            : "0 20px 50px -20px rgba(8,68,56,0.22)",
       }}
     >
       <Box
@@ -130,15 +122,12 @@ export function MockAppFrame({
           bgcolor: "action.hover",
         }}
       >
-        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ flexShrink: 0 }}>
-          <Dot color="#FF5F57" />
-          <Dot color="#FEBC2E" />
-          <Dot color="#28C840" />
-        </Stack>
+        <Box sx={{ color: "text.disabled", display: "flex", flexShrink: 0 }}>
+          <Globe size={13} />
+        </Box>
         <Typography
           variant="caption"
           sx={{
-            ml: 0.5,
             fontFamily: "monospace",
             color: "text.secondary",
             flex: 1,
@@ -163,8 +152,4 @@ export function MockAppFrame({
       <Box sx={{ p: { xs: 2, sm: 2.5 } }}>{children}</Box>
     </Card>
   );
-}
-
-function Dot({ color }: { color: string }) {
-  return <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: color }} />;
 }

@@ -22,7 +22,6 @@ import LogoutIcon from "@mui/icons-material/LogoutOutlined";
 import SettingsIcon from "@mui/icons-material/SettingsOutlined";
 import HelpIcon from "@mui/icons-material/HelpOutline";
 import { signOut, useSession } from "next-auth/react";
-import { ColorModeToggle } from "@/components/common/ColorModeToggle";
 import { Logo } from "@/components/common/Logo";
 import { initials } from "@/lib/format";
 import {
@@ -32,7 +31,6 @@ import {
 } from "@/lib/api/queries";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { SIDEBAR_WIDTH } from "./Sidebar";
 
 type Props = {
   onMobileMenuClick: () => void;
@@ -95,31 +93,27 @@ export function AppTopBar({ onMobileMenuClick }: Props) {
           <MenuIcon />
         </IconButton>
 
+        {/* Brand shows here only on mobile, where the rail (which owns the
+            logo on desktop) is a hidden drawer. */}
         <Box
           component={Link}
           href="/"
           sx={{
-            display: "flex",
+            display: { xs: "flex", md: "none" },
             alignItems: "center",
-            width: { md: SIDEBAR_WIDTH },
             height: "100%",
-            pl: { xs: 0, md: 3 },
-            pr: { xs: 0, md: 2 },
-            borderRight: { md: 1 },
-            borderColor: "divider",
-            flexShrink: 0,
+            ml: 0.5,
             color: "text.primary",
             textDecoration: "none",
+            flexShrink: 0,
           }}
         >
-          <Logo size={30} />
+          <Logo size={28} />
         </Box>
 
         <Box sx={{ flex: 1 }} />
 
         <Stack direction="row" spacing={1} alignItems="center">
-          <ColorModeToggle />
-
           <Tooltip title="Notifications">
             <IconButton
               onClick={(e) => setNotifEl(e.currentTarget)}

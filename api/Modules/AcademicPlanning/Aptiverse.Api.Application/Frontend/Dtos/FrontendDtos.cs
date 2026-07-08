@@ -33,6 +33,9 @@ namespace Aptiverse.AcademicPlanning.Application.Frontend.Dtos
         [JsonPropertyName("curriculumId")] public string? CurriculumId { get; init; }
         [JsonPropertyName("grade")] public int? Grade { get; init; }
         [JsonPropertyName("school")] public string? School { get; init; }
+        [JsonPropertyName("educationLevel")] public string EducationLevel { get; init; } = "highschool";
+        // Tertiary only — the institution picked at signup.
+        [JsonPropertyName("institutionId")] public string? InstitutionId { get; init; }
     }
 
     public record FrontendUpdateAcademicProfileDto
@@ -40,6 +43,8 @@ namespace Aptiverse.AcademicPlanning.Application.Frontend.Dtos
         [JsonPropertyName("curriculumId")] public string? CurriculumId { get; init; }
         [JsonPropertyName("grade")] public int? Grade { get; init; }
         [JsonPropertyName("school")] public string? School { get; init; }
+        [JsonPropertyName("educationLevel")] public string? EducationLevel { get; init; }
+        [JsonPropertyName("institutionId")] public string? InstitutionId { get; init; }
     }
 
     // A subject the student has enrolled in. Shape is intentionally minimal
@@ -56,6 +61,9 @@ namespace Aptiverse.AcademicPlanning.Application.Frontend.Dtos
         [JsonPropertyName("grade")] public int Grade { get; init; }
         [JsonPropertyName("teacher")] public string? Teacher { get; init; }
         [JsonPropertyName("isCompulsory")] public bool IsCompulsory { get; init; }
+        // True for a student-created (tertiary) subject: owned, free-text, no
+        // curriculum. Drives the "custom" chip + delete affordance in the UI.
+        [JsonPropertyName("isCustom")] public bool IsCustom { get; init; }
         [JsonPropertyName("createdAt")] public DateTime CreatedAt { get; init; }
     }
 
@@ -64,6 +72,47 @@ namespace Aptiverse.AcademicPlanning.Application.Frontend.Dtos
         [JsonPropertyName("curriculumSubjectId")] public long CurriculumSubjectId { get; init; }
         [JsonPropertyName("grade")] public int? Grade { get; init; }
         [JsonPropertyName("teacher")] public string? Teacher { get; init; }
+    }
+
+    // Body for creating a student-owned (tertiary) subject/module from free
+    // text — no CAPS catalog, no curriculum.
+    public record FrontendCreateCustomSubjectDto
+    {
+        [JsonPropertyName("name")] public string Name { get; init; } = "";
+        [JsonPropertyName("category")] public string? Category { get; init; }
+        [JsonPropertyName("teacher")] public string? Teacher { get; init; }
+    }
+
+    // A recognised SA tertiary institution (signup picker + course scoping).
+    public record FrontendInstitutionDto
+    {
+        [JsonPropertyName("id")] public string Id { get; init; } = "";
+        [JsonPropertyName("name")] public string Name { get; init; } = "";
+        [JsonPropertyName("shortName")] public string? ShortName { get; init; }
+        [JsonPropertyName("type")] public string Type { get; init; } = "";
+        [JsonPropertyName("province")] public string? Province { get; init; }
+    }
+
+    // A tertiary student's enrolled course. `practiceKey` is the id practice
+    // generation + mastery key on (institution-scoped).
+    public record FrontendCourseDto
+    {
+        [JsonPropertyName("id")] public string Id { get; init; } = "";          // student_course id
+        [JsonPropertyName("courseId")] public long CourseId { get; init; }
+        [JsonPropertyName("practiceKey")] public string PracticeKey { get; init; } = "";
+        [JsonPropertyName("institutionId")] public string InstitutionId { get; init; } = "";
+        [JsonPropertyName("name")] public string Name { get; init; } = "";
+        [JsonPropertyName("code")] public string? Code { get; init; }
+        [JsonPropertyName("lecturer")] public string? Lecturer { get; init; }
+        [JsonPropertyName("createdAt")] public DateTime CreatedAt { get; init; }
+    }
+
+    // Body for enrolling in / creating a course (emergent, shared per institution).
+    public record FrontendAddCourseDto
+    {
+        [JsonPropertyName("name")] public string Name { get; init; } = "";
+        [JsonPropertyName("code")] public string? Code { get; init; }
+        [JsonPropertyName("lecturer")] public string? Lecturer { get; init; }
     }
 
     // Student-logged assessment (SBA task / test / essay / etc.). The

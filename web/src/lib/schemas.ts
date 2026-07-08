@@ -18,8 +18,6 @@ export const registerStep2Schema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Enter a valid email"),
   password,
-  school: z.string().optional(),
-  grade: z.string().optional(),
 });
 export type RegisterValues = z.infer<typeof registerStep2Schema>;
 

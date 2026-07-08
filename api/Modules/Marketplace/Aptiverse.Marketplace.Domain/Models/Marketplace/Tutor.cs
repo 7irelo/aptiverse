@@ -19,6 +19,20 @@ namespace Aptiverse.Marketplace.Domain.Models.Marketplace
         public bool IsVerified { get; set; }
         public double Rating { get; set; }
         public int TotalReviews { get; set; }
+
+        // Settings-driven fields, edited on the tutor Settings page. Availability
+        // is a lightweight summary (accepting new students, open days, open-hour
+        // window) rather than a full slot calendar. Subjects is a comma-list of
+        // what they teach; Specialization holds finer specialist topics.
+        public bool AcceptingStudents { get; set; } = true;
+        public string AvailableDays { get; set; } = "Mon,Tue,Wed,Thu,Fri";
+        public int EarliestHour { get; set; } = 15;
+        public int LatestHour { get; set; } = 20;
+        public string Subjects { get; set; } = "";
+        public bool NotifyOnConnection { get; set; } = true;
+        public bool NotifyOnReview { get; set; } = true;
+        public bool WeeklySummary { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

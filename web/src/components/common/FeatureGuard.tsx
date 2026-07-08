@@ -20,6 +20,10 @@ export type FeatureGuardProps = {
   fallback?: React.ReactNode;
   // Compact variant for inline gating (e.g. a single locked button).
   variant?: "card" | "inline";
+  // Where the upgrade CTA points. Defaults to the in-app billing page so a
+  // signed-in user lands on their plan picker, not the signup funnel. Pass
+  // the role's billing route on parent/tutor pages (e.g. "/parent/billing").
+  upgradeHref?: string;
 };
 
 // Gates children on the user's feature entitlements. When the user
@@ -32,6 +36,7 @@ export function FeatureGuard({
   children,
   fallback,
   variant = "card",
+  upgradeHref = "/dashboard/billing",
 }: FeatureGuardProps) {
   const { has, hasAny, hasAll } = useFeatures();
   const features = Array.isArray(feature) ? feature : [feature];
@@ -46,7 +51,7 @@ export function FeatureGuard({
   if (fallback !== undefined) return <>{fallback}</>;
 
   // Suggest the lowest plan that unlocks the (first listed) feature.
-  const minPlan = FEATURE_MIN_PLAN[features[0]] ?? "student";
+  const minPlan = FEATURE_MIN_PLAN[features[0]] ?? "student.pro";
   const planLabel = PLAN_LABELS[minPlan];
 
   if (variant === "inline") {
@@ -56,7 +61,7 @@ export function FeatureGuard({
         <Typography variant="body2" color="text.secondary">
           {planLabel} plan unlocks this.
         </Typography>
-        <Button component={Link} href="/pricing" size="small" variant="text">
+        <Button component={Link} href={upgradeHref} size="small" variant="text">
           Upgrade
         </Button>
       </Stack>
@@ -87,11 +92,8 @@ export function FeatureGuard({
             This feature is part of Aptiverse {planLabel}. Upgrade to unlock — you can switch back any time.
           </Typography>
           <Stack direction="row" spacing={1.5}>
-            <Button component={Link} href="/pricing" variant="contained">
-              See plans
-            </Button>
-            <Button component={Link} href="/for-schools/contact" variant="outlined">
-              Talk to sales
+            <Button component={Link} href={upgradeHref} variant="contained">
+              Upgrade
             </Button>
           </Stack>
         </Stack>

@@ -23,9 +23,9 @@ export default function CareerPage() {
     <>
       <PageHeader
         title="Career navigator"
-        description="From dream course to bursary to first internship — we help you plan it backwards from where you want to be."
+        description="From dream course to first internship — we help you plan it backwards from where you want to be."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Career" }]}
-        actions={<Button variant="contained">Set dream course</Button>}
+        actions={<Button variant="contained" color="secondary">Set dream course</Button>}
       />
 
       <Grid container spacing={3}>
@@ -38,8 +38,8 @@ export default function CareerPage() {
                     width: 44,
                     height: 44,
                     borderRadius: 1.5,
-                    bgcolor: "primary.main",
-                    color: "primary.contrastText",
+                    bgcolor: "brandSurface.main",
+                    color: "brandSurface.contrastText",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -56,14 +56,14 @@ export default function CareerPage() {
                     Not set yet
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                    Pick a target course and we'll track the APS gap, suggest matching bursaries, and recommend the subjects most worth pushing.
+                    Pick a target course and we'll track your progress and recommend the subjects most worth pushing.
                   </Typography>
                   <Stack direction="row" spacing={1}>
                     <Button variant="contained" size="small">
                       Set dream course
                     </Button>
-                    <Button component={Link} href="/dashboard/universities" variant="outlined" size="small">
-                      Explore universities
+                    <Button component={Link} href="/dashboard/goals" variant="outlined" size="small">
+                      Set a goal
                     </Button>
                   </Stack>
                 </Box>

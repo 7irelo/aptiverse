@@ -57,7 +57,6 @@ export default function ParentSettingsPage() {
             <Stack>
               <FormControlLabel control={<Switch defaultChecked />} label="Celebration alerts (streaks, completed goals)" />
               <FormControlLabel control={<Switch defaultChecked />} label="Weekly wellbeing digest" />
-              <FormControlLabel control={<Switch defaultChecked />} label="Bursary deadlines for my children" />
               <FormControlLabel control={<Switch />} label="Every login by my child (verbose — leave off unless you need it)" />
             </Stack>
           </Box>
