@@ -39,11 +39,11 @@ import { api } from "@/lib/api/client";
 // upgrade / resubscribe options to free or cancelled owners.
 const TRACK_PLANS: Record<Track, string[]> = {
   student: ["student.pro", "student.max"],
-  family: ["family", "family.plus"],
+  parent: ["parent", "parent.2", "parent.3", "parent.4"],
   tutor: ["tutor.pro", "tutor.premium"],
 };
 
-type Track = "student" | "family" | "tutor";
+type Track = "student" | "parent" | "tutor";
 
 export function BillingManager({
   track,
@@ -551,15 +551,17 @@ const PLAN_TAGLINE: Record<string, string> = {
   free: "Start here with the core tools, at no cost.",
   "student.pro": "The full toolkit: curriculum-aware tutor, adaptive practice, career navigator.",
   "student.max": "Built for matric: exam simulator, weekly AI debrief, WhatsApp tutor.",
-  family: "One subscription covering every learner in the family.",
-  "family.plus": "More learners and allowance, with priority support.",
+  parent: "One child on Student Pro, plus the parent toolkit.",
+  "parent.2": "Two children on Student Pro, shared AI pool, combo price.",
+  "parent.3": "Three children on Student Pro, shared AI pool, combo price.",
+  "parent.4": "Four children on Student Pro, shared AI pool, combo price.",
   "tutor.pro": "Lower marketplace commission and pro scheduling tools.",
   "tutor.premium": "The lowest commission, with premium visibility.",
 };
 
 const RECOMMENDED: Record<Track, string> = {
   student: "student.pro",
-  family: "family",
+  parent: "parent.2",
   tutor: "tutor.pro",
 };
 

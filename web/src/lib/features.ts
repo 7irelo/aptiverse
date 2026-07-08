@@ -111,8 +111,10 @@ export type PlanCode =
   | "free"
   | "student.pro"
   | "student.max"
-  | "family"
-  | "family.plus"
+  | "parent"
+  | "parent.2"
+  | "parent.3"
+  | "parent.4"
   | "tutor.free"
   | "tutor.pro"
   | "tutor.premium"
@@ -165,28 +167,26 @@ export const FEATURE_MIN_PLAN: Record<FeatureKey, PlanCode> = {
   "ai_debrief.weekly": "student.max",
   "whatsapp.contextual": "student.max",
 
-  // Family entry
-  "parent.dashboard": "family",
-  "parent.realtime_feed": "family",
-  "parent.wellbeing_view": "family",
-  "parent.celebrations": "family",
-  "parent.forecast": "family",
-  "parent.billing": "family",
-  "family.linked_children": "family",
+  // Parent track — every parent tier grants the same tooling, so the entry
+  // tier (parent, 1 child) is the cheapest plan that unlocks these.
+  "parent.dashboard": "parent",
+  "parent.realtime_feed": "parent",
+  "parent.wellbeing_view": "parent",
+  "parent.celebrations": "parent",
+  "parent.forecast": "parent",
+  "parent.billing": "parent",
+  "family.linked_children": "parent",
+  "parent.uni_readiness": "parent",
+  "family.shared_calendar": "parent",
+  "family.whatsapp_recap": "parent",
 
-  // Family Plus
-  "parent.uni_readiness": "family.plus",
-  "family.shared_calendar": "family.plus",
-  "family.whatsapp_recap": "family.plus",
-  "counselling.session_included": "family.plus",
-
-  // Parent-premium extras. The seeder currently grants these only to the
-  // School plan (no Family tier does), so they surface as Family Plus here
-  // as the intended upgrade target; revisit if a Family Plus grant is added.
-  "parent.ai_coach": "family.plus",
-  "parent.interventions": "family.plus",
-  "parent.tutor_concierge": "family.plus",
-  "family.wellbeing_dashboard": "family.plus",
+  // School-only parent extras (a real counselling session + concierge/coach
+  // features). No paid parent tier grants these, so School is the min plan.
+  "counselling.session_included": "school",
+  "parent.ai_coach": "school",
+  "parent.interventions": "school",
+  "parent.tutor_concierge": "school",
+  "family.wellbeing_dashboard": "school",
 
   // Tutor entry (Free with commission)
   "tutor.dashboard": "tutor.free",
@@ -230,8 +230,10 @@ export const PLAN_LABELS: Record<PlanCode, string> = {
   free: "Free",
   "student.pro": "Student Pro",
   "student.max": "Student Max",
-  family: "Family",
-  "family.plus": "Family Plus",
+  parent: "Parent",
+  "parent.2": "Parent (2 children)",
+  "parent.3": "Parent (3 children)",
+  "parent.4": "Parent (4 children)",
   "tutor.free": "Tutor Free",
   "tutor.pro": "Tutor Pro",
   "tutor.premium": "Tutor Premium",

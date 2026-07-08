@@ -40,8 +40,10 @@ const ROLE_OPTIONS: { value: Role; label: string; description: string; icon: Rea
 const PAID_PLANS = new Set([
   "student.pro",
   "student.max",
-  "family",
-  "family.plus",
+  "parent",
+  "parent.2",
+  "parent.3",
+  "parent.4",
   "tutor.pro",
   "tutor.premium",
 ]);
@@ -49,7 +51,7 @@ const PAID_PLANS = new Set([
 function roleForPlan(plan: string | null): Role | null {
   if (!plan) return null;
   if (plan.startsWith("student")) return "student";
-  if (plan.startsWith("family")) return "parent";
+  if (plan.startsWith("parent")) return "parent";
   if (plan.startsWith("tutor")) return "tutor";
   return null;
 }

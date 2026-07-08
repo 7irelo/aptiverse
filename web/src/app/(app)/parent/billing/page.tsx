@@ -11,7 +11,7 @@ export default function BillingPage() {
         description="Your family subscription, payment method, and payment history."
         breadcrumbs={[{ label: "Parent", href: "/parent" }, { label: "Billing" }]}
       />
-      <BillingManager track="family" />
+      <BillingManager track="parent" />
     </>
   );
 }

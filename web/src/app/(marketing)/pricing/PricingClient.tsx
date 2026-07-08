@@ -33,7 +33,7 @@ import { type PlanDto } from "@/lib/api/queries";
 // silently drift from what the catalog actually grants.
 
 type Billing = "monthly" | "annual";
-type Audience = "students" | "families" | "tutors";
+type Audience = "students" | "parents" | "tutors";
 
 type PlanCopy = {
   audience: Audience;
@@ -96,31 +96,57 @@ const PLAN_COPY: Record<string, PlanCopy> = {
       "A cross-subject study plan",
     ],
   },
-  family: {
-    audience: "families",
-    audienceLabel: "For families",
-    tagline: "Up to two learners, one bill.",
-    highlight: true,
-    cta: { label: "Choose Family", href: "/register?plan=family" },
+  parent: {
+    audience: "parents",
+    audienceLabel: "For parents",
+    tagline: "For one learner.",
+    cta: { label: "Choose 1 child", href: "/register?plan=parent" },
     features: [
-      "Student Pro for each child",
-      "Up to {seats} children",
+      "One child on Student Pro",
       "Parent dashboard, calm and honest",
-      "Wellbeing summary, content stays private",
-      "Celebration alerts",
-      "A shared AI pool for the family",
+      "Private wellbeing summary and mark forecast",
+      "Celebration alerts and shared family calendar",
+      "Around {aiQuick} quick and {aiDeep} deep AI sessions a month",
     ],
   },
-  "family.plus": {
-    audience: "families",
-    audienceLabel: "For families",
-    tagline: "For bigger households.",
-    cta: { label: "Choose Family Plus", href: "/register?plan=family.plus" },
+  "parent.2": {
+    audience: "parents",
+    audienceLabel: "For parents",
+    tagline: "Two learners, combo price.",
+    highlight: true,
+    cta: { label: "Choose 2 children", href: "/register?plan=parent.2" },
     features: [
-      "Everything in Family",
-      "Up to {seats} children",
-      "Higher shared AI limits",
-      "Per-child goal and progress tracking",
+      "Two children, each on Student Pro",
+      "Parent dashboard, calm and honest",
+      "Private wellbeing summary and mark forecast",
+      "Celebration alerts and shared family calendar",
+      "Shared AI pool, around {aiQuick} quick and {aiDeep} deep a month",
+    ],
+  },
+  "parent.3": {
+    audience: "parents",
+    audienceLabel: "For parents",
+    tagline: "Three learners, combo price.",
+    cta: { label: "Choose 3 children", href: "/register?plan=parent.3" },
+    features: [
+      "Three children, each on Student Pro",
+      "Parent dashboard, calm and honest",
+      "Private wellbeing summary and mark forecast",
+      "Celebration alerts and shared family calendar",
+      "Shared AI pool, around {aiQuick} quick and {aiDeep} deep a month",
+    ],
+  },
+  "parent.4": {
+    audience: "parents",
+    audienceLabel: "For parents",
+    tagline: "Four learners, combo price.",
+    cta: { label: "Choose 4 children", href: "/register?plan=parent.4" },
+    features: [
+      "Four children, each on Student Pro",
+      "Parent dashboard, calm and honest",
+      "Private wellbeing summary and mark forecast",
+      "Celebration alerts and shared family calendar",
+      "Shared AI pool, around {aiQuick} quick and {aiDeep} deep a month",
     ],
   },
   "tutor.free": {
@@ -170,7 +196,7 @@ const PLAN_COPY: Record<string, PlanCopy> = {
   },
 };
 
-const AUDIENCE_ORDER: readonly string[] = ["free", "student.pro", "student.max", "family", "family.plus", "tutor.free", "tutor.pro", "tutor.premium"];
+const AUDIENCE_ORDER: readonly string[] = ["free", "student.pro", "student.max", "parent", "parent.2", "parent.3", "parent.4", "tutor.free", "tutor.pro", "tutor.premium"];
 
 const FAQ = [
   {
@@ -268,7 +294,7 @@ export default function PricingClient({ plans: allPlans }: { plans: PlanDto[] })
             sx={{ "& .MuiTab-root": { fontWeight: 600, textTransform: "none", fontSize: "0.95rem" } }}
           >
             <Tab value="students" label="Students" />
-            <Tab value="families" label="Families" />
+            <Tab value="parents" label="Parents" />
             <Tab value="tutors" label="Tutors" />
           </Tabs>
         </Box>
@@ -401,9 +427,9 @@ function PlanCard({ plan, billing }: { plan: PlanDto; billing: Billing }) {
       ? `${copy.cta.href}${copy.cta.href.includes("?") ? "&" : "?"}billing=annual`
       : copy.cta.href;
 
-  // Family tiers show the seat cap under the price; everyone else shows the
-  // audience label. Both derive from the live plan.
-  const subLabel = plan.maxMembers > 1 ? `Up to ${plan.maxMembers} children` : copy.audienceLabel;
+  // The child count now lives in the plan name (e.g. "Parent (2 children)"),
+  // so the line under the price is just the audience label.
+  const subLabel = copy.audienceLabel;
 
   return (
     <Card
