@@ -10,9 +10,19 @@ main {
   height: 100%;
 }
 
+/* Drop the browser's default underline on every anchor — including MUI
+ * components and Box/Stack rendered as component={Link}, which carry a class. */
 a {
-  color: inherit;
   text-decoration: none;
+}
+
+/* Colour is scoped to bare anchors only (next/link with no className). MUI
+ * components rendered as anchors carry a class and set their own colour; MUI's
+ * styles live in a lower CSS @layer (enableCssLayer), so an unlayered
+ * `a { color: inherit }` would win over them regardless of specificity and
+ * force button text to inherit the page colour (white-on-white / black-on-black). */
+a:not([class]) {
+  color: inherit;
 }
 
 *,

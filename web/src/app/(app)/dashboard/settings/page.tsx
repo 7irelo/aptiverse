@@ -16,12 +16,16 @@ import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNone
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { useSession } from "next-auth/react";
+import { useSnackbar } from "notistack";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EditWithTabs, type EditTab } from "@/components/common/EditWithTabs";
-import { useColorMode } from "@/providers/ColorModeProvider";
+import {
+  useNotificationPreferences,
+  useUpdateNotificationPreferences,
+  type NotificationPreferences,
+} from "@/lib/api/queries";
 
 export default function SettingsPage() {
-  const { mode, setMode } = useColorMode();
   const { data: session } = useSession();
   const u = (session?.user ?? {}) as {
     name?: string | null;
@@ -35,10 +39,21 @@ export default function SettingsPage() {
   const fallbackLast =
     u.lastName ?? (u.name && u.name.includes(" ") ? u.name.split(" ").slice(1).join(" ") : "");
 
-  const [emailNotifs, setEmailNotifs] = useState(true);
-  const [pushNotifs, setPushNotifs] = useState(true);
   const [parentVisibility, setParentVisibility] = useState(true);
   const [diaryEncryption, setDiaryEncryption] = useState(true);
+
+  // Real, persisted notification preferences. Each toggle saves on change via a
+  // partial patch, so one never clobbers the others.
+  const { enqueueSnackbar } = useSnackbar();
+  const prefsQuery = useNotificationPreferences();
+  const updatePrefs = useUpdateNotificationPreferences();
+  const prefs = prefsQuery.data;
+  const prefsDisabled = prefsQuery.isLoading || updatePrefs.isPending;
+  const setPref = (key: keyof NotificationPreferences, value: boolean) =>
+    updatePrefs.mutate(
+      { [key]: value },
+      { onError: () => enqueueSnackbar("Couldn't save that preference.", { variant: "error" }) },
+    );
 
   const tabs: EditTab[] = [
     {
@@ -53,14 +68,14 @@ export default function SettingsPage() {
               defaultValue={fallbackFirst}
               key={`first-${fallbackFirst}`}
               fullWidth
-              placeholder="—"
+              placeholder="Not set"
             />
             <TextField
               label="Last name"
               defaultValue={fallbackLast}
               key={`last-${fallbackLast}`}
               fullWidth
-              placeholder="—"
+              placeholder="Not set"
             />
           </Stack>
           <TextField
@@ -68,7 +83,7 @@ export default function SettingsPage() {
             defaultValue={u.email ?? ""}
             key={`email-${u.email ?? ""}`}
             fullWidth
-            placeholder="—"
+            placeholder="Not set"
           />
           <TextField
             label="School"
@@ -100,17 +115,9 @@ export default function SettingsPage() {
       icon: <PaletteOutlinedIcon />,
       content: (
         <Stack spacing={2} sx={{ maxWidth: 460 }}>
-          <TextField
-            select
-            fullWidth
-            label="Theme"
-            value={mode}
-            onChange={(e) => setMode(e.target.value as "light" | "dark" | "system")}
-          >
-            <MenuItem value="system">Match system</MenuItem>
-            <MenuItem value="light">Light</MenuItem>
-            <MenuItem value="dark">Dark</MenuItem>
-          </TextField>
+          <Typography variant="body2" color="text.secondary">
+            Aptiverse follows your device's light or dark setting automatically.
+          </Typography>
           <TextField select fullWidth label="Language" defaultValue="en">
             <MenuItem value="en">English</MenuItem>
             <MenuItem value="zu">isiZulu</MenuItem>
@@ -132,17 +139,24 @@ export default function SettingsPage() {
       content: (
         <Stack spacing={3} sx={{ maxWidth: 560 }}>
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+            <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600 }}>
               Channels
             </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+              In-app notifications are always on. These control the extra channels.
+            </Typography>
             <Stack>
-              <FormControlLabel
-                control={<Switch checked={emailNotifs} onChange={(e) => setEmailNotifs(e.target.checked)} />}
+              <PrefSwitch
                 label="Email notifications"
+                checked={prefs?.emailNotifications ?? true}
+                disabled={prefsDisabled}
+                onChange={(v) => setPref("emailNotifications", v)}
               />
-              <FormControlLabel
-                control={<Switch checked={pushNotifs} onChange={(e) => setPushNotifs(e.target.checked)} />}
+              <PrefSwitch
                 label="Push notifications"
+                checked={prefs?.pushNotifications ?? true}
+                disabled={prefsDisabled}
+                onChange={(v) => setPref("pushNotifications", v)}
               />
             </Stack>
           </Box>
@@ -152,14 +166,42 @@ export default function SettingsPage() {
               What to notify me about
             </Typography>
             <Stack>
-              <FormControlLabel control={<Switch defaultChecked />} label="Daily wellbeing check-in reminder" />
-              <FormControlLabel control={<Switch defaultChecked />} label="Bursary deadline reminders" />
-              <FormControlLabel control={<Switch defaultChecked />} label="SBA due in 3 days" />
-              <FormControlLabel control={<Switch />} label="Weekly study summary" />
+              <PrefSwitch
+                label="Study group session reminders (email)"
+                checked={prefs?.studyGroupEmailReminders ?? false}
+                disabled={prefsDisabled}
+                onChange={(v) => setPref("studyGroupEmailReminders", v)}
+              />
+              <PrefSwitch
+                label="Assessment due soon"
+                checked={prefs?.assessmentDueReminders ?? true}
+                disabled={prefsDisabled}
+                onChange={(v) => setPref("assessmentDueReminders", v)}
+              />
+              <Box sx={{ pl: 4 }}>
+                <PrefSwitch
+                  label="Also email me"
+                  checked={prefs?.assessmentDueEmailReminders ?? false}
+                  disabled={prefsDisabled || !(prefs?.assessmentDueReminders ?? true)}
+                  onChange={(v) => setPref("assessmentDueEmailReminders", v)}
+                />
+              </Box>
+              <PrefSwitch
+                label="Daily wellbeing check-in reminder"
+                checked={prefs?.wellbeingCheckinReminders ?? true}
+                disabled={prefsDisabled}
+                onChange={(v) => setPref("wellbeingCheckinReminders", v)}
+              />
+              <PrefSwitch
+                label="Weekly study summary"
+                checked={prefs?.weeklyStudySummary ?? false}
+                disabled={prefsDisabled}
+                onChange={(v) => setPref("weeklyStudySummary", v)}
+              />
             </Stack>
-          </Box>
-          <Box>
-            <Button variant="contained">Save notification preferences</Button>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+              Saved as you toggle.
+            </Typography>
           </Box>
         </Stack>
       ),
@@ -250,5 +292,28 @@ export default function SettingsPage() {
 
       <EditWithTabs tabs={tabs} defaultTab="profile" />
     </>
+  );
+}
+
+// A labelled switch that reports its new boolean on change. Keeps the
+// notification preference rows terse and consistent.
+function PrefSwitch({
+  label,
+  checked,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <FormControlLabel
+      control={
+        <Switch checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+      }
+      label={label}
+    />
   );
 }

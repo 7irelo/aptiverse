@@ -14,9 +14,16 @@ namespace Aptiverse.Practice.Domain.Models.Practice
     // relationally. PracticeQuestionConfiguration wires the jsonb conversion.
     [Index(nameof(SubjectId))]
     [Index(nameof(SubjectId), nameof(Difficulty))]
+    [Index(nameof(OwnerStudentId))]
     public class PracticeTest : IEntityTimestamps
     {
         public long Id { get; set; }
+
+        // Owner of a privately-generated test. Null = a shared test (teacher-
+        // authored or seeded), visible to everyone; non-null = an AI test the
+        // student generated for themselves, visible only to them. Keeps
+        // "generate from your weakest" out of the global catalogue.
+        public string? OwnerStudentId { get; set; }
 
         // Canonical subject slug (e.g. "math", "physci"). Matches the Subject
         // catalog Id used elsewhere, so the UI can filter by subject without a

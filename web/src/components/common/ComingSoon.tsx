@@ -31,7 +31,7 @@ export function ComingSoon({ title, description, bullets, badge = "Preview" }: C
             <Stack spacing={1.5} sx={{ maxWidth: 640 }}>
               {bullets.map((b) => (
                 <Stack key={b} direction="row" spacing={1.5} alignItems="flex-start">
-                  <Box sx={{ width: 24, height: 24, borderRadius: "50%", bgcolor: "primary.main", color: "primary.contrastText", display: "grid", placeItems: "center", flexShrink: 0, fontSize: "0.75rem", fontWeight: 700 }}>
+                  <Box sx={{ width: 24, height: 24, borderRadius: "50%", bgcolor: "brandSurface.main", color: "brandSurface.contrastText", display: "grid", placeItems: "center", flexShrink: 0, fontSize: "0.75rem", fontWeight: 700 }}>
                     ✓
                   </Box>
                   <Typography variant="body1">{b}</Typography>

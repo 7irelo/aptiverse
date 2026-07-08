@@ -12,6 +12,7 @@ import Button from "@mui/material/Button";
 import Link from "next/link";
 import dayjs from "dayjs";
 import { motion } from "framer-motion";
+import { alpha } from "@mui/material/styles";
 import { CardError } from "@/components/common/CardError";
 import { PageHeader } from "@/components/common/PageHeader";
 import { QueryStates } from "@/components/common/QueryStates";
@@ -247,6 +248,7 @@ function Hero({
                       component={Link}
                       href={`/dashboard/assessments/${nextUp.id}`}
                       variant="contained"
+                      color="secondary"
                       size="small"
                       endIcon={<ArrowForwardIcon />}
                     >
@@ -504,10 +506,7 @@ function CenterIcon({ children }: { children: React.ReactNode }) {
         mb: 2,
         display: "grid",
         placeItems: "center",
-        bgcolor: (t) =>
-          t.palette.mode === "dark"
-            ? "rgba(116, 181, 174, 0.12)"
-            : "rgba(15, 105, 99, 0.08)",
+        bgcolor: (t) => alpha(t.palette.primary.main, t.palette.mode === "dark" ? 0.12 : 0.08),
         color: "primary.main",
       }}
     >

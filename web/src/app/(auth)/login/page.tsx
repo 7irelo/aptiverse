@@ -59,12 +59,29 @@ function dashboardForRole(role: string | undefined | null): string {
   }
 }
 
+// Friendly copy for the ?error= codes NextAuth (and our Google signIn
+// callback) redirect back with. OAuthNoAccount is our invite-only rejection.
+function oauthErrorMessage(code: string | null): string | null {
+  switch (code) {
+    case "OAuthNoAccount":
+      return "No Aptiverse account is linked to that Google email. Create an account first, then you can sign in with Google.";
+    case "OAuthFailed":
+    case "OAuthCallback":
+    case "OAuthAccountNotLinked":
+    case "AccessDenied":
+      return "We couldn't sign you in with Google. Please try again.";
+    default:
+      return null;
+  }
+}
+
 function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
   const rawCallback = params.get("callbackUrl");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const oauthError = oauthErrorMessage(params.get("error"));
 
   const {
     register,
@@ -118,7 +135,7 @@ function LoginInner() {
 
       <OAuthButtons callbackUrl={rawCallback ?? "/dashboard"} />
 
-      {error && <Alert severity="error">{error}</Alert>}
+      {(error ?? oauthError) && <Alert severity="error">{error ?? oauthError}</Alert>}
 
       <Box component="form" noValidate onSubmit={handleSubmit(onSubmit)}>
         <Stack spacing={2}>

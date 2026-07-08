@@ -5,6 +5,12 @@ namespace Aptiverse.Application.Auth.Dtos
         string Password,
         string FirstName,
         string LastName,
-        string Role
+        string Role,
+        // Academic profile captured at signup. EducationLevel is the switch:
+        // "highschool" uses CurriculumId + Grade; "tertiary" uses InstitutionId.
+        string? EducationLevel = null,
+        string? CurriculumId = null,
+        int? Grade = null,
+        string? InstitutionId = null
     );
 }

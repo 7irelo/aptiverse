@@ -106,6 +106,26 @@ namespace Aptiverse.Application.Auth.Services
             var user = _mapper.Map<User>(registerDto);
             user.CreatedAt = DateTime.UtcNow;
 
+            // Academic profile from signup. Student type is the switch:
+            // tertiary -> institution; highschool -> curriculum + grade. Set
+            // authoritatively so an unmapped/null field can't blank the default.
+            if (registerDto.EducationLevel?.Trim().ToLowerInvariant() == "tertiary")
+            {
+                user.EducationLevel = "tertiary";
+                user.InstitutionId = string.IsNullOrWhiteSpace(registerDto.InstitutionId)
+                    ? null : registerDto.InstitutionId.Trim();
+                user.CurriculumId = null;
+                user.Grade = null;
+            }
+            else
+            {
+                user.EducationLevel = "highschool";
+                user.CurriculumId = string.IsNullOrWhiteSpace(registerDto.CurriculumId)
+                    ? null : registerDto.CurriculumId.Trim();
+                user.Grade = registerDto.Grade;
+                user.InstitutionId = null;
+            }
+
             var result = await _userManager.CreateAsync(user, registerDto.Password);
 
             if (!result.Succeeded)

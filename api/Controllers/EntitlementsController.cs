@@ -23,7 +23,8 @@ namespace Aptiverse.Entitlements.Controllers
 
         // Quota keys this app meters. Keeping them in one place avoids
         // typos drifting between the controller, the bot, and the seeder.
-        private static readonly string[] QuotaKeys = ["ai.quick", "ai.deep", "whatsapp"];
+        private static readonly string[] QuotaKeys =
+            ["ai.quick", "ai.deep", "whatsapp", "practice.generate"];
 
         private string? CurrentUserId()
             => User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -89,6 +90,7 @@ namespace Aptiverse.Entitlements.Controllers
                 AiQuick = byKey["ai.quick"],
                 AiDeep = byKey["ai.deep"],
                 Whatsapp = byKey["whatsapp"],
+                PracticeGenerate = byKey["practice.generate"],
             });
         }
 
@@ -308,5 +310,6 @@ namespace Aptiverse.Entitlements.Controllers
         [JsonPropertyName("aiQuick")] public FrontendQuotaSnapshotDto AiQuick { get; init; } = new();
         [JsonPropertyName("aiDeep")] public FrontendQuotaSnapshotDto AiDeep { get; init; } = new();
         [JsonPropertyName("whatsapp")] public FrontendQuotaSnapshotDto Whatsapp { get; init; } = new();
+        [JsonPropertyName("practiceGenerate")] public FrontendQuotaSnapshotDto PracticeGenerate { get; init; } = new();
     }
 }

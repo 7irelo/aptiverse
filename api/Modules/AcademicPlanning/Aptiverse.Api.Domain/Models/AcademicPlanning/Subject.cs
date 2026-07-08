@@ -6,11 +6,18 @@ namespace Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning
     // curricula via CurriculumSubject. Students enrol in subjects via
     // StudentSubject.
     [Index(nameof(Category))]
+    [Index(nameof(OwnerStudentId))]
     public class Subject
     {
         public required string Id { get; set; }      // slug: "math", "physci", "eng_hl"
         public required string Code { get; set; }    // short code shown on cards: "MATH", "PHSC"
         public required string Name { get; set; }    // "Mathematics", "Physical Sciences"
+
+        // Owner of a student-created subject. Null = a shared CAPS-catalog
+        // subject (high-school). Non-null = a tertiary student's own subject/
+        // module they added (e.g. "Calculus I"), visible only to them. Mirrors
+        // the owned-vs-shared pattern used for private practice tests.
+        public string? OwnerStudentId { get; set; }
 
         // Category buckets used by the UI to colour-code subject cards and
         // group them in the add-subject picker.

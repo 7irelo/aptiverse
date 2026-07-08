@@ -30,7 +30,123 @@ namespace Aptiverse.AcademicPlanning.Infrastructure.Data
             await UpsertCurriculaAsync(db, ct);
             await UpsertSubjectsAsync(db, ct);
             await UpsertJunctionsAsync(db, ct);
+            await UpsertInstitutionsAsync(db, ct);
             await db.SaveChangesAsync(ct);
+        }
+
+        // Recognised SA tertiary institutions: all 26 public universities,
+        // major private higher-ed providers, and well-known public TVET
+        // colleges. Not exhaustive on TVET (there are 50) — the signup picker
+        // offers an "Other" fallback. Idempotent upsert by id.
+        private static async Task UpsertInstitutionsAsync(ApplicationDbContext db, CancellationToken ct)
+        {
+            const string uni = "university";
+            const string uot = "university_of_technology";
+            const string comp = "comprehensive_university";
+            const string tvet = "tvet";
+            const string priv = "private_college";
+
+            var desired = new (string Id, string Name, string? Short, string Type, string Province)[]
+            {
+                // ── Public universities (traditional) ──
+                ("uct",   "University of Cape Town", "UCT", uni, "Western Cape"),
+                ("wits",  "University of the Witwatersrand", "Wits", uni, "Gauteng"),
+                ("up",    "University of Pretoria", "UP", uni, "Gauteng"),
+                ("su",    "Stellenbosch University", "SU", uni, "Western Cape"),
+                ("ukzn",  "University of KwaZulu-Natal", "UKZN", uni, "KwaZulu-Natal"),
+                ("ufs",   "University of the Free State", "UFS", uni, "Free State"),
+                ("ru",    "Rhodes University", "RU", uni, "Eastern Cape"),
+                ("uwc",   "University of the Western Cape", "UWC", uni, "Western Cape"),
+                ("ufh",   "University of Fort Hare", "UFH", uni, "Eastern Cape"),
+                ("ul",    "University of Limpopo", "UL", uni, "Limpopo"),
+                ("nwu",   "North-West University", "NWU", uni, "North West"),
+
+                // ── Universities of technology ──
+                ("cput",  "Cape Peninsula University of Technology", "CPUT", uot, "Western Cape"),
+                ("cut",   "Central University of Technology", "CUT", uot, "Free State"),
+                ("dut",   "Durban University of Technology", "DUT", uot, "KwaZulu-Natal"),
+                ("mut",   "Mangosuthu University of Technology", "MUT", uot, "KwaZulu-Natal"),
+                ("tut",   "Tshwane University of Technology", "TUT", uot, "Gauteng"),
+                ("vut",   "Vaal University of Technology", "VUT", uot, "Gauteng"),
+
+                // ── Comprehensive universities ──
+                ("uj",    "University of Johannesburg", "UJ", comp, "Gauteng"),
+                ("nmu",   "Nelson Mandela University", "NMU", comp, "Eastern Cape"),
+                ("unisa", "University of South Africa", "UNISA", comp, "Gauteng"),
+                ("univen","University of Venda", "Univen", comp, "Limpopo"),
+                ("wsu",   "Walter Sisulu University", "WSU", comp, "Eastern Cape"),
+                ("unizulu","University of Zululand", "UniZulu", comp, "KwaZulu-Natal"),
+
+                // ── Newer public universities ──
+                ("spu",   "Sol Plaatje University", "SPU", uni, "Northern Cape"),
+                ("ump",   "University of Mpumalanga", "UMP", uni, "Mpumalanga"),
+                ("smu",   "Sefako Makgatho Health Sciences University", "SMU", uni, "Gauteng"),
+
+                // ── Major private higher-ed ──
+                ("varsity_college", "The IIE's Varsity College", "Varsity College", priv, "National"),
+                ("rosebank_college","The IIE's Rosebank College", "Rosebank College", priv, "National"),
+                ("vega",            "The IIE's Vega School", "Vega", priv, "National"),
+                ("eduvos",          "Eduvos", "Eduvos", priv, "National"),
+                ("boston",          "Boston City Campus", "Boston", priv, "National"),
+                ("damelin",         "Damelin", "Damelin", priv, "National"),
+                ("richfield",       "Richfield Graduate Institute of Technology", "Richfield", priv, "National"),
+                ("mancosa",         "MANCOSA", "MANCOSA", priv, "KwaZulu-Natal"),
+                ("regenesys",       "Regenesys Business School", "Regenesys", priv, "Gauteng"),
+                ("milpark",         "Milpark Education", "Milpark", priv, "National"),
+                ("stadio",          "STADIO Higher Education", "STADIO", priv, "National"),
+                ("afda",            "AFDA (The School for the Creative Economy)", "AFDA", priv, "National"),
+                ("redandyellow",    "Red & Yellow Creative School of Business", "Red & Yellow", priv, "Western Cape"),
+                ("cornerstone",     "Cornerstone Institute", "Cornerstone", priv, "Western Cape"),
+
+                // ── Public TVET colleges (well-known subset) ──
+                ("tvet_cape_town",  "College of Cape Town", "College of Cape Town", tvet, "Western Cape"),
+                ("tvet_false_bay",  "False Bay TVET College", "False Bay", tvet, "Western Cape"),
+                ("tvet_northlink",  "Northlink TVET College", "Northlink", tvet, "Western Cape"),
+                ("tvet_boland",     "Boland TVET College", "Boland", tvet, "Western Cape"),
+                ("tvet_west_coast", "West Coast TVET College", "West Coast", tvet, "Western Cape"),
+                ("tvet_tshwane_north","Tshwane North TVET College", "Tshwane North", tvet, "Gauteng"),
+                ("tvet_tshwane_south","Tshwane South TVET College", "Tshwane South", tvet, "Gauteng"),
+                ("tvet_ekurhuleni_east","Ekurhuleni East TVET College", "Ekurhuleni East", tvet, "Gauteng"),
+                ("tvet_ekurhuleni_west","Ekurhuleni West TVET College", "Ekurhuleni West", tvet, "Gauteng"),
+                ("tvet_sedibeng",   "Sedibeng TVET College", "Sedibeng", tvet, "Gauteng"),
+                ("tvet_swgc",       "South West Gauteng TVET College", "SWGC", tvet, "Gauteng"),
+                ("tvet_thekwini",   "Thekwini TVET College", "Thekwini", tvet, "KwaZulu-Natal"),
+                ("tvet_coastal",    "Coastal KZN TVET College", "Coastal KZN", tvet, "KwaZulu-Natal"),
+                ("tvet_elangeni",   "Elangeni TVET College", "Elangeni", tvet, "KwaZulu-Natal"),
+                ("tvet_majuba",     "Majuba TVET College", "Majuba", tvet, "KwaZulu-Natal"),
+                ("tvet_umgungundlovu","Umgungundlovu TVET College", "Umgungundlovu", tvet, "KwaZulu-Natal"),
+                ("tvet_buffalo_city","Buffalo City TVET College", "Buffalo City", tvet, "Eastern Cape"),
+                ("tvet_ksd",        "King Sabata Dalindyebo TVET College", "KSD", tvet, "Eastern Cape"),
+                ("tvet_eastcape_midlands","Eastcape Midlands TVET College", "Eastcape Midlands", tvet, "Eastern Cape"),
+                ("tvet_motheo",     "Motheo TVET College", "Motheo", tvet, "Free State"),
+                ("tvet_maluti",     "Maluti TVET College", "Maluti", tvet, "Free State"),
+                ("tvet_capricorn",  "Capricorn TVET College", "Capricorn", tvet, "Limpopo"),
+                ("tvet_vhembe",     "Vhembe TVET College", "Vhembe", tvet, "Limpopo"),
+                ("tvet_ehlanzeni",  "Ehlanzeni TVET College", "Ehlanzeni", tvet, "Mpumalanga"),
+                ("tvet_gert_sibande","Gert Sibande TVET College", "Gert Sibande", tvet, "Mpumalanga"),
+                ("tvet_nkangala",   "Nkangala TVET College", "Nkangala", tvet, "Mpumalanga"),
+                ("tvet_orbit",      "Orbit TVET College", "Orbit", tvet, "North West"),
+                ("tvet_vuselela",   "Vuselela TVET College", "Vuselela", tvet, "North West"),
+                ("tvet_nc_urban",   "Northern Cape Urban TVET College", "NC Urban", tvet, "Northern Cape"),
+                ("tvet_nc_rural",   "Northern Cape Rural TVET College", "NC Rural", tvet, "Northern Cape"),
+
+                // ── Fallback ──
+                ("other", "Other / not listed", "Other", priv, "National"),
+            };
+
+            var existingIds = await db.Set<Institution>().AsNoTracking().Select(i => i.Id).ToListAsync(ct);
+            foreach (var (id, name, shortName, type, province) in desired)
+            {
+                if (existingIds.Contains(id)) continue;
+                db.Set<Institution>().Add(new Institution
+                {
+                    Id = id,
+                    Name = name,
+                    ShortName = shortName,
+                    Type = type,
+                    Province = province,
+                });
+            }
         }
 
         private static async Task UpsertCurriculaAsync(ApplicationDbContext db, CancellationToken ct)

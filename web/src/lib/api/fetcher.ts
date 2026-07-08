@@ -8,6 +8,7 @@
 // standard sign-in flow.
 
 import { getSession, signIn } from "next-auth/react";
+import { humanizeApiError } from "@/lib/api/errors";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5100";
 
@@ -47,7 +48,7 @@ export async function fetcher<T>(path: string, init: RequestInit = {}): Promise<
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new ApiError(res.status, body);
+    throw new ApiError(res.status, body, humanizeApiError(res.status, body));
   }
 
   if (res.status === 204) return undefined as T;

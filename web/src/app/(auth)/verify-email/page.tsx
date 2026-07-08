@@ -109,7 +109,7 @@ function ConfirmResult({
 function ResendInbox() {
   return (
     <Stack spacing={3} alignItems="center" sx={{ textAlign: "center" }}>
-      <Box sx={{ width: 72, height: 72, borderRadius: "50%", bgcolor: "primary.main", color: "primary.contrastText", display: "grid", placeItems: "center" }}>
+      <Box sx={{ width: 72, height: 72, borderRadius: "50%", bgcolor: "brandSurface.main", color: "brandSurface.contrastText", display: "grid", placeItems: "center" }}>
         <MarkEmailReadIcon sx={{ fontSize: 38 }} />
       </Box>
       <Box>
@@ -163,7 +163,7 @@ function ResendBlock({ compact = false }: { compact?: boolean }) {
           </Stack>
           {resend.isError && (
             <Alert severity="info">
-              Couldn&apos;t resend — try again, or contact support if the issue persists.
+              Couldn&apos;t resend. Try again, or contact support if the issue persists.
             </Alert>
           )}
         </Stack>

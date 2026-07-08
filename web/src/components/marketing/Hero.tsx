@@ -7,10 +7,7 @@ import Button from "@mui/material/Button";
 import { alpha, useTheme } from "@mui/material/styles";
 import { GradientBackdrop } from "@/components/common/GradientBackdrop";
 import Link from "next/link";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import CheckIcon from "@mui/icons-material/Check";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartment";
+import { ArrowRight, Check, TrendingUp, Flame } from "lucide-react";
 import { motion } from "framer-motion";
 
 export function Hero() {
@@ -21,50 +18,17 @@ export function Hero() {
           maxWidth: 1240,
           mx: "auto",
           px: { xs: 2.5, sm: 4, lg: 6 },
-          py: { xs: 9, md: 16 },
+          py: { xs: 6, md: 16 },
           position: "relative",
           zIndex: 1,
         }}
       >
         <Stack
           direction={{ xs: "column", lg: "row" }}
-          spacing={{ xs: 6, lg: 10 }}
+          spacing={{ xs: 5, lg: 10 }}
           alignItems="center"
         >
-          <Stack spacing={3.5} sx={{ flex: 1 }}>
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <Box
-                sx={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 1,
-                  px: 1.25,
-                  py: 0.5,
-                  borderRadius: 999,
-                  border: 1,
-                  borderColor: "divider",
-                  bgcolor: "background.paper",
-                  fontSize: "0.75rem",
-                  fontWeight: 500,
-                  color: "text.secondary",
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    bgcolor: "success.main",
-                  }}
-                />
-                Built for SA Grades 10–12 (FET phase)
-              </Box>
-            </motion.div>
-
+          <Stack spacing={{ xs: 2.5, md: 3.5 }} sx={{ flex: 1 }}>
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -74,12 +38,12 @@ export function Hero() {
                 variant="h1"
                 component="h1"
                 sx={{
-                  fontSize: { xs: "2.5rem", md: "3.75rem" },
+                  fontSize: { xs: "2.15rem", md: "3.75rem" },
                   letterSpacing: "-0.03em",
                   lineHeight: 1.05,
                 }}
               >
-                The student success platform for South African high school.
+                Get ahead without burning out.
               </Typography>
             </motion.div>
 
@@ -96,9 +60,8 @@ export function Hero() {
                   lineHeight: 1.55,
                 }}
               >
-                Aptiverse unifies SBA preparation, mastery tracking, wellbeing,
-                tutoring and bursaries into a single, calm workspace —
-                purpose-built for South African FET-phase learners (Grades 10–12).
+                Aptiverse helps you learn well and stay well, from your first
+                term to your last exam.
               </Typography>
             </motion.div>
 
@@ -113,17 +76,17 @@ export function Hero() {
                   href="/register"
                   size="large"
                   variant="contained"
-                  endIcon={<ArrowForwardIcon />}
+                  endIcon={<ArrowRight size={18} />}
                 >
                   Start free
                 </Button>
                 <Button
                   component={Link}
-                  href="/demo"
+                  href="/features"
                   size="large"
                   variant="outlined"
                 >
-                  Book a demo
+                  See how it works
                 </Button>
               </Stack>
             </motion.div>
@@ -141,10 +104,10 @@ export function Hero() {
                 sx={{ pt: 1 }}
               >
                 {[
-                  "IEB & NSC aligned",
+                  "Curriculum-aware",
                   "Wellbeing-first",
-                  "Predictive mastery",
-                  "Verified rewards",
+                  "Predicts your results",
+                  "Works offline",
                 ].map((t) => (
                   <Stack
                     key={t}
@@ -152,9 +115,9 @@ export function Hero() {
                     spacing={0.75}
                     alignItems="center"
                   >
-                    <CheckIcon
-                      sx={{ fontSize: 14, color: "primary.main" }}
-                    />
+                    <Box sx={{ color: "primary.main", display: "flex" }}>
+                      <Check size={14} />
+                    </Box>
                     <Typography
                       variant="body2"
                       color="text.secondary"
@@ -203,7 +166,7 @@ function HeroPreview() {
             : "0 1px 0 rgba(15,23,42,0.04), 0 24px 48px -20px rgba(15,23,42,0.18)",
         }}
       >
-        {/* Header bar — restrained, no traffic-light dots */}
+        {/* Header bar, restrained */}
         <Stack
           direction="row"
           alignItems="center"
@@ -227,22 +190,22 @@ function HeroPreview() {
             Dashboard
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            Term 2 · Week 6
+            Semester 2 · Week 6
           </Typography>
         </Stack>
 
         <Box sx={{ p: 2.5 }}>
           <Stack spacing={0.5} sx={{ mb: 2.5 }}>
             <Typography variant="caption" color="text.secondary">
-              English Home Language · Essay
+              Statistics · Assignment
             </Typography>
             <Typography
               variant="h5"
               sx={{ fontWeight: 600, letterSpacing: "-0.015em" }}
             >
-              On track — predicted{" "}
+              On track, predicted{" "}
               <Box component="span" sx={{ color: "primary.main" }}>
-                72%
+                74%
               </Box>
             </Typography>
           </Stack>
@@ -251,18 +214,18 @@ function HeroPreview() {
           <Stack direction="row" spacing={1.5} sx={{ mb: 2.5 }}>
             <MetricTile
               label="Mastery"
-              value="68%"
-              hint="+4 this term"
-              icon={<TrendingUpIcon sx={{ fontSize: 14 }} />}
+              value="71%"
+              hint="+4 this semester"
+              icon={<TrendingUp size={14} />}
               positive
             />
             <MetricTile
               label="Streak"
               value="12d"
               hint="Personal best"
-              icon={<LocalFireDepartmentIcon sx={{ fontSize: 14 }} />}
+              icon={<Flame size={14} />}
             />
-            <MetricTile label="APS" value="34" hint="+2" positive />
+            <MetricTile label="Average" value="74%" hint="+3" positive />
           </Stack>
 
           {/* Mini bar / progress strip */}
@@ -328,7 +291,7 @@ function HeroPreview() {
               variant="caption"
               sx={{ color: "text.primary", fontWeight: 500 }}
             >
-              Next: 25 minute drill on figurative language
+              Next: 25 minute drill on hypothesis testing
             </Typography>
           </Stack>
         </Box>

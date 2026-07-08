@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Card from "@mui/material/Card";
 import CardActionArea from "@mui/material/CardActionArea";
 import CardContent from "@mui/material/CardContent";
@@ -9,45 +10,54 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
 import Skeleton from "@mui/material/Skeleton";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import TextField from "@mui/material/TextField";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
 import { alpha, useTheme } from "@mui/material/styles";
 import Link from "next/link";
-import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { AptiverseLineChart as LineChart } from "@/components/common/AptiverseLineChart";
 import { AtmosphericBackdrop } from "@/components/common/AtmosphericBackdrop";
 import { CardError } from "@/components/common/CardError";
 import { PageHeader } from "@/components/common/PageHeader";
-import { useWellbeingSummary, useMoodTrend } from "@/lib/api/queries";
+import { useWellbeingSummary, useMoodTrend, useLogMood } from "@/lib/api/queries";
 import { enter, enterStagger } from "@/lib/motion";
 import type { MoodPoint, WellbeingSummary } from "@/lib/mockData";
 import SelfImprovementIcon from "@mui/icons-material/SelfImprovementOutlined";
 import PsychologyIcon from "@mui/icons-material/PsychologyOutlined";
 import EditNoteIcon from "@mui/icons-material/EditNoteOutlined";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorderOutlined";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForwardOutlined";
 
 const STRESS_COPY: Record<WellbeingSummary["stressSignal"], { label: string; hint: string }> = {
-  none:     { label: "No signal yet", hint: "Check in to start tracking" },
-  low:      { label: "Low",           hint: "No alerts this week" },
-  moderate: { label: "Moderate",      hint: "Worth slowing down" },
-  high:     { label: "High",          hint: "Take a break today" },
+  none: { label: "No signal yet", hint: "Check in to start tracking" },
+  low: { label: "Low", hint: "No alerts this week" },
+  moderate: { label: "Moderate", hint: "Worth slowing down" },
+  high: { label: "High", hint: "Take a break today" },
 };
+
+const MOOD_LABELS = ["Rough", "Low", "Okay", "Good", "Great"];
 
 const hasCheckedIn = (s: WellbeingSummary | undefined): boolean =>
   !!s && (s.moodAvg7d > 0 || s.checkinStreakDays > 0);
 
 export default function WellbeingPage() {
   const summaryQ = useWellbeingSummary();
-  const trendQ   = useMoodTrend(14);
+  const trendQ = useMoodTrend(14);
 
-  const summary  = summaryQ.data;
+  const summary = summaryQ.data;
   const populated = hasCheckedIn(summary);
-  const loading   = summaryQ.isLoading || trendQ.isLoading;
-  // The summary endpoint is the source of truth for "is the page
-  // populated"; if it errors we can't tell whether the student is a
-  // returning user or a first-timer, and falling through to
-  // FirstCheckIn tells a long-time user to "start your first check-in"
-  // which is wrong. Surface the error honestly with a retry instead.
+  const loading = summaryQ.isLoading || trendQ.isLoading;
   const hardError = summaryQ.isError;
+
+  const [checkInOpen, setCheckInOpen] = useState(false);
+  const [toast, setToast] = useState(false);
 
   return (
     <AtmosphericBackdrop>
@@ -55,6 +65,16 @@ export default function WellbeingPage() {
         title="Wellbeing"
         description="Daily check-ins, breathing tools, and people to talk to. Small habits, real signal."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Wellbeing" }]}
+        actions={
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<FavoriteBorderIcon />}
+            onClick={() => setCheckInOpen(true)}
+          >
+            Check in
+          </Button>
+        }
       />
 
       {loading ? (
@@ -65,8 +85,8 @@ export default function WellbeingPage() {
             <CardError
               what="your wellbeing history"
               onRetry={() => {
-                summaryQ.refetch();
-                trendQ.refetch();
+                void summaryQ.refetch();
+                void trendQ.refetch();
               }}
             />
           </CardContent>
@@ -74,13 +94,194 @@ export default function WellbeingPage() {
       ) : populated ? (
         <PopulatedSummary summary={summary!} trend={trendQ.data ?? []} />
       ) : (
-        <FirstCheckIn />
+        <FirstCheckIn onCheckIn={() => setCheckInOpen(true)} />
       )}
 
       <Box sx={{ mt: 4 }}>
-        <QuickTools />
+        <QuickTools onCheckIn={() => setCheckInOpen(true)} />
       </Box>
+
+      <MoodCheckInDialog
+        open={checkInOpen}
+        onClose={() => setCheckInOpen(false)}
+        onLogged={() => {
+          setCheckInOpen(false);
+          setToast(true);
+        }}
+      />
+
+      <Snackbar
+        open={toast}
+        autoHideDuration={4000}
+        onClose={() => setToast(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert severity="success" variant="filled" onClose={() => setToast(false)}>
+          Checked in. Thanks for showing up for yourself.
+        </Alert>
+      </Snackbar>
     </AtmosphericBackdrop>
+  );
+}
+
+// ─── Check-in dialog (the real write path) ────────────────────────────
+
+function MoodCheckInDialog({
+  open,
+  onClose,
+  onLogged,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onLogged: () => void;
+}) {
+  const logMood = useLogMood();
+  const [mood, setMood] = useState<number | null>(null);
+  const [stress, setStress] = useState<string | null>(null);
+  const [sleep, setSleep] = useState("");
+  const [notes, setNotes] = useState("");
+
+  function reset() {
+    setMood(null);
+    setStress(null);
+    setSleep("");
+    setNotes("");
+    logMood.reset();
+  }
+
+  function handleClose() {
+    if (logMood.isPending) return;
+    reset();
+    onClose();
+  }
+
+  function submit() {
+    if (mood == null) return;
+    const sleepHours = sleep.trim() === "" ? undefined : Number(sleep);
+    logMood.mutate(
+      {
+        mood,
+        stressLevel: stress ?? undefined,
+        sleepHours: Number.isFinite(sleepHours) ? sleepHours : undefined,
+        notes: notes.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          reset();
+          onLogged();
+        },
+      },
+    );
+  }
+
+  return (
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">
+      <DialogTitle sx={{ fontWeight: 600 }}>How are you today?</DialogTitle>
+      <DialogContent>
+        <Stack spacing={3} sx={{ pt: 0.5 }}>
+          <Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+              Your mood right now
+            </Typography>
+            <Stack direction="row" spacing={1}>
+              {[1, 2, 3, 4, 5].map((n) => {
+                const active = mood === n;
+                return (
+                  <Box
+                    key={n}
+                    onClick={() => setMood(n)}
+                    role="button"
+                    aria-label={`Mood ${n}: ${MOOD_LABELS[n - 1]}`}
+                    aria-pressed={active}
+                    sx={{
+                      flex: 1,
+                      aspectRatio: "1",
+                      borderRadius: 1.5,
+                      border: 2,
+                      cursor: "pointer",
+                      display: "grid",
+                      placeItems: "center",
+                      fontWeight: 700,
+                      fontSize: 18,
+                      fontVariantNumeric: "tabular-nums",
+                      borderColor: active ? "wellbeing.main" : "divider",
+                      color: active ? "wellbeing.main" : "text.secondary",
+                      bgcolor: (t) => (active ? alpha(t.palette.wellbeing.main, 0.12) : "transparent"),
+                      transition: "border-color 140ms ease, background-color 140ms ease",
+                    }}
+                  >
+                    {n}
+                  </Box>
+                );
+              })}
+            </Stack>
+            <Stack direction="row" justifyContent="space-between" sx={{ mt: 0.75 }}>
+              <Typography variant="caption" color="text.secondary">
+                Rough
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Great
+              </Typography>
+            </Stack>
+          </Box>
+
+          <Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+              Stress level (optional)
+            </Typography>
+            <ToggleButtonGroup
+              value={stress}
+              exclusive
+              size="small"
+              onChange={(_, v) => setStress(v)}
+              fullWidth
+            >
+              <ToggleButton value="low">Low</ToggleButton>
+              <ToggleButton value="moderate">Moderate</ToggleButton>
+              <ToggleButton value="high">High</ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+
+          <TextField
+            label="Hours slept last night (optional)"
+            value={sleep}
+            onChange={(e) => setSleep(e.target.value)}
+            type="number"
+            size="small"
+            inputProps={{ min: 0, max: 24, step: 0.5 }}
+            fullWidth
+          />
+
+          <TextField
+            label="Anything on your mind? (optional)"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            multiline
+            minRows={2}
+            maxRows={5}
+            size="small"
+            fullWidth
+          />
+
+          {logMood.isError && (
+            <Alert severity="error">Couldn&apos;t save your check-in. Please try again.</Alert>
+          )}
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2.5 }}>
+        <Button onClick={handleClose} color="inherit" disabled={logMood.isPending}>
+          Cancel
+        </Button>
+        <Button
+          onClick={submit}
+          variant="contained"
+          color="secondary"
+          disabled={mood == null || logMood.isPending}
+        >
+          {logMood.isPending ? "Saving…" : "Log check-in"}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 
@@ -117,7 +318,12 @@ function PopulatedSummary({ summary, trend }: { summary: WellbeingSummary; trend
 
       <Card>
         <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
-          <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ sm: "baseline" }} justifyContent="space-between" sx={{ mb: 2 }}>
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            alignItems={{ sm: "baseline" }}
+            justifyContent="space-between"
+            sx={{ mb: 2 }}
+          >
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               Mood over the past 14 days
             </Typography>
@@ -129,7 +335,7 @@ function PopulatedSummary({ summary, trend }: { summary: WellbeingSummary; trend
           {trend.length === 0 ? (
             <Box sx={{ py: 6, textAlign: "center", color: "text.secondary" }}>
               <Typography variant="body2">
-                Your trend will appear here once you've logged a few check-ins.
+                Your trend will appear here once you&apos;ve logged a few check-ins.
               </Typography>
             </Box>
           ) : (
@@ -162,10 +368,7 @@ function MoodChart({ trend }: { trend: MoodPoint[] }) {
           data: data.map((d) => d.mood),
           label: "Mood",
           curve: "monotoneX",
-          // Token: Aptiverse Teal via the theme. Was hard-coded #1F8079 —
-          // drift caught in /impeccable polish. Now mode-aware (light vs
-          // dark variants of the primary).
-          color: theme.palette.primary.main,
+          color: theme.palette.wellbeing.main,
           showMark: true,
         },
       ]}
@@ -211,7 +414,7 @@ function Stat({ label, value, unit, hint }: { label: string; value: string; unit
 
 // ─── First-check-in hero (no data yet) ────────────────────────────────
 
-function FirstCheckIn() {
+function FirstCheckIn({ onCheckIn }: { onCheckIn: () => void }) {
   return (
     <motion.div {...enter}>
       <Card>
@@ -221,28 +424,28 @@ function FirstCheckIn() {
               <Typography variant="overline" color="primary.main" sx={{ letterSpacing: "0.08em" }}>
                 Start small
               </Typography>
-              <Typography variant="h4" component="h2" sx={{ fontWeight: 600, mt: 1, mb: 1.5, lineHeight: 1.2 }}>
+              <Typography
+                variant="h4"
+                component="h2"
+                sx={{ fontWeight: 600, mt: 1, mb: 1.5, lineHeight: 1.2 }}
+              >
                 Thirty seconds to check in.
               </Typography>
               <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 460 }}>
-                A daily mood log helps you (and the people who care about you) spot rough patches before they pile up. No streaks to chase yet — just one honest answer.
+                A daily mood log helps you (and the people who care about you) spot rough patches
+                before they pile up. No streaks to chase yet — just one honest answer.
               </Typography>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
                 <Button
-                  component={Link}
-                  href="/dashboard/diary"
+                  onClick={onCheckIn}
                   variant="contained"
+                  color="secondary"
                   size="large"
-                  endIcon={<ArrowForwardIcon />}
+                  startIcon={<FavoriteBorderIcon />}
                 >
                   Start your first check-in
                 </Button>
-                <Button
-                  component={Link}
-                  href="/dashboard/psychologist"
-                  variant="text"
-                  size="large"
-                >
+                <Button component={Link} href="/dashboard/psychologist" variant="text" size="large">
                   Or talk to someone
                 </Button>
               </Stack>
@@ -257,8 +460,6 @@ function FirstCheckIn() {
   );
 }
 
-// A small illustrative preview of the 1–5 mood scale. Static — no
-// fake data, just a visual cue of what the check-in itself looks like.
 function CheckInPreview() {
   return (
     <Box
@@ -299,14 +500,18 @@ function CheckInPreview() {
         ))}
       </Stack>
       <Stack direction="row" justifyContent="space-between" sx={{ mt: 1 }}>
-        <Typography variant="caption" color="text.secondary">Rough</Typography>
-        <Typography variant="caption" color="text.secondary">Great</Typography>
+        <Typography variant="caption" color="text.secondary">
+          Rough
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Great
+        </Typography>
       </Stack>
     </Box>
   );
 }
 
-// ─── Loading skeleton (layout-stable) ─────────────────────────────────
+// ─── Loading skeleton ─────────────────────────────────────────────────
 
 function SummarySkeleton() {
   return (
@@ -335,29 +540,19 @@ function SummarySkeleton() {
 }
 
 // ─── Quick tools ──────────────────────────────────────────────────────
-//
-// Previously a 4-up grid of identical icon-tile cards with the leading
-// glyph in a coloured square above each title. /impeccable polish caught
-// the drift: directly violates the No-Icon-Tile-Above-Heading Rule from
-// DESIGN.md and the "identical card grids are an AI-template tell"
-// Don't. Reworked as a single card with a vertical list, inline icons
-// next to row labels (allowed by DESIGN.md — *row-label*, not
-// *above-heading*). "Stories that helped" dropped: it linked to
-// /dashboard/journey which is now a per-subject working track, not a
-// stories page. Fake affordance, removed until a real destination exists.
 
 const TOOLS = [
-  {
-    icon: <EditNoteIcon fontSize="small" />,
-    title: "Daily check-in",
-    description: "A 30-second mood log. The whole foundation.",
-    href: "/dashboard/diary",
-  },
   {
     icon: <SelfImprovementIcon fontSize="small" />,
     title: "Box breathing",
     description: "Five minutes, slower heart, calmer head.",
     href: "/dashboard/diary?tool=breathing",
+  },
+  {
+    icon: <EditNoteIcon fontSize="small" />,
+    title: "Diary",
+    description: "Write it out. A longer-form space than a check-in.",
+    href: "/dashboard/diary",
   },
   {
     icon: <PsychologyIcon fontSize="small" />,
@@ -367,7 +562,7 @@ const TOOLS = [
   },
 ] as const;
 
-function QuickTools() {
+function QuickTools({ onCheckIn }: { onCheckIn: () => void }) {
   return (
     <Stack spacing={2}>
       <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: "0.08em" }}>
@@ -375,45 +570,26 @@ function QuickTools() {
       </Typography>
       <Card>
         <Stack divider={<Box sx={{ borderTop: 1, borderColor: "divider" }} />}>
+          <motion.div {...enterStagger(0)}>
+            <CardActionArea
+              onClick={onCheckIn}
+              sx={{ px: { xs: 2, sm: 2.5 }, py: 2, borderRadius: 0, display: "block" }}
+            >
+              <ToolRow
+                icon={<FavoriteBorderIcon fontSize="small" />}
+                title="Daily check-in"
+                description="A 30-second mood log. The whole foundation."
+              />
+            </CardActionArea>
+          </motion.div>
           {TOOLS.map((t, i) => (
-            <motion.div key={t.title} {...enterStagger(i)}>
+            <motion.div key={t.title} {...enterStagger(i + 1)}>
               <CardActionArea
                 component={Link}
                 href={t.href}
-                sx={{
-                  px: { xs: 2, sm: 2.5 },
-                  py: 2,
-                  borderRadius: 0,
-                  display: "block",
-                }}
+                sx={{ px: { xs: 2, sm: 2.5 }, py: 2, borderRadius: 0, display: "block" }}
               >
-                <Stack direction="row" alignItems="center" spacing={2}>
-                  <Box
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 1,
-                      display: "grid",
-                      placeItems: "center",
-                      color: "primary.main",
-                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
-                      flexShrink: 0,
-                    }}
-                  >
-                    {t.icon}
-                  </Box>
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
-                      {t.title}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-                      {t.description}
-                    </Typography>
-                  </Box>
-                  <ArrowForwardIcon
-                    sx={{ color: "text.secondary", fontSize: 18, flexShrink: 0 }}
-                  />
-                </Stack>
+                <ToolRow icon={t.icon} title={t.title} description={t.description} />
               </CardActionArea>
             </motion.div>
           ))}
@@ -423,10 +599,48 @@ function QuickTools() {
   );
 }
 
+function ToolRow({
+  icon,
+  title,
+  description,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}) {
+  return (
+    <Stack direction="row" alignItems="center" spacing={2}>
+      <Box
+        sx={{
+          width: 32,
+          height: 32,
+          borderRadius: 1,
+          display: "grid",
+          placeItems: "center",
+          color: "primary.main",
+          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </Box>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
+          {title}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+          {description}
+        </Typography>
+      </Box>
+      <ArrowForwardIcon sx={{ color: "text.secondary", fontSize: 18, flexShrink: 0 }} />
+    </Stack>
+  );
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────
 
 function formatHours(h: number): string {
   const whole = Math.floor(h);
-  const mins  = Math.round((h - whole) * 60);
+  const mins = Math.round((h - whole) * 60);
   return mins === 0 ? `${whole}h` : `${whole}h ${mins}m`;
 }

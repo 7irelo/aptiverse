@@ -14,39 +14,36 @@ const roboto = Roboto({
 
 export const metadata: Metadata = {
   title: {
-    default: "Aptiverse — Grow with confidence",
+    default: "Aptiverse: Grow with confidence",
     template: "%s · Aptiverse",
   },
   description:
-    "AI-powered student success platform built for South African FET-phase learners (Grades 10–12). SBA prep, goals, mastery, wellbeing, and bursary navigation in one calm, empowering space.",
+    "Aptiverse helps South African students learn well and stay well, from high school to university. Practice, mastery tracking, wellbeing, and goals in one calm place.",
   applicationName: "Aptiverse",
   keywords: [
     "Aptiverse",
-    "SBA",
-    "Grade 10",
-    "Grade 11",
-    "Grade 12",
-    "FET phase",
+    "student success",
     "High school",
+    "University",
     "South Africa",
-    "Bursary",
     "NSFAS",
-    "Tutor",
+    "Wellbeing",
     "AI study",
+    "Parents",
   ],
   authors: [{ name: "Aptiverse" }],
   openGraph: {
-    title: "Aptiverse — Grow with confidence",
+    title: "Aptiverse: Grow with confidence",
     description:
-      "Holistic student success: SBA prep, goals, wellbeing, tutors, bursaries.",
+      "Learn well and stay well. Practice, mastery, wellbeing, and goals in one calm place.",
     type: "website",
   },
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#0F6963" },
-    { media: "(prefers-color-scheme: dark)", color: "#0B1219" },
+    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
+    { media: "(prefers-color-scheme: dark)", color: "#0F1012" },
   ],
 };
 

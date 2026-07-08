@@ -31,7 +31,7 @@ export default function CalendarPage() {
           <>
             <Button variant="outlined">Sync Google</Button>
             <Button variant="outlined">Sync Outlook</Button>
-            <Button variant="contained">New event</Button>
+            <Button variant="contained" color="secondary">New event</Button>
           </>
         }
       />

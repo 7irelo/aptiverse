@@ -3,12 +3,9 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Box from "@mui/material/Box";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import LinearProgress from "@mui/material/LinearProgress";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
@@ -20,17 +17,20 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
+import LinearProgress from "@mui/material/LinearProgress";
 import { alpha } from "@mui/material/styles";
 import AddIcon from "@mui/icons-material/Add";
 import RedeemIcon from "@mui/icons-material/RedeemOutlined";
 import FlagIcon from "@mui/icons-material/FlagOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import SwapVertIcon from "@mui/icons-material/SwapVert";
 import { useSnackbar } from "notistack";
 import { PageHeader } from "@/components/common/PageHeader";
-import { StatusChip } from "@/components/common/StatusChip";
+import { CardRow } from "@/components/common/CardRow";
+import { PriorityList } from "@/components/common/PriorityList";
 import { QueryStates } from "@/components/common/QueryStates";
 import { useConfirm } from "@/components/common/ConfirmDialog";
-import { useGoals, useSubjects, useCreateGoal, useDeleteGoal, type CreateGoalInput } from "@/lib/api/queries";
+import { useGoals, useSubjects, useCreateGoal, useDeleteGoal, useReorderGoals, type CreateGoalInput } from "@/lib/api/queries";
 import type { Goal, Subject } from "@/lib/mockData";
 import { RelativeTime } from "@/components/common/RelativeTime";
 import { AtmosphericBackdrop } from "@/components/common/AtmosphericBackdrop";
@@ -59,7 +59,7 @@ export default function GoalsPage() {
         description="AI sets healthy goals based on your history. You make them happen. Schools verify the wins."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Goals" }]}
         actions={
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setDialogOpen(true)}>
+          <Button variant="contained" color="secondary" startIcon={<AddIcon />} onClick={() => setDialogOpen(true)}>
             New goal
           </Button>
         }
@@ -253,6 +253,7 @@ function NewGoalDialog({
 
 function GoalsList({ goals, subjects }: { goals: Goal[]; subjects: Subject[] }) {
   const [tab, setTab] = useState<TabValue>("Active");
+  const [reordering, setReordering] = useState(false);
 
   const filtered = goals.filter((g) => {
     if (tab === "Active") return g.status === "active";
@@ -262,19 +263,48 @@ function GoalsList({ goals, subjects }: { goals: Goal[]; subjects: Subject[] }) 
     return true;
   });
 
+  const activeGoals = goals.filter((g) => g.status === "active");
+  const canPrioritize = tab === "Active" && activeGoals.length >= 2;
+
   return (
     <>
-      <Tabs
-        value={tab}
-        onChange={(_, v) => setTab(v as TabValue)}
-        sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 1,
+          mb: 3,
+          borderBottom: 1,
+          borderColor: "divider",
+        }}
       >
-        {TABS.map((t) => (
-          <Tab key={t} value={t} label={t} />
-        ))}
-      </Tabs>
+        <Tabs
+          value={tab}
+          onChange={(_, v) => {
+            setTab(v as TabValue);
+            setReordering(false);
+          }}
+        >
+          {TABS.map((t) => (
+            <Tab key={t} value={t} label={t} />
+          ))}
+        </Tabs>
+        {canPrioritize && (
+          <Button
+            size="small"
+            startIcon={<SwapVertIcon />}
+            onClick={() => setReordering((r) => !r)}
+            sx={{ flexShrink: 0 }}
+          >
+            {reordering ? "Done" : "Prioritize"}
+          </Button>
+        )}
+      </Box>
 
-      {filtered.length === 0 ? (
+      {tab === "Active" && reordering ? (
+        <PrioritizeGoals goals={activeGoals} subjects={subjects} />
+      ) : filtered.length === 0 ? (
         <Box sx={{ py: 6, textAlign: "center" }}>
           <Typography variant="body2" color="text.secondary">
             Nothing in {tab.toLowerCase()}.
@@ -290,6 +320,78 @@ function GoalsList({ goals, subjects }: { goals: Goal[]; subjects: Subject[] }) 
         </Grid>
       )}
     </>
+  );
+}
+
+// Drag-to-rank mode for the Active tab. Local order state gives an instant,
+// optimistic reorder; every drop persists the new order to the server so the
+// priority survives a refresh (goals come back ordered by SortOrder).
+function PrioritizeGoals({ goals, subjects }: { goals: Goal[]; subjects: Subject[] }) {
+  const [ordered, setOrdered] = useState<Goal[]>(goals);
+  const reorder = useReorderGoals();
+  const { enqueueSnackbar } = useSnackbar();
+
+  const handleReorder = (next: Goal[]) => {
+    setOrdered(next);
+    reorder.mutate(
+      next.map((g) => g.id),
+      {
+        onError: () =>
+          enqueueSnackbar("Couldn't save the new order. It'll revert on refresh.", {
+            variant: "error",
+          }),
+      },
+    );
+  };
+
+  return (
+    <Stack spacing={2}>
+      <Typography variant="body2" color="text.secondary">
+        Drag to rank what matters most. The order saves automatically.
+      </Typography>
+      <PriorityList
+        items={ordered}
+        getKey={(g) => g.id}
+        onReorder={handleReorder}
+        renderItem={(g) => (
+          <GoalPriorityRow goal={g} subject={subjects.find((s) => s.id === g.subjectId)} />
+        )}
+      />
+    </Stack>
+  );
+}
+
+function GoalPriorityRow({ goal, subject }: { goal: Goal; subject?: Subject }) {
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", gap: 2, width: "100%", minWidth: 0 }}>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography noWrap sx={{ fontWeight: 500 }}>
+          {goal.title}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
+          {subject?.name ?? (
+            <Box component="span" sx={{ textTransform: "capitalize" }}>
+              {goal.category}
+            </Box>
+          )}
+        </Typography>
+      </Box>
+      <Box sx={{ width: 88, flexShrink: 0, display: { xs: "none", sm: "block" } }}>
+        <LinearProgress
+          variant="determinate"
+          value={goal.progress}
+          sx={{ height: 6, borderRadius: 999 }}
+          color="primary"
+        />
+      </Box>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ width: 36, textAlign: "right", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}
+      >
+        {goal.progress}%
+      </Typography>
+    </Box>
   );
 }
 
@@ -310,11 +412,6 @@ function GoalCard({ goal, subject }: { goal: Goal; subject?: Subject }) {
       : goal.status === "completed"
       ? "success"
       : "primary";
-  // MUI's LinearProgress doesn't accept "achievement" as a color
-  // (it's a custom palette key we augmented). Map achievement ->
-  // success for the bar since verified === 100% always anyway.
-  const barColor: "warning" | "success" | "primary" =
-    tone === "achievement" ? "success" : tone;
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -338,22 +435,11 @@ function GoalCard({ goal, subject }: { goal: Goal; subject?: Subject }) {
 
   return (
     <>
-    <Card
-      component={Link}
-      href={`/dashboard/goals/${goal.id}`}
-      sx={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        textDecoration: "none",
-        color: "inherit",
-        transition: "border-color 180ms cubic-bezier(0.165, 0.84, 0.44, 1)",
-        "&:hover": { borderColor: "primary.main" },
-      }}
-    >
-      <CardContent sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column" }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 1 }}>
-          <Chip label={goal.category} size="small" sx={{ textTransform: "capitalize" }} />
+      <CardRow
+        href={`/dashboard/goals/${goal.id}`}
+        accent={tone === "achievement" ? "achievement" : "primary"}
+        chips={<Chip label={goal.category} size="small" sx={{ textTransform: "capitalize" }} />}
+        headerAction={
           <IconButton
             size="small"
             onClick={handleDelete}
@@ -362,51 +448,30 @@ function GoalCard({ goal, subject }: { goal: Goal; subject?: Subject }) {
           >
             <DeleteOutlineIcon fontSize="small" />
           </IconButton>
-        </Stack>
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-          {goal.title}
-        </Typography>
-        {subject && (
-          <Typography variant="caption" color="text.secondary">
-            {subject.name}
-          </Typography>
-        )}
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          {goal.description}
-        </Typography>
-
-        <Box sx={{ mt: "auto", pt: 2 }}>
-          <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
-            <Typography variant="caption" color="text.secondary">
-              Progress · {goal.target}
-            </Typography>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {goal.progress}%
-            </Typography>
-          </Stack>
-          <LinearProgress
-            variant="determinate"
-            value={goal.progress}
-            color={barColor}
-            sx={{ height: 8, borderRadius: 999 }}
-          />
-
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 2 }}>
-            <StatusChip
-              kind={tone}
-              label={goal.status.replace("_", " ")}
-              dot={goal.status === "active" || goal.status === "at_risk"}
-              sx={{ textTransform: "capitalize" }}
-            />
-            <Typography variant="caption" color="text.secondary">
-              Due <RelativeTime iso={goal.dueDate} />
-            </Typography>
-          </Stack>
-
-          {goal.reward && (
+        }
+        title={goal.title}
+        subtitle={subject?.name}
+        description={goal.description}
+        progress={{ value: goal.progress, label: `Progress · ${goal.target}` }}
+        status={{
+          kind: tone,
+          dot: goal.status === "active" || goal.status === "at_risk",
+          label: (
+            <Box component="span" sx={{ textTransform: "capitalize" }}>
+              {goal.status.replace("_", " ")}
+            </Box>
+          ),
+        }}
+        footerMeta={
+          <>
+            Due <RelativeTime iso={goal.dueDate} />
+          </>
+        }
+        actions={
+          goal.reward ? (
             <Box
               sx={{
-                mt: 2,
+                width: "100%",
                 p: 1.5,
                 borderRadius: 1.5,
                 bgcolor: (t) => alpha(t.palette.achievement.main, 0.1),
@@ -422,11 +487,10 @@ function GoalCard({ goal, subject }: { goal: Goal; subject?: Subject }) {
                 {goal.reward}
               </Typography>
             </Box>
-          )}
-        </Box>
-      </CardContent>
-    </Card>
-    {confirmDialog}
+          ) : undefined
+        }
+      />
+      {confirmDialog}
     </>
   );
 }

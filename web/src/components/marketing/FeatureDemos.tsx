@@ -15,6 +15,7 @@ import TimerIcon from "@mui/icons-material/TimerOutlined";
 import LockIcon from "@mui/icons-material/LockOutlined";
 import VerifiedIcon from "@mui/icons-material/VerifiedOutlined";
 import StarIcon from "@mui/icons-material/Star";
+import { Frown, Annoyed, Meh, Smile, Laugh, Heart, TrendingDown } from "lucide-react";
 import { MockAppFrame } from "./FeatureShowcase";
 import { AptiverseLineChart } from "@/components/common/AptiverseLineChart";
 
@@ -23,28 +24,28 @@ import { AptiverseLineChart } from "@/components/common/AptiverseLineChart";
 // ============================================================
 export function TutorChatDemo() {
   return (
-    <MockAppFrame title="aptiverse.co.za/dashboard/chatbot" badge="Grade 11 Maths">
+    <MockAppFrame title="aptiverse.co.za/dashboard/chatbot" badge="Calculus">
       <Stack spacing={2}>
         <UserBubble>
           Hey, can you explain the chain rule? I keep getting it wrong on my homework.
         </UserBubble>
 
         <AiBubble model="Quick">
-          Sure! The chain rule lets you differentiate a function inside another function.
-          The NSC syllabus introduces it in <strong>Grade 12 Differential Calculus</strong> —
-          but you'll see it sooner in Physical Sciences (rates of reaction).
+          Sure. The chain rule lets you differentiate a function inside another function.
+          It is the key to <strong>related rates and optimisation</strong>, and it turns up
+          right across your calculus work.
           <Box sx={{ mt: 1.5, p: 1.5, bgcolor: "action.hover", borderRadius: 1, fontFamily: "monospace", fontSize: "0.9em" }}>
             d/dx [f(g(x))] = f&apos;(g(x)) · g&apos;(x)
           </Box>
           <Stack direction="row" spacing={0.75} sx={{ mt: 1.5 }}>
             <Chip
               icon={<MenuBookIcon sx={{ fontSize: 14 }} />}
-              label="Mind Action Series, p. 218"
+              label="Stewart, Calculus, §3.4"
               size="small"
               variant="outlined"
               sx={{ height: 22, fontSize: "0.72rem" }}
             />
-            <Chip label="2020 NSC Paper 1 Q9" size="small" variant="outlined" sx={{ height: 22, fontSize: "0.72rem" }} />
+            <Chip label="Tutorial 4, Q9" size="small" variant="outlined" sx={{ height: 22, fontSize: "0.72rem" }} />
           </Stack>
         </AiBubble>
 
@@ -88,7 +89,7 @@ function UserBubble({ children }: { children: React.ReactNode }) {
       >
         <Typography variant="body2">{children}</Typography>
       </Box>
-      <Avatar sx={{ bgcolor: "secondary.light", width: 32, height: 32 }}>
+      <Avatar sx={{ bgcolor: "secondary.light", color: "secondary.contrastText", width: 32, height: 32 }}>
         <PersonIcon fontSize="small" />
       </Avatar>
     </Stack>
@@ -244,7 +245,7 @@ export function MasteryChartDemo() {
         <Stack direction="row" justifyContent="space-between" alignItems="flex-end">
           <Box>
             <Typography variant="overline" color="text.secondary">
-              Predicted matric mark
+              Predicted final mark
             </Typography>
             <Stack direction="row" spacing={1} alignItems="baseline">
               <Typography variant="h3" sx={{ fontWeight: 700, color: "primary.main" }}>
@@ -428,7 +429,7 @@ export function AdaptivePracticeDemo() {
     { topic: "Factorise: 2x² − 5x − 3", diff: 0.4, status: "correct" as const },
     { topic: "Factorise by grouping: x³ − x² + x − 1", diff: 0.6, status: "correct" as const },
     { topic: "Solve x² − 4x + 5 = 0 (over ℂ)", diff: 0.85, status: "current" as const },
-    { topic: "Coming next — difficulty 0.9", diff: 0.9, status: "next" as const },
+    { topic: "Coming next, difficulty 0.9", diff: 0.9, status: "next" as const },
   ];
   return (
     <MockAppFrame title="aptiverse.co.za/dashboard/practice" badge="Adaptive · Grade 11">
@@ -555,11 +556,11 @@ export function MoodCheckInDemo() {
 
         <Stack direction="row" spacing={1} justifyContent="space-between">
           {[
-            { emoji: "😢", label: "Tough", active: false },
-            { emoji: "😕", label: "Meh", active: false },
-            { emoji: "😐", label: "OK", active: false },
-            { emoji: "🙂", label: "Good", active: true },
-            { emoji: "😄", label: "Great", active: false },
+            { Icon: Frown, label: "Tough", active: false },
+            { Icon: Annoyed, label: "Meh", active: false },
+            { Icon: Meh, label: "OK", active: false },
+            { Icon: Smile, label: "Good", active: true },
+            { Icon: Laugh, label: "Great", active: false },
           ].map((m) => (
             <Box
               key={m.label}
@@ -579,7 +580,16 @@ export function MoodCheckInDemo() {
                   : "action.hover",
               }}
             >
-              <Typography sx={{ fontSize: "1.5rem", lineHeight: 1 }}>{m.emoji}</Typography>
+              <Box
+                sx={{
+                  color: m.active ? "primary.main" : "text.secondary",
+                  display: "flex",
+                  justifyContent: "center",
+                  mb: 0.5,
+                }}
+              >
+                <m.Icon size={26} />
+              </Box>
               <Typography variant="caption" sx={{ fontWeight: m.active ? 700 : 500 }}>
                 {m.label}
               </Typography>
@@ -598,13 +608,15 @@ export function MoodCheckInDemo() {
           }}
         >
           <Stack direction="row" spacing={1.5} alignItems="flex-start">
-            <Typography sx={{ fontSize: "1.25rem" }}>💛</Typography>
+            <Box sx={{ color: "warning.main", display: "flex", pt: 0.25 }}>
+              <Heart size={20} fill="currentColor" />
+            </Box>
             <Box>
               <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.25 }}>
                 Stress trending up this week.
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Try a 3-minute Take A Break, or talk to a counsellor — both are one tap away.
+                Try a 3-minute Take A Break, or talk to a counsellor. Both are one tap away.
               </Typography>
             </Box>
           </Stack>
@@ -615,9 +627,12 @@ export function MoodCheckInDemo() {
             <Typography variant="caption" color="text.secondary">
               7-day mood
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Average ↘ 2.7
-            </Typography>
+            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ color: "text.secondary" }}>
+              <TrendingDown size={12} />
+              <Typography variant="caption" color="text.secondary">
+                Average 2.7
+              </Typography>
+            </Stack>
           </Stack>
           <Stack direction="row" spacing={1} alignItems="flex-end" sx={{ height: 56 }}>
             {moods.map((m, i) => {
@@ -682,8 +697,8 @@ export function DiaryEncryptedDemo() {
           }}
         >
           <Typography variant="body2" sx={{ lineHeight: 1.7, fontFamily: "inherit" }}>
-            I thought I was going to fail. Question 4.2 had me sweating — the chain rule again
-            — and my mind just went blank for like two whole minutes. But then I remembered
+            I thought I was going to fail. Question 4.2 had me sweating, the chain rule again,
+            and my mind just went blank for like two whole minutes. But then I remembered
             the worked example from yesterday and I got it back. Marked roughly 68% in my head.
             Better than last term. <em>Tomorrow I want to drill rate-of-change problems before
             assembly.</em>

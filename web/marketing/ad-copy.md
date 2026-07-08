@@ -113,8 +113,8 @@ high-LTV — happy to spend more per click here.
 - Learners (16-19), South Africa, interests: NSC past papers, school accounts on TikTok (Cape Town College etc.), gaming overlap.
 
 **LinkedIn — audience suggestions:**
-- Founders, school principals, education NGO leaders, bursary fund managers.
-- Job titles: Head of School, Academic Director, Bursary Coordinator.
+- Founders, school principals, education NGO leaders.
+- Job titles: Head of School, Academic Director.
 - Industries: Education Management, Primary/Secondary Education.
 
 **Visuals to pair with each:**

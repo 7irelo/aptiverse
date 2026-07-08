@@ -43,10 +43,43 @@ namespace Aptiverse.Entitlements.Domain.Models
         // When does the access expire? Null = no scheduled end (until cancelled).
         public DateTime? ValidUntil { get; set; }
 
-        // Payment-provider linkage (Paystack). Both null until billing
-        // is wired — they only get populated on real paid subscriptions.
+        // Payment-provider linkage (Paystack). Null until billing is wired —
+        // they only get populated on real paid subscriptions. The
+        // authorization code is the reusable card token, captured on
+        // activation so we can charge renewals (and a scheduled downgrade)
+        // without asking for the card again.
+        //
+        // PaystackSubscriptionCode is legacy: Path A drives recurring billing
+        // ourselves via charge_authorization, so new subs never create a
+        // Paystack subscription object (and never trigger its manage-link
+        // email). It stays for any pre-Path-A subs still linked to one.
         public string? PaystackSubscriptionCode { get; set; }
         public string? PaystackCustomerCode { get; set; }
+        public long? PaystackCustomerId { get; set; }
+        public string? PaystackAuthorizationCode { get; set; }
+
+        // Renewal state we own (Path A). Billing is the charge interval
+        // ("monthly" | "annual"); BillingEmail is who charge_authorization
+        // bills. Card* is the saved-card summary shown on the billing page
+        // (we no longer fetch it live from a Paystack subscription).
+        public string Billing { get; set; } = "monthly";
+        public string? BillingEmail { get; set; }
+        public string? CardBrand { get; set; }
+        public string? CardLast4 { get; set; }
+        public int? CardExpMonth { get; set; }
+        public int? CardExpYear { get; set; }
+
+        // When the last successful charge landed, and how many consecutive
+        // renewal attempts have failed (drives the dunning window before a
+        // past-due sub lapses to cancelled).
+        public DateTime? LastChargeAt { get; set; }
+        public int RenewalFailureCount { get; set; }
+
+        // Scheduled downgrade: at ValidUntil the plan switches to
+        // PendingPlanCode (on PendingBilling interval). Null when there is no
+        // pending change. Upgrades are immediate and never use these.
+        public string? PendingPlanCode { get; set; }
+        public string? PendingBilling { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

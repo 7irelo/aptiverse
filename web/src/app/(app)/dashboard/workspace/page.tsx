@@ -879,6 +879,7 @@ function FocusTimer({
           <Button
             startIcon={state.kind === "running" ? <PauseIcon /> : <PlayArrowIcon />}
             variant="contained"
+            color="secondary"
             fullWidth
             onClick={state.kind === "running" ? pause : start}
             disabled={done && state.kind !== "running"}

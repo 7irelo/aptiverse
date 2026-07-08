@@ -163,6 +163,15 @@ resource "aws_instance" "api" {
   tags = {
     Name = "aptiverse-${var.env}-api"
   }
+
+  # Guard against AMI drift. `data.aws_ami.al2023` with most_recent = true
+  # resolves to a newer image whenever AWS publishes one, which would otherwise
+  # force-replace this instance on the next apply (as happened once). Ignore ami
+  # + user_data so re-imaging is a deliberate act (terraform taint / -replace),
+  # never a surprise side effect of an unrelated apply.
+  lifecycle {
+    ignore_changes = [ami, user_data]
+  }
 }
 
 resource "aws_eip" "api" {

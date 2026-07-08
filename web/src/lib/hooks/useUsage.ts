@@ -16,6 +16,7 @@ export type UsageSummary = {
   aiQuick: QuotaSnapshot;
   aiDeep: QuotaSnapshot;
   whatsapp: QuotaSnapshot;
+  practiceGenerate: QuotaSnapshot;
 };
 
 // Current-month consumption across every metered quota. Powers the

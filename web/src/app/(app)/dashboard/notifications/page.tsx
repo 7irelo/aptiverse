@@ -5,9 +5,14 @@ import CardContent from "@mui/material/CardContent";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
-import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
+import { alpha } from "@mui/material/styles";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNoneOutlined";
+import CelebrationIcon from "@mui/icons-material/CelebrationOutlined";
+import EventNoteIcon from "@mui/icons-material/EventNoteOutlined";
+import WarningAmberIcon from "@mui/icons-material/WarningAmberOutlined";
+import LightbulbIcon from "@mui/icons-material/LightbulbOutlined";
+import type { SvgIconComponent } from "@mui/icons-material";
 import Link from "next/link";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Dot } from "@/components/common/Dot";
@@ -20,11 +25,17 @@ import {
 } from "@/lib/api/queries";
 import { RelativeTime } from "@/components/common/RelativeTime";
 
-const KIND_AVATAR: Record<string, { emoji: string; color: string }> = {
-  celebration: { emoji: "🎉", color: "secondary.main" },
-  reminder: { emoji: "📋", color: "primary.main" },
-  alert: { emoji: "⚠️", color: "warning.main" },
-  info: { emoji: "💡", color: "info.main" },
+// Category glyph + the single accent that category is allowed to show. Icons,
+// not emojis. Colours resolve to real palette tokens so the tinted badge stays
+// readable in both modes (celebration borrows the gold "achievement" zone; the
+// citron accent is surface-only and never used as a small icon colour).
+type NotifKind = { Icon: SvgIconComponent; color: "achievement" | "primary" | "warning" | "info" };
+
+const KIND_ICON: Record<string, NotifKind> = {
+  celebration: { Icon: CelebrationIcon, color: "achievement" },
+  reminder: { Icon: EventNoteIcon, color: "primary" },
+  alert: { Icon: WarningAmberIcon, color: "warning" },
+  info: { Icon: LightbulbIcon, color: "info" },
 };
 
 export default function NotificationsPage() {
@@ -74,7 +85,7 @@ function NotificationsList({ notifications }: { notifications: AppNotification[]
       <CardContent sx={{ p: 0 }}>
         <Stack divider={<Box sx={{ borderTop: 1, borderColor: "divider" }} />}>
           {notifications.map((n) => {
-            const k = KIND_AVATAR[n.kind] ?? KIND_AVATAR.info;
+            const k = KIND_ICON[n.kind] ?? KIND_ICON.info;
             const onView = () => {
               if (!n.read) markRead.mutate(n.id);
             };
@@ -88,14 +99,25 @@ function NotificationsList({ notifications }: { notifications: AppNotification[]
                   p: 2.5,
                   bgcolor: n.read ? "transparent" : (t) =>
                     t.palette.mode === "dark"
-                      ? "rgba(63,157,149,0.05)"
-                      : "rgba(15,105,99,0.03)",
+                      ? alpha(t.palette.primary.main, 0.05)
+                      : alpha(t.palette.primary.main, 0.03),
                   transition: "background-color 200ms ease",
                 }}
               >
-                <Avatar sx={{ bgcolor: k.color, color: "primary.contrastText", width: 40, height: 40 }}>
-                  {k.emoji}
-                </Avatar>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 1.5,
+                    flexShrink: 0,
+                    display: "grid",
+                    placeItems: "center",
+                    bgcolor: (t) => alpha(t.palette[k.color].main, 0.14),
+                    color: `${k.color}.main`,
+                  }}
+                >
+                  <k.Icon fontSize="small" />
+                </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <Typography variant="subtitle2" sx={{ fontWeight: n.read ? 400 : 700 }}>

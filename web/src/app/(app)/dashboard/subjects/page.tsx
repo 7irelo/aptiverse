@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -18,7 +19,6 @@ import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
 import Divider from "@mui/material/Divider";
-import LinearProgress from "@mui/material/LinearProgress";
 import Skeleton from "@mui/material/Skeleton";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
@@ -29,6 +29,8 @@ import { useSnackbar } from "notistack";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useConfirm } from "@/components/common/ConfirmDialog";
 import { AtmosphericBackdrop } from "@/components/common/AtmosphericBackdrop";
+import { AcademicStatusBand } from "@/components/dashboard/AcademicStatusBand";
+import { UnitSignals } from "@/components/dashboard/UnitSignals";
 import {
   useSubjects,
   useCurricula,
@@ -76,7 +78,7 @@ const CATEGORY_COLOR: Record<string, string> = {
   technical: "#455A64",        // was #607d8b — 6.5:1
   services: "#2A6B45",         // was #3D9762 — 5.5:1
   arts: "#B0094A",             // was #e91e63 — 5.6:1
-  life_orientation: "#0F6963", // unchanged — 7.1:1
+  life_orientation: "#4B4E4A", // neutral graphite — was old-brand pine #0F6963
 };
 
 export default function SubjectsPage() {
@@ -88,9 +90,21 @@ export default function SubjectsPage() {
 
   const profile = profileQuery.data;
   const subjects = subjectsQuery.data ?? [];
+  const router = useRouter();
+  const isTertiary = profile?.educationLevel === "tertiary";
 
-  // Loading state — show skeleton header + grid until profile resolves
-  if (profileQuery.isLoading || subjectsQuery.isLoading) {
+  // Tertiary students study institution courses, not CAPS subjects. They live
+  // on /dashboard/courses now, so bounce them there and keep this page purely
+  // high-school.
+  useEffect(() => {
+    if (profileQuery.isSuccess && isTertiary) {
+      router.replace("/dashboard/courses");
+    }
+  }, [profileQuery.isSuccess, isTertiary, router]);
+
+  // Loading state — show skeleton header + grid until profile resolves, or
+  // while a tertiary student is being redirected to Courses.
+  if (profileQuery.isLoading || subjectsQuery.isLoading || isTertiary) {
     return (
       <AtmosphericBackdrop>
         <PageHeader title="Subjects" breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Subjects" }]} />
@@ -115,6 +129,7 @@ export default function SubjectsPage() {
           breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Subjects" }]}
         />
         <CurriculumPicker curricula={curriculaQuery.data ?? []} loading={curriculaQuery.isLoading} />
+        <LevelSwitch to="tertiary" />
       </AtmosphericBackdrop>
     );
   }
@@ -126,7 +141,7 @@ export default function SubjectsPage() {
         description="Your FET-phase subjects. Add the ones you're studying. Marks and topic mastery fill in as you log assessments."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Subjects" }]}
         actions={
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setDialogOpen(true)}>
+          <Button variant="contained" color="secondary" startIcon={<AddIcon />} onClick={() => setDialogOpen(true)}>
             Add subject
           </Button>
         }
@@ -146,7 +161,10 @@ export default function SubjectsPage() {
           </Button>
         </Box>
       ) : (
-        <SubjectsGrid subjects={subjects} />
+        <>
+          <AcademicStatusBand />
+          <SubjectsGrid subjects={subjects} />
+        </>
       )}
 
       <AddSubjectDialog
@@ -200,8 +218,8 @@ function CurriculumPicker({ curricula, loading }: { curricula: Curriculum[]; loa
                     width: 44,
                     height: 44,
                     borderRadius: 1.5,
-                    bgcolor: "primary.main",
-                    color: "primary.contrastText",
+                    bgcolor: "brandSurface.main",
+                    color: "brandSurface.contrastText",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -540,75 +558,19 @@ function SubjectCard({ subject: s }: { subject: Subject }) {
 
         <Divider sx={{ mb: 2 }} />
 
-        <Stack direction="row" spacing={3} sx={{ mb: 2 }}>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Current
-            </Typography>
-            <Typography variant="h5" sx={{ fontWeight: 700 }}>
-              {s.currentAverage != null ? `${s.currentAverage}%` : "–"}
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Predicted
-            </Typography>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: "primary.main" }}>
-              {s.predictedNextTerm != null ? `${s.predictedNextTerm}%` : "—"}
-            </Typography>
-          </Box>
-        </Stack>
-
-        {s.topics && s.topics.length > 0 ? (
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="overline" color="text.secondary">
-              Topic mastery
-            </Typography>
-            <Stack spacing={1.5} sx={{ mt: 1 }}>
-              {s.topics.slice(0, 4).map((t) => (
-                <Box key={t.name}>
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2">{t.name}</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {t.mastery}%
-                    </Typography>
-                  </Stack>
-                  <LinearProgress
-                    variant="determinate"
-                    value={t.mastery}
-                    color={t.mastery >= 70 ? "success" : t.mastery >= 50 ? "primary" : "warning"}
-                    sx={{ height: 6, borderRadius: 999 }}
-                  />
-                </Box>
-              ))}
-            </Stack>
-          </Box>
-        ) : (
-          <Box
-            sx={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: 1,
-              borderStyle: "dashed",
-              borderColor: "divider",
-              borderRadius: 1.5,
-              py: 2.5,
-              mt: 1,
-            }}
-          >
-            <Typography variant="caption" color="text.secondary" sx={{ textAlign: "center", px: 2 }}>
-              Log SBA tasks and tests to start tracking topic mastery here.
-            </Typography>
-          </Box>
-        )}
+        <UnitSignals unitId={s.subjectId} />
 
         <Stack direction="row" spacing={1} sx={{ mt: 2.5 }}>
           <Button component={Link} href={`/dashboard/subjects/${s.id}`} variant="contained" size="small" fullWidth>
             Open
           </Button>
-          <Button component={Link} href={`/dashboard/practice?subject=${s.subjectId}`} variant="outlined" size="small">
+          <Button
+            component={Link}
+            href={`/dashboard/practice?subject=${s.subjectId}`}
+            variant="outlined"
+            color="secondary"
+            size="small"
+          >
             Practice
           </Button>
         </Stack>
@@ -616,5 +578,29 @@ function SubjectCard({ subject: s }: { subject: Subject }) {
     </Card>
     {confirmDialog}
     </>
+  );
+}
+
+// Switch student type when signup didn't set it (or to correct it). For a
+// high-school student this offers the jump to university/college; the tertiary
+// side lives on /dashboard/courses.
+function LevelSwitch({ to }: { to: "highschool" | "tertiary" }) {
+  const update = useUpdateAcademicProfile();
+  const prompt = to === "tertiary" ? "At university or college?" : "Actually in high school?";
+  const cta = to === "tertiary" ? "Switch to university/college" : "Switch to high school";
+  return (
+    <Box sx={{ textAlign: "center", mt: 4 }}>
+      <Typography variant="body2" color="text.secondary" component="span" sx={{ mr: 1 }}>
+        {prompt}
+      </Typography>
+      <Button
+        variant="text"
+        size="small"
+        disabled={update.isPending}
+        onClick={() => update.mutate({ educationLevel: to })}
+      >
+        {cta}
+      </Button>
+    </Box>
   );
 }

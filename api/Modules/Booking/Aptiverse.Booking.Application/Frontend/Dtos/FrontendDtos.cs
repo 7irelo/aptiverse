@@ -24,4 +24,14 @@ namespace Aptiverse.Booking.Application.Frontend.Dtos
         [JsonPropertyName("endMinutes")] public int EndMinutes { get; init; }
         [JsonPropertyName("recurring")] public bool Recurring { get; init; } = true;
     }
+
+    public record FrontendConnectionDto
+    {
+        [JsonPropertyName("id")] public string Id { get; init; } = "";
+        [JsonPropertyName("studentId")] public string StudentId { get; init; } = "";
+        [JsonPropertyName("student")] public string Student { get; init; } = "";
+        [JsonPropertyName("subject")] public string Subject { get; init; } = "";
+        [JsonPropertyName("status")] public string Status { get; init; } = "active";
+        [JsonPropertyName("connectedAt")] public DateTime ConnectedAt { get; init; }
+    }
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import dynamic from "next/dynamic";
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -12,53 +11,49 @@ import Button from "@mui/material/Button";
 import LinearProgress from "@mui/material/LinearProgress";
 import Chip from "@mui/material/Chip";
 import Skeleton from "@mui/material/Skeleton";
-import Tooltip from "@mui/material/Tooltip";
-import IconButton from "@mui/material/IconButton";
 import Divider from "@mui/material/Divider";
 import { alpha, useTheme } from "@mui/material/styles";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
 import { motion } from "framer-motion";
 import { WelcomeBanner } from "@/components/dashboard/WelcomeBanner";
 import { AtmosphericBackdrop } from "@/components/common/AtmosphericBackdrop";
 import { CardError } from "@/components/common/CardError";
 import { LastSynced } from "@/components/common/LastSynced";
 import { SectionHeader } from "@/components/common/SectionHeader";
-import { brand } from "@/theme/palette";
 import {
   useSubjects,
   useAssessments,
   useGoals,
+  useTermPredictions,
+  useTopicMastery,
+  useWellbeingSummary,
+  useMoodTrend,
+  useAcademicProfile,
+  useCurricula,
+  useMyEntitlements,
+  useLiveActivity,
+  type TermPrediction,
+  type TopicMastery,
+  type LiveActivity,
 } from "@/lib/api/queries";
-import { type Goal, type Subject } from "@/lib/mockData";
+import { type Goal, type Subject, type MoodPoint } from "@/lib/mockData";
 import { useCountUp } from "@/lib/hooks/useCountUp";
 import { enter } from "@/lib/motion";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForwardOutlined";
-import AssignmentIcon from "@mui/icons-material/AssignmentOutlined";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import ArrowDropUpIcon from "@mui/icons-material/ArrowDropUp";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorderOutlined";
+import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
+import QuizOutlinedIcon from "@mui/icons-material/QuizOutlined";
 
-// Lazy-load the chart and, transitively, @mui/x-charts (~100-150kb
-// gzipped). The Mastery card sits below the canonical-fold on mobile,
-// and the matching Skeleton in the data-loading branch already
-// reserves the same 240px height, so the chunk swap-in is zero-CLS.
-// SSR is off because the underlying MUI X library renders to a real
-// SVG that wants the document/measurements at runtime.
-const LineChart = dynamic(
-  () =>
-    import("@/components/common/AptiverseLineChart").then(
-      (m) => m.AptiverseLineChart,
-    ),
-  {
-    ssr: false,
-    loading: () => <Skeleton variant="rounded" height={240} />,
-  },
-);
+dayjs.extend(relativeTime);
 
-// Hidden hello for the matric (or curious dev) who hits F12. Fires
-// once per session, never on subsequent dashboard mounts. Specific to
-// Aptiverse, not generic AI-slop console copy. No tech-stack reveal.
+// Hidden hello for the matric (or curious dev) who hits F12. Fires once
+// per session, never on subsequent mounts. Aptiverse-specific, no tech
+// reveal, graphite brand colour.
 let easterEggFired = false;
 function devtoolsHello() {
   if (easterEggFired || typeof window === "undefined") return;
@@ -66,7 +61,7 @@ function devtoolsHello() {
   // eslint-disable-next-line no-console
   console.log(
     "%cAptiverse%c · built for the matric stretch · hello@aptiverse.app",
-    "font: 700 16px sans-serif; color: #08534F; letter-spacing: -0.02em;",
+    "font: 700 16px sans-serif; color: #1B1D22; letter-spacing: -0.02em;",
     "color: #5F5E58; font-size: 12px;",
   );
 }
@@ -77,6 +72,8 @@ export default function StudentDashboardPage() {
   const subjectsQuery = useSubjects();
   const assessmentsQuery = useAssessments();
   const goalsQuery = useGoals();
+  const predictionsQuery = useTermPredictions();
+  const masteryQuery = useTopicMastery();
 
   const subjects = subjectsQuery.data ?? [];
   const assessments = assessmentsQuery.data ?? [];
@@ -94,6 +91,8 @@ export default function StudentDashboardPage() {
     <AtmosphericBackdrop>
       <WelcomeBanner />
 
+      <QuickActionsRail />
+
       <UpcomingAssessmentsCard
         upcoming={upcoming}
         subjects={subjects}
@@ -104,14 +103,15 @@ export default function StudentDashboardPage() {
         dataUpdatedAt={assessmentsQuery.dataUpdatedAt}
       />
 
-      <Grid container spacing={{ xs: 2, md: 3 }}>
+      <Grid container spacing={{ xs: 2, md: 3 }} sx={{ mt: 0 }}>
         <Grid size={{ xs: 12, md: 7 }}>
-          <MasteryTrendCard
-            subjects={subjects}
-            loading={subjectsQuery.isLoading}
-            isError={subjectsQuery.isError}
-            onRetry={() => subjectsQuery.refetch()}
-            dataUpdatedAt={subjectsQuery.dataUpdatedAt}
+          <AcademicStandingCard
+            predictions={predictionsQuery.data ?? []}
+            weakTopics={masteryQuery.data ?? []}
+            loading={predictionsQuery.isLoading || masteryQuery.isLoading}
+            isError={predictionsQuery.isError}
+            onRetry={() => predictionsQuery.refetch()}
+            dataUpdatedAt={predictionsQuery.dataUpdatedAt}
           />
         </Grid>
         <Grid size={{ xs: 12, md: 5 }}>
@@ -124,7 +124,108 @@ export default function StudentDashboardPage() {
           />
         </Grid>
       </Grid>
+
+      <Grid container spacing={{ xs: 2, md: 3 }} sx={{ mt: { xs: 2, md: 3 } }}>
+        <Grid size={{ xs: 12, md: 7 }}>
+          <WellbeingSnapshotCard />
+        </Grid>
+        <Grid size={{ xs: 12, md: 5 }}>
+          <RecentActivityCard />
+        </Grid>
+      </Grid>
     </AtmosphericBackdrop>
+  );
+}
+
+// ─── Context + quick actions rail ─────────────────────────────────────
+// Orients (grade · curriculum · plan) and offers the three actions a
+// student most often wants from a cold open: log a mood, set a goal, run
+// a practice test. Chips only render when they have real data.
+
+function QuickActionsRail() {
+  const profileQuery = useAcademicProfile();
+  const curriculaQuery = useCurricula();
+  const entitlementsQuery = useMyEntitlements();
+
+  const profile = profileQuery.data;
+
+  // Gate: a student whose academic profile isn't set up yet (fresh email or
+  // Google signup) goes to the onboarding step first. Keeps the arrival state
+  // clean no matter how the account was created.
+  const router = useRouter();
+  useEffect(() => {
+    if (!profile) return;
+    const complete =
+      (profile.educationLevel === "highschool" && !!profile.curriculumId) ||
+      (profile.educationLevel === "tertiary" && !!profile.institutionId);
+    if (!complete) router.replace("/onboarding");
+  }, [profile, router]);
+
+  const curriculumName = profile?.curriculumId
+    ? curriculaQuery.data?.find((c) => c.id === profile.curriculumId)?.shortName
+    : undefined;
+  const plan = entitlementsQuery.data?.primaryPlanCode;
+
+  const chips: { label: string; href?: string }[] = [];
+  if (profile?.grade != null) chips.push({ label: `Grade ${profile.grade}` });
+  if (curriculumName) chips.push({ label: curriculumName });
+  if (plan) chips.push({ label: titleCase(plan), href: "/dashboard/billing" });
+
+  return (
+    <Stack
+      direction={{ xs: "column", sm: "row" }}
+      spacing={1.5}
+      alignItems={{ xs: "stretch", sm: "center" }}
+      sx={{ mb: 3 }}
+    >
+      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ flex: 1 }}>
+        {chips.map((c) =>
+          c.href ? (
+            <Chip
+              key={c.label}
+              label={c.label}
+              size="small"
+              variant="outlined"
+              component={Link}
+              href={c.href}
+              clickable
+            />
+          ) : (
+            <Chip key={c.label} label={c.label} size="small" variant="outlined" />
+          ),
+        )}
+      </Stack>
+      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        <Button
+          component={Link}
+          href="/dashboard/wellbeing"
+          size="small"
+          variant="outlined"
+          startIcon={<FavoriteBorderIcon />}
+        >
+          Log mood
+        </Button>
+        <Button
+          component={Link}
+          href="/dashboard/goals"
+          size="small"
+          variant="outlined"
+          startIcon={<FlagOutlinedIcon />}
+        >
+          Add goal
+        </Button>
+        <Button
+          component={Link}
+          href="/dashboard/practice"
+          size="small"
+          variant="contained"
+          color="secondary"
+          startIcon={<QuizOutlinedIcon />}
+        >
+          Practice
+        </Button>
+      </Stack>
+    </Stack>
   );
 }
 
@@ -160,15 +261,7 @@ function UpcomingAssessmentsCard({
   const [hero, ...rest] = upcoming;
 
   return (
-    // Card itself doesn't animate on every page visit -- product
-    // register: "No page-load choreography; users are in a task."
-    // The hero ROW (the page's focal moment) gets the signature
-    // entrance instead, inside the populated branch below.
     <Card sx={{ mb: 3 }}>
-      {/* Primary surface gets more breathing room than the
-          secondary cards below (which stay at the standard
-          { xs: 2.5, sm: 3 }). Same padding everywhere is
-          monotony; the size difference encodes hierarchy. */}
       <CardContent sx={{ p: { xs: 2.5, sm: 4 } }}>
         <SectionHeader
           overline="Up next"
@@ -196,17 +289,16 @@ function UpcomingAssessmentsCard({
           <CardError onRetry={onRetry} what="your upcoming SBAs" />
         ) : isEmpty ? (
           <Box sx={{ py: 5, textAlign: "center" }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Nothing on the horizon. Enjoy the breather, or get ahead.
             </Typography>
+            <Button component={Link} href="/dashboard/practice" variant="outlined" size="small">
+              Try a practice test
+            </Button>
           </Box>
         ) : (
           <>
             {hero && (
-              // The hero row is the page's one signature entrance:
-              // a single 220ms fade-and-rise when the data arrives.
-              // Conveys "this is the answer to what's next" without
-              // making the whole page choreograph itself.
               <motion.div {...enter}>
                 <HeroUpcomingRow
                   a={hero}
@@ -217,10 +309,6 @@ function UpcomingAssessmentsCard({
 
             {rest.length > 0 && (
               <>
-                {/* Asymmetric divider rhythm: more space above
-                    the rule (the hero block needs its breath),
-                    tighter below (compact rows are dense). The
-                    previous my: 2 was uniform monotony. */}
                 <Divider sx={{ mt: 3, mb: 1.5 }} />
                 <Stack spacing={0.5}>
                   {rest.map((a) => (
@@ -242,19 +330,7 @@ function UpcomingAssessmentsCard({
   );
 }
 
-// ─── Hero row (the page's one focal moment) ──────────────────────────
-// The most urgent upcoming SBA gets dedicated typography, a prominent
-// days-left numeral, and a direct "Start working" deeplink. This is
-// where the page commits to answering the canonical question: "what
-// should I work on right now?"
-
-function HeroUpcomingRow({
-  a,
-  subject,
-}: {
-  a: UpcomingItem;
-  subject?: Subject;
-}) {
+function HeroUpcomingRow({ a, subject }: { a: UpcomingItem; subject?: Subject }) {
   const daysLeft = dayjs(a.dueDate).diff(dayjs(), "day");
   const urgent = daysLeft >= 0 && daysLeft <= 3;
   const daysLabel =
@@ -281,10 +357,6 @@ function HeroUpcomingRow({
           color="text.secondary"
           sx={{
             display: "block",
-            // Subject names like "Life Orientation" are mostly short
-            // but the field is user-editable in some flows. Truncate
-            // to one line with ellipsis so a long name doesn't push
-            // the title row down.
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -293,10 +365,6 @@ function HeroUpcomingRow({
           {subject?.name ?? "Unlinked"}
         </Typography>
         <Typography
-          // h4 (1.25rem) outranks the card's h5 section header
-          // (1.0625rem) by a 1.176x scale jump. The hero is the
-          // focal item on the page; the card label is subordinate.
-          // Previously both were h5, which mumbled the hierarchy.
           variant="h4"
           component={Link}
           href={`/dashboard/assessments/${a.id}`}
@@ -308,9 +376,6 @@ function HeroUpcomingRow({
             WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical",
             overflow: "hidden",
-            // Long assessment titles ("Maths SBA: Trigonometry
-            // identities + radian-measure problem set") shouldn't
-            // shove the meta row off-screen. Clamp to two lines.
             wordBreak: "break-word",
             mt: 0.5,
             "&:hover": { color: "primary.main" },
@@ -323,10 +388,6 @@ function HeroUpcomingRow({
           direction="row"
           spacing={1}
           alignItems="center"
-          // Meta row has up to 4 fragments separated by bullets. On
-          // 360px viewports with longer values ("85% weight",
-          // "Predicted 78%") this could blow past one row. Wrap
-          // gracefully instead of forcing a horizontal scroll.
           useFlexGap
           flexWrap="wrap"
           rowGap={0.5}
@@ -373,6 +434,7 @@ function HeroUpcomingRow({
         component={Link}
         href={`/dashboard/workspace?assessmentId=${a.id}`}
         variant="contained"
+        color="secondary"
         size="large"
         sx={{ flexShrink: 0 }}
       >
@@ -382,23 +444,11 @@ function HeroUpcomingRow({
   );
 }
 
-// ─── Compact row (denser, glanceable; not the hero) ──────────────────
-
-function CompactUpcomingRow({
-  a,
-  subject,
-}: {
-  a: UpcomingItem;
-  subject?: Subject;
-}) {
+function CompactUpcomingRow({ a, subject }: { a: UpcomingItem; subject?: Subject }) {
   const daysLeft = dayjs(a.dueDate).diff(dayjs(), "day");
   const urgent = daysLeft >= 0 && daysLeft <= 3;
   const dayLabel =
-    daysLeft === 0
-      ? "Today"
-      : urgent
-        ? `${daysLeft}d`
-        : dayjs(a.dueDate).format("DD MMM");
+    daysLeft === 0 ? "Today" : urgent ? `${daysLeft}d` : dayjs(a.dueDate).format("DD MMM");
 
   return (
     <Box
@@ -413,8 +463,7 @@ function CompactUpcomingRow({
         gap: 1.5,
         textDecoration: "none",
         color: "inherit",
-        transition:
-          "background-color 180ms cubic-bezier(0.165, 0.84, 0.44, 1)",
+        transition: "background-color 180ms cubic-bezier(0.165, 0.84, 0.44, 1)",
         "&:hover": { bgcolor: (t) => alpha(t.palette.primary.main, 0.04) },
       }}
     >
@@ -422,12 +471,7 @@ function CompactUpcomingRow({
         <Typography variant="subtitle2" sx={{ fontWeight: 600 }} noWrap>
           {a.title}
         </Typography>
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          noWrap
-          sx={{ display: "block" }}
-        >
+        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
           {subject?.name ?? "Unlinked"} · {a.type} · {a.weight}%
         </Typography>
       </Box>
@@ -442,96 +486,47 @@ function CompactUpcomingRow({
   );
 }
 
-// ─── Mastery trend (now carries the predicted average) ────────────────
+// ─── Academic standing (real predictions + weakest topics) ────────────
+// Replaces the old mastery-trend chart (which read mock-only term
+// averages). Predicted marks come from the compute-on-read Mastery
+// engine; "focus topics" are the lowest-mastery topics from real
+// practice attempts. Each half renders only when its data exists.
 
-// Tonal teal ramp for the chart. Replaces MUI X's categorical default
-// palette (which would render each subject in an unrelated hue, the
-// usual SaaS line-chart look). Inside one ramp the chart commits to the
-// Aptiverse brand colour; subject identity is still distinguishable by
-// shade, and the visual register reads as "this is our chart", not
-// "this is a chart library's output".
-const CHART_TEAL_RAMP_LIGHT = [
-  brand.teal[700],
-  brand.teal[500],
-  brand.teal[400],
-  brand.teal[300],
-  brand.teal[200],
-];
-const CHART_TEAL_RAMP_DARK = [
-  brand.teal[200],
-  brand.teal[300],
-  brand.teal[400],
-  brand.teal[500],
-  brand.teal[600],
-];
-
-function MasteryTrendCard({
-  subjects,
+function AcademicStandingCard({
+  predictions,
+  weakTopics,
   loading,
   isError,
   onRetry,
   dataUpdatedAt,
 }: {
-  subjects: Subject[];
+  predictions: TermPrediction[];
+  weakTopics: TopicMastery[];
   loading: boolean;
   isError: boolean;
   onRetry: () => void;
   dataUpdatedAt: number | undefined;
 }) {
-  const theme = useTheme();
-  const tealRamp =
-    theme.palette.mode === "dark" ? CHART_TEAL_RAMP_DARK : CHART_TEAL_RAMP_LIGHT;
-  const withData = subjects.filter(
-    (s) => s.termAverages && s.termAverages.length > 0,
-  );
-  const empty = !loading && (subjects.length === 0 || withData.length === 0);
-
-  // Predicted-average pulled in from the deprecated Stat tile. Lives
-  // here now because the question "what is my predicted average" is a
-  // mastery question, and beside the trend chart it has the context
-  // (sample size, direction) the standalone tile lacked.
-  //
-  // Honest delta calculation: compute both averages as raw floats,
-  // take the difference, THEN round. Previously each average was
-  // rounded independently which gave the delta up to a 1pt drift
-  // from the true value. PRODUCT.md "Honesty before flash" applies
-  // even to display arithmetic; a rounded-of-rounded delta isn't
-  // honest, it's a fast lie.
-  const subjectsWithPredictions = subjects.filter(
-    (s) => s.predictedNextTerm != null,
-  );
-  const n = subjectsWithPredictions.length;
+  // Predicted average across subjects — computed from raw floats, then
+  // rounded once, so the delta never drifts from the true value.
+  const n = predictions.length;
   const rawPredicted =
-    n > 0
-      ? subjectsWithPredictions.reduce(
-          (acc, x) => acc + (x.predictedNextTerm ?? 0),
-          0,
-        ) / n
-      : null;
-  const rawCurrent =
-    n > 0
-      ? subjectsWithPredictions.reduce((acc, x) => {
-          const last = (x.termAverages ?? []).at(-1);
-          return acc + (last?.mark ?? 0);
-        }, 0) / n
-      : null;
+    n > 0 ? predictions.reduce((s, p) => s + p.predictedNextTerm, 0) / n : null;
+  const rawCurrent = n > 0 ? predictions.reduce((s, p) => s + p.currentTerm, 0) / n : null;
   const predictedAverage = rawPredicted != null ? Math.round(rawPredicted) : null;
   const delta =
-    rawPredicted != null && rawCurrent != null
-      ? Math.round(rawPredicted - rawCurrent)
-      : null;
+    rawPredicted != null && rawCurrent != null ? Math.round(rawPredicted - rawCurrent) : null;
+  const animated = useCountUp(predictedAverage);
 
-  // Atmospheric craft: animate the predicted-mark numeral from the
-  // last shown value up to the new one (from 0 on first arrival).
-  // Honours prefers-reduced-motion via the hook.
-  const animatedPredicted = useCountUp(predictedAverage);
+  const focus = weakTopics.slice(0, 3);
+  const empty = !loading && n === 0 && focus.length === 0;
 
   return (
     <Card sx={{ height: "100%" }}>
       <CardContent sx={{ p: { xs: 2.5, sm: 3 }, height: "100%" }}>
         <SectionHeader
-          overline="Mastery"
-          title="Term-over-term"
+          overline="Academic standing"
+          title="Predicted marks"
           action={
             <Button
               component={Link}
@@ -544,137 +539,158 @@ function MasteryTrendCard({
           }
         />
 
-        {isError && <CardError onRetry={onRetry} what="your mastery trend" />}
-
-        {!isError && predictedAverage != null && (
-          <Stack
-            direction="row"
-            alignItems="flex-end"
-            spacing={2}
-            sx={{ mb: 2 }}
-          >
-            <Box>
-              <Stack direction="row" spacing={0.5} alignItems="center">
-                <Typography variant="caption" color="text.secondary">
-                  Predicted next term
-                </Typography>
-                <Tooltip
-                  arrow
-                  enterTouchDelay={0}
-                  title="Weighted average of your current term marks, projected forward using the remaining assessment weights for each subject. Updates as new marks are logged."
-                >
-                  <IconButton
-                    size="small"
-                    aria-label="How predicted average is calculated"
-                    sx={{
-                      // 44x44 touch target (WCAG 2.5.5) without
-                      // visually growing the icon: 14px padding
-                      // pulls the hit area out, 14px negative
-                      // margin pulls layout back so the surrounding
-                      // baseline doesn't shift. Net rendered footprint
-                      // matches the previous 16px-ish icon.
-                      p: "14px",
-                      m: "-14px",
-                    }}
-                  >
-                    <InfoOutlinedIcon sx={{ fontSize: "1rem" }} />
-                  </IconButton>
-                </Tooltip>
-              </Stack>
-              <Stack direction="row" alignItems="baseline" spacing={1}>
-                <Typography
-                  component="div"
-                  sx={{
-                    // Display-style numeral. Larger than h4 (1.25rem)
-                    // so the predicted mark is the page's bold focal
-                    // figure. Clamp keeps it readable across breakpoints.
-                    fontSize: { xs: "2.25rem", sm: "2.75rem" },
-                    fontWeight: 600,
-                    lineHeight: 1,
-                    letterSpacing: "-0.02em",
-                    color: "primary.main",
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  {animatedPredicted}
-                </Typography>
-                <Typography
-                  sx={{
-                    fontSize: "1rem",
-                    fontWeight: 500,
-                    color: "primary.main",
-                    lineHeight: 1,
-                  }}
-                >
-                  %
-                </Typography>
-              </Stack>
-            </Box>
-            {delta != null && delta !== 0 && (
-              <Stack
-                direction="row"
-                alignItems="center"
-                spacing={0.5}
-                sx={{
-                  color: delta > 0 ? "success.main" : "warning.main",
-                  pb: 1,
-                }}
-              >
-                {delta > 0 ? (
-                  <ArrowDropUpIcon fontSize="small" />
-                ) : (
-                  <ArrowDropDownIcon fontSize="small" />
-                )}
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontWeight: 600,
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  {Math.abs(delta)}pt
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  vs current
-                </Typography>
-              </Stack>
-            )}
+        {isError ? (
+          <CardError onRetry={onRetry} what="your predictions" />
+        ) : loading ? (
+          <Stack spacing={1.5}>
+            <Skeleton variant="rounded" height={72} />
+            <Skeleton variant="rounded" height={48} />
+            <Skeleton variant="rounded" height={48} />
           </Stack>
-        )}
-
-        {loading ? (
-          <Skeleton variant="rounded" height={240} />
-        ) : isError ? null : empty ? (
-          <Box sx={{ py: 6, textAlign: "center" }}>
+        ) : empty ? (
+          <Box sx={{ py: 5, textAlign: "center" }}>
             <Typography
               variant="body2"
               color="text.secondary"
-              sx={{ maxWidth: 360, mx: "auto" }}
+              sx={{ maxWidth: 360, mx: "auto", mb: 2 }}
             >
-              {subjects.length === 0
-                ? "Add subjects, then log a few marks against them. Your term-over-term trend lives here."
-                : "Log marks against your subjects to see your trend appear."}
+              Log a few graded marks and take practice tests. Your predicted marks and
+              focus topics build from there.
             </Typography>
+            <Button component={Link} href="/dashboard/assessments" variant="outlined" size="small">
+              Log a mark
+            </Button>
           </Box>
         ) : (
-          <LineChart
-            height={240}
-            xAxis={[
-              { data: ["T1", "T2", "T3", "T4"], scaleType: "point" },
-            ]}
-            series={withData.slice(0, 5).map((s, i) => ({
-              data: (s.termAverages ?? []).map((t) => t.mark),
-              label: s.name,
-              curve: "monotoneX",
-              color: tealRamp[i],
-            }))}
-            margin={{ top: 16, right: 16, bottom: 32, left: 32 }}
-          />
+          <>
+            {predictedAverage != null && (
+              <Stack direction="row" alignItems="flex-end" spacing={2} sx={{ mb: 2 }}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Predicted average
+                  </Typography>
+                  <Stack direction="row" alignItems="baseline" spacing={1}>
+                    <Typography
+                      component="div"
+                      sx={{
+                        fontSize: { xs: "2.25rem", sm: "2.75rem" },
+                        fontWeight: 600,
+                        lineHeight: 1,
+                        letterSpacing: "-0.02em",
+                        color: "primary.main",
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {animated}
+                    </Typography>
+                    <Typography
+                      sx={{ fontSize: "1rem", fontWeight: 500, color: "primary.main", lineHeight: 1 }}
+                    >
+                      %
+                    </Typography>
+                  </Stack>
+                </Box>
+                {delta != null && delta !== 0 && (
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    spacing={0.5}
+                    sx={{ color: delta > 0 ? "success.main" : "warning.main", pb: 1 }}
+                  >
+                    {delta > 0 ? (
+                      <ArrowDropUpIcon fontSize="small" />
+                    ) : (
+                      <ArrowDropDownIcon fontSize="small" />
+                    )}
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}
+                    >
+                      {Math.abs(delta)}pt
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      vs current
+                    </Typography>
+                  </Stack>
+                )}
+              </Stack>
+            )}
+
+            {predictions.length > 0 && (
+              <Stack spacing={1.25} sx={{ mb: focus.length > 0 ? 2.5 : 0 }}>
+                {predictions.slice(0, 4).map((p) => (
+                  <SubjectPredictionRow key={p.subjectId} p={p} />
+                ))}
+              </Stack>
+            )}
+
+            {focus.length > 0 && (
+              <>
+                {predictions.length > 0 && <Divider sx={{ mb: 1.5 }} />}
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                  Focus topics
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
+                  {focus.map((t) => (
+                    <Chip
+                      key={`${t.subjectId}-${t.topic}`}
+                      component={Link}
+                      href="/dashboard/mastery"
+                      clickable
+                      size="small"
+                      variant="outlined"
+                      label={`${t.topic} · ${t.mastery}%`}
+                    />
+                  ))}
+                </Stack>
+              </>
+            )}
+          </>
         )}
 
         <LastSynced at={dataUpdatedAt} />
       </CardContent>
     </Card>
+  );
+}
+
+function SubjectPredictionRow({ p }: { p: TermPrediction }) {
+  const up = p.predictedNextTerm >= p.currentTerm;
+  return (
+    <Box>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, minWidth: 0 }} noWrap>
+          {p.subject}
+        </Typography>
+        <Stack direction="row" alignItems="center" spacing={0.75} sx={{ flexShrink: 0 }}>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ fontVariantNumeric: "tabular-nums" }}
+          >
+            {p.currentTerm}%
+          </Typography>
+          <ArrowForwardIcon sx={{ fontSize: 14, color: "text.disabled" }} />
+          <Typography
+            variant="subtitle2"
+            sx={{
+              fontWeight: 700,
+              color: up ? "success.main" : "warning.main",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {p.predictedNextTerm}%
+          </Typography>
+        </Stack>
+      </Stack>
+      {/* Confidence — honest signal of how much evidence backs the number. */}
+      <LinearProgress
+        variant="determinate"
+        value={Math.round(p.confidence * 100)}
+        sx={{ mt: 0.5, height: 3, borderRadius: 999, opacity: 0.5 }}
+        aria-label={`${p.subject}: ${Math.round(p.confidence * 100)}% confidence`}
+      />
+    </Box>
   );
 }
 
@@ -696,10 +712,6 @@ function ActiveGoalsCard({
   return (
     <Card sx={{ height: "100%" }}>
       <CardContent sx={{ p: { xs: 2.5, sm: 3 }, height: "100%" }}>
-        {/* Overline reads "Tracking" not "In progress": the list
-            includes at-risk goals, which aren't strictly in
-            progress in a positive sense. "Tracking" covers both
-            states honestly. */}
         <SectionHeader
           overline="Tracking"
           title="Active goals"
@@ -722,9 +734,14 @@ function ActiveGoalsCard({
         ) : isError ? (
           <CardError onRetry={onRetry} what="your goals" />
         ) : isEmpty ? (
-          <Typography variant="body2" color="text.secondary">
-            No active goals yet. Set one to start tracking.
-          </Typography>
+          <Box sx={{ py: 2 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              No active goals yet. Set one to start tracking.
+            </Typography>
+            <Button component={Link} href="/dashboard/goals" variant="outlined" size="small">
+              Set a goal
+            </Button>
+          </Box>
         ) : (
           <Stack spacing={1.5}>
             {goals.map((g) => (
@@ -736,16 +753,6 @@ function ActiveGoalsCard({
     </Card>
   );
 }
-
-// Goal row clarifies three things the previous version didn't:
-//   1. What is the percentage progress AGAINST? -- surface the target
-//      string under the title so "62%" reads as "62% of [target]".
-//   2. What does "at_risk" mean? -- pair the warning colour with the
-//      words "Falling behind" so colour isn't the only signal
-//      (DESIGN.md: colour is never the only signal).
-//   3. Why am I looking at this if I can't act on it? -- wrap the
-//      whole row as a Link to /dashboard/goals/{id}, matching the SBA
-//      row's interaction model. Hover state matches too.
 
 function GoalRow({ g }: { g: Goal }) {
   const atRisk = g.status === "at_risk";
@@ -761,8 +768,7 @@ function GoalRow({ g }: { g: Goal }) {
         py: 1,
         mx: -1.5,
         borderRadius: 1.5,
-        transition:
-          "background-color 180ms cubic-bezier(0.165, 0.84, 0.44, 1)",
+        transition: "background-color 180ms cubic-bezier(0.165, 0.84, 0.44, 1)",
         "&:hover": { bgcolor: (t) => alpha(t.palette.primary.main, 0.04) },
       }}
     >
@@ -773,14 +779,7 @@ function GoalRow({ g }: { g: Goal }) {
         sx={{ mb: 1, gap: 1 }}
       >
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography
-            // subtitle2 is the correct semantic role for a list-item
-            // title ("small heading"). body2 600 was rendering the
-            // same pixels but with body-text semantics.
-            variant="subtitle2"
-            sx={{ fontWeight: 600 }}
-            noWrap
-          >
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }} noWrap>
             {g.title}
           </Typography>
           {g.target && (
@@ -802,10 +801,7 @@ function GoalRow({ g }: { g: Goal }) {
             {g.progress}%
           </Typography>
           {atRisk && (
-            <Typography
-              variant="caption"
-              sx={{ color: "warning.dark", fontWeight: 600 }}
-            >
+            <Typography variant="caption" sx={{ color: "warning.dark", fontWeight: 600 }}>
               Falling behind
             </Typography>
           )}
@@ -819,4 +815,219 @@ function GoalRow({ g }: { g: Goal }) {
       />
     </Box>
   );
+}
+
+// ─── Wellbeing snapshot ───────────────────────────────────────────────
+
+function WellbeingSnapshotCard() {
+  const summaryQuery = useWellbeingSummary();
+  const moodQuery = useMoodTrend(14);
+  const summary = summaryQuery.data;
+  const trend = moodQuery.data ?? [];
+
+  const noCheckins =
+    !summaryQuery.isLoading &&
+    (!summary || (summary.moodAvg7d === 0 && summary.checkinStreakDays === 0));
+
+  const stressColor: Record<string, "success" | "warning" | "error" | "default"> = {
+    none: "success",
+    low: "success",
+    moderate: "warning",
+    high: "error",
+  };
+
+  return (
+    <Card sx={{ height: "100%" }}>
+      <CardContent sx={{ p: { xs: 2.5, sm: 3 }, height: "100%" }}>
+        <SectionHeader
+          overline="Wellbeing"
+          title="How you're doing"
+          action={
+            <Button
+              component={Link}
+              href="/dashboard/wellbeing"
+              endIcon={<ArrowForwardIcon />}
+              size="small"
+            >
+              More
+            </Button>
+          }
+        />
+
+        {summaryQuery.isLoading ? (
+          <Skeleton variant="rounded" height={96} />
+        ) : summaryQuery.isError ? (
+          <CardError onRetry={() => summaryQuery.refetch()} what="your wellbeing" />
+        ) : noCheckins ? (
+          <Box sx={{ py: 2 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              No check-ins yet. A quick daily mood log builds a picture of how the term is
+              treating you.
+            </Typography>
+            <Button
+              component={Link}
+              href="/dashboard/wellbeing"
+              variant="contained"
+              color="secondary"
+              size="small"
+              startIcon={<FavoriteBorderIcon />}
+            >
+              Log today&apos;s mood
+            </Button>
+          </Box>
+        ) : (
+          <Stack spacing={2}>
+            <Stack direction="row" spacing={3} alignItems="flex-end" flexWrap="wrap" useFlexGap>
+              <Metric label="7-day mood" value={summary!.moodAvg7d.toFixed(1)} unit="/5" />
+              <Metric label="Check-in streak" value={String(summary!.checkinStreakDays)} unit="d" />
+              {summary!.sleepHours > 0 && (
+                <Metric label="Sleep" value={summary!.sleepHours.toFixed(1)} unit="h" />
+              )}
+              <Box sx={{ alignSelf: "center" }}>
+                <Chip
+                  label={`${titleCase(summary!.stressSignal)} stress`}
+                  size="small"
+                  color={stressColor[summary!.stressSignal] ?? "default"}
+                  variant="outlined"
+                />
+              </Box>
+            </Stack>
+            {trend.length >= 2 && <MoodSparkline points={trend} />}
+          </Stack>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function Metric({ label, value, unit }: { label: string; value: string; unit?: string }) {
+  return (
+    <Box>
+      <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+        {label}
+      </Typography>
+      <Stack direction="row" alignItems="baseline" spacing={0.25}>
+        <Typography
+          sx={{ fontSize: "1.5rem", fontWeight: 700, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}
+        >
+          {value}
+        </Typography>
+        {unit && (
+          <Typography variant="caption" color="text.secondary">
+            {unit}
+          </Typography>
+        )}
+      </Stack>
+    </Box>
+  );
+}
+
+// Lightweight inline SVG sparkline for the 14-day mood trend. Avoids
+// pulling MUI X charts in for a decorative micro-viz. Mood scale 1-5.
+function MoodSparkline({ points }: { points: MoodPoint[] }) {
+  const theme = useTheme();
+  const w = 100;
+  const h = 28;
+  const pad = 2;
+  const min = 1;
+  const max = 5;
+  const xs = points.map((_, i) => pad + (i * (w - 2 * pad)) / (points.length - 1));
+  const ys = points.map(
+    (p) => h - pad - ((Math.min(max, Math.max(min, p.mood)) - min) / (max - min)) * (h - 2 * pad),
+  );
+  const d = xs.map((x, i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(" ");
+  return (
+    <Box
+      component="svg"
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+      role="img"
+      aria-label="14-day mood trend"
+      sx={{ width: "100%", height: 36, display: "block" }}
+    >
+      <path
+        d={d}
+        fill="none"
+        stroke={theme.palette.wellbeing.main}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </Box>
+  );
+}
+
+// ─── Recent activity ──────────────────────────────────────────────────
+
+function RecentActivityCard() {
+  const activityQuery = useLiveActivity(8);
+  const items = activityQuery.data ?? [];
+
+  return (
+    <Card sx={{ height: "100%" }}>
+      <CardContent sx={{ p: { xs: 2.5, sm: 3 }, height: "100%" }}>
+        <SectionHeader overline="Recent" title="Activity" />
+        {activityQuery.isLoading ? (
+          <Stack spacing={1.5}>
+            <Skeleton variant="rounded" height={40} />
+            <Skeleton variant="rounded" height={40} />
+            <Skeleton variant="rounded" height={40} />
+          </Stack>
+        ) : activityQuery.isError ? (
+          <CardError onRetry={() => activityQuery.refetch()} what="your activity" />
+        ) : items.length === 0 ? (
+          <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+            Your recent activity will appear here as you practise, log marks, and hit goals.
+          </Typography>
+        ) : (
+          <Stack spacing={0.25}>
+            {items.map((a) => (
+              <ActivityRow key={a.id} a={a} />
+            ))}
+          </Stack>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ActivityRow({ a }: { a: LiveActivity }) {
+  const meta = [a.subject, a.detail].filter(Boolean).join(" · ");
+  return (
+    <Stack direction="row" alignItems="center" spacing={1.5} sx={{ py: 0.75 }}>
+      <Box
+        sx={{
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          bgcolor: "secondary.main",
+          flexShrink: 0,
+        }}
+      />
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>
+          {a.action}
+        </Typography>
+        {meta && (
+          <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
+            {meta}
+          </Typography>
+        )}
+      </Box>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ flexShrink: 0, fontVariantNumeric: "tabular-nums" }}
+      >
+        {dayjs(a.ts).fromNow(true)}
+      </Typography>
+    </Stack>
+  );
+}
+
+// ─── util ─────────────────────────────────────────────────────────────
+
+function titleCase(s: string) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }

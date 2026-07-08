@@ -30,7 +30,7 @@ export default function TeachersPage() {
     <>
       <PageHeader
         title="Teachers"
-        description="Active teachers and pending invitations. Reuses the same Assign/Unassign workflow we use for classes and bursaries."
+        description="Active teachers and pending invitations. Reuses the same Assign/Unassign workflow we use for classes."
         breadcrumbs={[{ label: "School", href: "/school-admin" }, { label: "Teachers" }]}
         actions={<Button variant="contained">Invite teacher</Button>}
       />

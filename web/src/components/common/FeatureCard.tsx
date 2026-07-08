@@ -7,7 +7,7 @@ import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
 import { alpha, useTheme } from "@mui/material/styles";
 import Link from "next/link";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import { ArrowRight } from "lucide-react";
 
 export type FeatureCardProps = {
   icon: React.ReactNode;
@@ -92,7 +92,7 @@ export function FeatureCard({
             }}
           >
             <span>Learn more</span>
-            <ArrowForwardIcon />
+            <ArrowRight size={14} />
           </Stack>
         )}
       </Stack>

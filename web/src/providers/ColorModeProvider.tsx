@@ -1,18 +1,15 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { buildTheme, type ColorMode } from "@/theme";
 
-const STORAGE_KEY = "aptiverse:color-mode";
+// Colour scheme follows the operating system only. There is no in-app
+// light/dark switch by design: the theme mirrors the user's system
+// preference and updates live when they change it.
 
-type ColorModeContextValue = {
-  mode: ColorMode;
-  resolvedMode: ColorMode;
-  setMode: (mode: ColorMode | "system") => void;
-  toggle: () => void;
-};
+type ColorModeContextValue = { resolvedMode: ColorMode };
 
 const ColorModeContext = createContext<ColorModeContextValue | undefined>(undefined);
 
@@ -21,58 +18,26 @@ function getSystemMode(): ColorMode {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-function readStored(): ColorMode | "system" {
-  if (typeof window === "undefined") return "system";
-  const v = window.localStorage.getItem(STORAGE_KEY);
-  if (v === "light" || v === "dark" || v === "system") return v;
-  return "system";
-}
-
 export function ColorModeProvider({ children }: { children: React.ReactNode }) {
-  const [preference, setPreference] = useState<ColorMode | "system">("system");
-  const [systemMode, setSystemMode] = useState<ColorMode>("light");
-  const [hydrated, setHydrated] = useState(false);
+  const [resolvedMode, setResolvedMode] = useState<ColorMode>("light");
 
   useEffect(() => {
-    setPreference(readStored());
-    setSystemMode(getSystemMode());
-    setHydrated(true);
+    setResolvedMode(getSystemMode());
 
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = (e: MediaQueryListEvent) => setSystemMode(e.matches ? "dark" : "light");
+    const handler = (e: MediaQueryListEvent) => setResolvedMode(e.matches ? "dark" : "light");
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  const resolvedMode: ColorMode = preference === "system" ? systemMode : preference;
-
-  const setMode = useCallback((m: ColorMode | "system") => {
-    setPreference(m);
-    if (typeof window !== "undefined") window.localStorage.setItem(STORAGE_KEY, m);
-  }, []);
-
-  const toggle = useCallback(() => {
-    setMode(resolvedMode === "dark" ? "light" : "dark");
-  }, [resolvedMode, setMode]);
-
   const theme = useMemo(() => buildTheme(resolvedMode), [resolvedMode]);
+  const value = useMemo(() => ({ resolvedMode }), [resolvedMode]);
 
-  const value = useMemo(
-    () => ({
-      mode: preference === "system" ? systemMode : preference,
-      resolvedMode,
-      setMode,
-      toggle,
-    }),
-    [preference, systemMode, resolvedMode, setMode, toggle],
-  );
-
-  // Avoid hydration flash: until we've read storage, render with light theme baseline.
   return (
     <ColorModeContext.Provider value={value}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <div style={{ visibility: hydrated ? "visible" : "visible" }}>{children}</div>
+        {children}
       </ThemeProvider>
     </ColorModeContext.Provider>
   );

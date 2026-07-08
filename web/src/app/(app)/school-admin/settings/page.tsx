@@ -70,7 +70,6 @@ export default function SchoolSettings() {
           <FormControlLabel control={<Switch />} label="Enable Google Workspace SSO" />
           <TextField label="Allowed email domain" defaultValue="@school.example" fullWidth />
           <FormControlLabel control={<Switch defaultChecked />} label="POPIA-compliant data residency in SA" />
-          <FormControlLabel control={<Switch defaultChecked />} label="Allow data sharing with bursary partners (with student consent)" />
           <Box>
             <Button variant="contained">Save</Button>
           </Box>

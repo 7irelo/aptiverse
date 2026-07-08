@@ -52,6 +52,9 @@ namespace Aptiverse.AcademicPlanning.Controllers
 
         // --- Curriculum catalog ------------------------------------------------
 
+        // Public: the signup form's curriculum picker needs this before the
+        // student has an account.
+        [AllowAnonymous]
         [HttpGet("curricula")]
         public async Task<ActionResult<IEnumerable<FrontendCurriculumDto>>> GetCurricula()
         {
@@ -111,6 +114,8 @@ namespace Aptiverse.AcademicPlanning.Controllers
                 CurriculumId = user.CurriculumId,
                 Grade = user.Grade,
                 School = user.School,
+                EducationLevel = user.EducationLevel,
+                InstitutionId = user.InstitutionId,
             });
         }
 
@@ -175,6 +180,27 @@ namespace Aptiverse.AcademicPlanning.Controllers
             {
                 user.School = string.IsNullOrWhiteSpace(body.School) ? null : body.School.Trim();
             }
+            if (body.EducationLevel is not null)
+            {
+                var lvl = body.EducationLevel.Trim().ToLowerInvariant();
+                if (lvl is not ("highschool" or "tertiary"))
+                    return BadRequest("educationLevel must be 'highschool' or 'tertiary'.");
+                user.EducationLevel = lvl;
+            }
+            if (body.InstitutionId is not null)
+            {
+                var instId = body.InstitutionId.Trim();
+                if (instId.Length == 0)
+                {
+                    user.InstitutionId = null;
+                }
+                else
+                {
+                    var exists = await _db.Set<Institution>().AsNoTracking().AnyAsync(i => i.Id == instId);
+                    if (!exists) return BadRequest($"Unknown institution '{instId}'.");
+                    user.InstitutionId = instId;
+                }
+            }
 
             user.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
@@ -184,6 +210,8 @@ namespace Aptiverse.AcademicPlanning.Controllers
                 CurriculumId = user.CurriculumId,
                 Grade = user.Grade,
                 School = user.School,
+                EducationLevel = user.EducationLevel,
+                InstitutionId = user.InstitutionId,
             });
         }
 
@@ -216,13 +244,37 @@ namespace Aptiverse.AcademicPlanning.Controllers
                           Grade = x.ss.Grade,
                           Teacher = x.ss.Teacher,
                           IsCompulsory = x.cs.IsCompulsory,
+                          IsCustom = false,
                           CreatedAt = x.ss.CreatedAt,
                       })
-                .OrderBy(r => r.Category)
-                .ThenBy(r => r.Name)
                 .ToListAsync();
 
-            return Ok(rows);
+            // Student-created (tertiary) subjects: owned Subject rows with no
+            // curriculum. Unioned in so both worlds show in one list.
+            var owned = await _db.Set<Subject>().AsNoTracking()
+                .Where(s => s.OwnerStudentId == userId)
+                .ToListAsync();
+            var custom = owned.Select(s => new FrontendSubjectDto
+            {
+                Id = s.Id,
+                SubjectId = s.Id,
+                Code = s.Code,
+                Name = s.Name,
+                Category = s.Category,
+                LanguageType = s.LanguageType,
+                Grade = 0,
+                Teacher = null,
+                IsCompulsory = false,
+                IsCustom = true,
+                CreatedAt = default,
+            });
+
+            var all = rows.Concat(custom)
+                .OrderBy(r => r.Category)
+                .ThenBy(r => r.Name)
+                .ToList();
+
+            return Ok(all);
         }
 
         [HttpGet("subjects/{id}")]
@@ -230,7 +282,28 @@ namespace Aptiverse.AcademicPlanning.Controllers
         {
             var userId = CurrentUserId();
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
-            if (!long.TryParse(id, out var ssId)) return NotFound();
+
+            // A non-numeric id is an owned (custom/tertiary) subject slug.
+            if (!long.TryParse(id, out var ssId))
+            {
+                var ownedSubject = await _db.Set<Subject>().AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.Id == id && s.OwnerStudentId == userId);
+                if (ownedSubject is null) return NotFound();
+                return Ok(new FrontendSubjectDto
+                {
+                    Id = ownedSubject.Id,
+                    SubjectId = ownedSubject.Id,
+                    Code = ownedSubject.Code,
+                    Name = ownedSubject.Name,
+                    Category = ownedSubject.Category,
+                    LanguageType = ownedSubject.LanguageType,
+                    Grade = 0,
+                    Teacher = null,
+                    IsCompulsory = false,
+                    IsCustom = true,
+                    CreatedAt = default,
+                });
+            }
 
             var row = await _db.Set<StudentSubject>()
                 .AsNoTracking()
@@ -253,6 +326,7 @@ namespace Aptiverse.AcademicPlanning.Controllers
                           Grade = x.ss.Grade,
                           Teacher = x.ss.Teacher,
                           IsCompulsory = x.cs.IsCompulsory,
+                          IsCustom = false,
                           CreatedAt = x.ss.CreatedAt,
                       })
                 .FirstOrDefaultAsync();
@@ -314,12 +388,108 @@ namespace Aptiverse.AcademicPlanning.Controllers
             return await GetSubject(enrolment.Id.ToString());
         }
 
+        // Create a student-owned (tertiary) subject from free text. No catalog,
+        // no curriculum — the student defines their own module. The slug is
+        // derived from the name + a short owner tag so it's unique and stable
+        // for practice generation + mastery to key on.
+        [HttpPost("subjects/custom")]
+        public async Task<ActionResult<FrontendSubjectDto>> CreateCustomSubject(
+            [FromBody] FrontendCreateCustomSubjectDto body)
+        {
+            var userId = CurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var name = (body.Name ?? "").Trim();
+            if (name.Length < 2) return BadRequest("Subject name is required.");
+            if (name.Length > 80) name = name[..80];
+
+            var category = string.IsNullOrWhiteSpace(body.Category)
+                ? "tertiary"
+                : body.Category.Trim().ToLowerInvariant();
+
+            // Stable, unique slug: usr-{owner}-{slug}. Suffix a counter if this
+            // student already owns a subject with the same slug.
+            var baseSlug = $"usr-{userId[..Math.Min(8, userId.Length)]}-{SlugifySubject(name)}";
+            var slug = baseSlug;
+            var n = 2;
+            while (await _db.Set<Subject>().AsNoTracking().AnyAsync(s => s.Id == slug))
+            {
+                slug = $"{baseSlug}-{n++}";
+            }
+
+            var subject = new Subject
+            {
+                Id = slug,
+                Code = MakeCode(name),
+                Name = name,
+                Category = category,
+                OwnerStudentId = userId,
+            };
+            _db.Set<Subject>().Add(subject);
+            await _db.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetSubject), new { id = subject.Id }, new FrontendSubjectDto
+            {
+                Id = subject.Id,
+                SubjectId = subject.Id,
+                Code = subject.Code,
+                Name = subject.Name,
+                Category = subject.Category,
+                LanguageType = null,
+                Grade = 0,
+                Teacher = null,
+                IsCompulsory = false,
+                IsCustom = true,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+
+        // name -> lowercase slug ("Organic Chemistry" -> "organic-chemistry").
+        private static string SlugifySubject(string s)
+        {
+            var sb = new System.Text.StringBuilder(s.Length);
+            var prevDash = false;
+            foreach (var ch in s.Trim().ToLowerInvariant())
+            {
+                if (char.IsLetterOrDigit(ch)) { sb.Append(ch); prevDash = false; }
+                else if (!prevDash && sb.Length > 0) { sb.Append('-'); prevDash = true; }
+            }
+            var slug = sb.ToString().Trim('-');
+            return slug.Length == 0 ? "subject" : slug;
+        }
+
+        // name -> short display code ("Organic Chemistry" -> "OC").
+        private static string MakeCode(string name)
+        {
+            var initials = name
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(w => char.IsLetterOrDigit(w[0]))
+                .Select(w => char.ToUpperInvariant(w[0]))
+                .Take(4)
+                .ToArray();
+            var code = new string(initials);
+            if (code.Length >= 2) return code;
+
+            var alnum = new string(name.Where(char.IsLetterOrDigit).Take(4).ToArray()).ToUpperInvariant();
+            return alnum.Length >= 2 ? alnum : "SUBJ";
+        }
+
         [HttpDelete("subjects/{id}")]
         public async Task<IActionResult> RemoveSubject(string id)
         {
             var userId = CurrentUserId();
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
-            if (!long.TryParse(id, out var ssId)) return NotFound();
+
+            // A non-numeric id is an owned (custom/tertiary) subject slug.
+            if (!long.TryParse(id, out var ssId))
+            {
+                var ownedSubject = await _db.Set<Subject>()
+                    .FirstOrDefaultAsync(s => s.Id == id && s.OwnerStudentId == userId);
+                if (ownedSubject is null) return NotFound();
+                _db.Set<Subject>().Remove(ownedSubject);
+                await _db.SaveChangesAsync();
+                return NoContent();
+            }
 
             var row = await _db.Set<StudentSubject>()
                 .FirstOrDefaultAsync(ss => ss.Id == ssId && ss.StudentId == userId);
@@ -329,6 +499,159 @@ namespace Aptiverse.AcademicPlanning.Controllers
             await _db.SaveChangesAsync();
             return NoContent();
         }
+
+        // --- Institutions (tertiary) -----------------------------------------
+
+        // Public: the signup picker needs the list before the student has an
+        // account. Optionally filter by type.
+        [AllowAnonymous]
+        [HttpGet("institutions")]
+        public async Task<ActionResult<IEnumerable<FrontendInstitutionDto>>> GetInstitutions(
+            [FromQuery] string? type = null, CancellationToken ct = default)
+        {
+            var q = _db.Set<Institution>().AsNoTracking().AsQueryable();
+            if (!string.IsNullOrWhiteSpace(type)) q = q.Where(i => i.Type == type);
+            var list = await q
+                .OrderBy(i => i.Name)
+                .Select(i => new FrontendInstitutionDto
+                {
+                    Id = i.Id,
+                    Name = i.Name,
+                    ShortName = i.ShortName,
+                    Type = i.Type,
+                    Province = i.Province,
+                })
+                .ToListAsync(ct);
+            return Ok(list);
+        }
+
+        // --- Courses (tertiary) ----------------------------------------------
+
+        [HttpGet("courses")]
+        public async Task<ActionResult<IEnumerable<FrontendCourseDto>>> GetCourses(CancellationToken ct = default)
+        {
+            var userId = CurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var rows = await _db.Set<StudentCourse>().AsNoTracking()
+                .Where(sc => sc.StudentId == userId)
+                .Join(_db.Set<Course>().AsNoTracking(),
+                      sc => sc.CourseId, c => c.Id, (sc, c) => new { sc, c })
+                .OrderBy(x => x.c.Name)
+                .ToListAsync(ct);
+
+            return Ok(rows.Select(x => MapCourse(x.sc, x.c)).ToList());
+        }
+
+        // The institution's shared course catalogue — for the "add course"
+        // autocomplete so students reuse existing course rows.
+        [HttpGet("institutions/{institutionId}/courses")]
+        public async Task<ActionResult<IEnumerable<FrontendCourseDto>>> GetInstitutionCourses(
+            string institutionId, CancellationToken ct = default)
+        {
+            var list = await _db.Set<Course>().AsNoTracking()
+                .Where(c => c.InstitutionId == institutionId)
+                .OrderBy(c => c.Name)
+                .Select(c => new FrontendCourseDto
+                {
+                    Id = "",
+                    CourseId = c.Id,
+                    PracticeKey = c.InstitutionId + ":" + c.Slug,
+                    InstitutionId = c.InstitutionId,
+                    Name = c.Name,
+                    Code = c.Code,
+                    Lecturer = null,
+                    CreatedAt = c.CreatedAt,
+                })
+                .ToListAsync(ct);
+            return Ok(list);
+        }
+
+        // Enrol in a course. Emergent + shared: find-or-create the institution's
+        // Course row (so everyone at the institution shares one "Calculus I"),
+        // then create this student's enrolment.
+        [HttpPost("courses")]
+        public async Task<ActionResult<FrontendCourseDto>> AddCourse([FromBody] FrontendAddCourseDto body)
+        {
+            var userId = CurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var name = (body.Name ?? "").Trim();
+            if (name.Length < 2) return BadRequest("Course name is required.");
+            if (name.Length > 100) name = name[..100];
+
+            var user = await _db.Set<User>().FirstOrDefaultAsync(u => u.Id == userId);
+            if (user is null) return Unauthorized();
+            if (user.EducationLevel != "tertiary" || string.IsNullOrEmpty(user.InstitutionId))
+                return BadRequest("Courses are for tertiary students. Set your institution first.");
+
+            var institutionId = user.InstitutionId;
+            var slug = SlugifySubject(name);
+
+            var course = await _db.Set<Course>()
+                .FirstOrDefaultAsync(c => c.InstitutionId == institutionId && c.Slug == slug);
+            if (course is null)
+            {
+                course = new Course
+                {
+                    InstitutionId = institutionId,
+                    Slug = slug,
+                    Name = name,
+                    Code = string.IsNullOrWhiteSpace(body.Code) ? null : body.Code.Trim(),
+                };
+                _db.Set<Course>().Add(course);
+                await _db.SaveChangesAsync(); // materialise course.Id for the enrolment
+            }
+
+            var existing = await _db.Set<StudentCourse>()
+                .FirstOrDefaultAsync(sc => sc.StudentId == userId && sc.CourseId == course.Id);
+            if (existing is not null)
+            {
+                if (!string.IsNullOrWhiteSpace(body.Lecturer)) existing.Lecturer = body.Lecturer.Trim();
+                await _db.SaveChangesAsync();
+                return Ok(MapCourse(existing, course));
+            }
+
+            var enrolment = new StudentCourse
+            {
+                StudentId = userId,
+                CourseId = course.Id,
+                Lecturer = string.IsNullOrWhiteSpace(body.Lecturer) ? null : body.Lecturer.Trim(),
+            };
+            _db.Set<StudentCourse>().Add(enrolment);
+            await _db.SaveChangesAsync();
+            return Ok(MapCourse(enrolment, course));
+        }
+
+        [HttpDelete("courses/{id}")]
+        public async Task<IActionResult> RemoveCourse(string id, CancellationToken ct = default)
+        {
+            var userId = CurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+            if (!long.TryParse(id, out var scId)) return NotFound();
+
+            var row = await _db.Set<StudentCourse>()
+                .FirstOrDefaultAsync(sc => sc.Id == scId && sc.StudentId == userId, ct);
+            if (row is null) return NotFound();
+
+            // Remove only this student's enrolment; the shared Course row stays
+            // for other students at the institution.
+            _db.Set<StudentCourse>().Remove(row);
+            await _db.SaveChangesAsync(ct);
+            return NoContent();
+        }
+
+        private static FrontendCourseDto MapCourse(StudentCourse sc, Course c) => new()
+        {
+            Id = sc.Id.ToString(),
+            CourseId = c.Id,
+            PracticeKey = c.InstitutionId + ":" + c.Slug,
+            InstitutionId = c.InstitutionId,
+            Name = c.Name,
+            Code = c.Code,
+            Lecturer = sc.Lecturer,
+            CreatedAt = sc.CreatedAt,
+        };
 
         // --- Assessments (SBA tasks) ------------------------------------------
 
@@ -447,7 +770,16 @@ namespace Aptiverse.AcademicPlanning.Controllers
                 if (body.Weight < 0 || body.Weight > 100) return BadRequest("Weight must be between 0 and 100.");
                 a.Weight = body.Weight.Value;
             }
-            if (body.DueDate is not null) a.DueDate = body.DueDate.Value;
+            if (body.DueDate is not null && body.DueDate.Value != a.DueDate)
+            {
+                a.DueDate = body.DueDate.Value;
+                // The due date moved — re-arm the "due soon" reminder so the
+                // background poller can notify again for the new date. Safe if
+                // the new date is far out or past: the poller only fires within
+                // its 3-day window on open, opted-in assessments.
+                a.DueReminderSent = false;
+                a.DueReminderSentAt = null;
+            }
             if (body.Status is not null)
             {
                 var status = body.Status.ToLowerInvariant();

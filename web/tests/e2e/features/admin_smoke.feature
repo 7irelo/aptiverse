@@ -17,7 +17,6 @@ Feature: Admin page smoke tests
       | name                | path                       | text                |
       | dashboard home      | /admin                     | Admin               |
       | audit               | /admin/audit               | Audit log           |
-      | bursaries           | /admin/bursaries           | Bursaries           |
       | courses             | /admin/courses             | Courses             |
       | flags               | /admin/flags               | Feature flags       |
       | impersonate         | /admin/impersonate         | Impersonate user    |

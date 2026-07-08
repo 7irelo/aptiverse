@@ -66,7 +66,7 @@ function ResetPasswordForm() {
       {missingToken ? (
         <>
           <Alert severity="warning">
-            This link is missing its reset token. Request a fresh one — they expire after 30 minutes.
+            This link is missing its reset token. Request a fresh one. They expire after 30 minutes.
           </Alert>
           <Button component={Link} href="/forgot-password" variant="contained" size="large" fullWidth>
             Request a new reset link

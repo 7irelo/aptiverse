@@ -49,6 +49,34 @@ export type AcademicProfile = {
   curriculumId: string | null;
   grade: number | null;
   school: string | null;
+  // "highschool" (CAPS catalog) | "tertiary" (institution courses).
+  // Chosen at signup; decides where subjects/courses come from.
+  educationLevel: "highschool" | "tertiary";
+  // Tertiary only: the institution picked at signup.
+  institutionId: string | null;
+};
+
+// A recognised SA tertiary institution (signup picker + course scoping).
+export type Institution = {
+  id: string;
+  name: string;
+  shortName: string | null;
+  type: string; // university | university_of_technology | comprehensive_university | tvet | private_college
+  province: string | null;
+};
+
+// A tertiary student's enrolled course. `practiceKey` is the id practice
+// generation + mastery key on (institution-scoped). Named EnrolledCourse to
+// avoid clashing with the legacy marketplace `Course` type below.
+export type EnrolledCourse = {
+  id: string; // student_course id
+  courseId: number;
+  practiceKey: string; // "institutionId:slug"
+  institutionId: string;
+  name: string;
+  code: string | null;
+  lecturer: string | null;
+  createdAt: string;
 };
 
 // Legacy seed data — preserved only because a handful of demo-mode pages
@@ -454,7 +482,7 @@ export const GOALS: Goal[] = [
   {
     id: "g5",
     title: "Submit NSFAS application",
-    description: "Complete the bursary navigator checklist before deadline.",
+    description: "Complete the university application checklist before deadline.",
     target: "All docs uploaded",
     progress: 100,
     status: "verified",
@@ -557,100 +585,22 @@ export const PRACTICE_TESTS: PracticeTest[] = [
   },
 ];
 
+// Student-facing tutor discovery. Real data comes from GET /api/marketplace/tutors
+// (a join of marketplace.tutors + the tutor's identity user). Id is the tutor's
+// identity user id, which connect/review actions key on.
 export type Tutor = {
   id: string;
   name: string;
   subjects: string[];
+  qualification: string;
+  specialization: string;
+  bio: string;
+  yearsOfExperience: number;
+  teachingStyle: string;
   rating: number;
   reviewCount: number;
-  hourlyRate: number;
-  bio: string;
-  city: string;
   verified: boolean;
-  online: boolean;
-  avatarColor: string;
 };
-
-export const TUTORS: Tutor[] = [
-  {
-    id: "t1",
-    name: "Sipho Mabaso",
-    subjects: ["Mathematics", "Physical Sciences"],
-    rating: 4.9,
-    reviewCount: 124,
-    hourlyRate: 250,
-    bio: "Wits Engineering graduate. Specialises in lifting calculus marks from 50% to 75%+.",
-    city: "Johannesburg",
-    verified: true,
-    online: true,
-    avatarColor: "#1F8079",
-  },
-  {
-    id: "t2",
-    name: "Leah van Rooyen",
-    subjects: ["English HL", "History"],
-    rating: 4.8,
-    reviewCount: 87,
-    hourlyRate: 220,
-    bio: "Published author. Helps students unlock voice in essay writing — past paper specialist.",
-    city: "Cape Town",
-    verified: true,
-    online: false,
-    avatarColor: "#F25C2E",
-  },
-  {
-    id: "t3",
-    name: "Dr. Anika Pillay",
-    subjects: ["Life Sciences", "Physical Sciences"],
-    rating: 5.0,
-    reviewCount: 56,
-    hourlyRate: 350,
-    bio: "PhD Biochemistry, UKZN. Patient explainer of the trickiest organic chem concepts.",
-    city: "Durban",
-    verified: true,
-    online: true,
-    avatarColor: "#3D9762",
-  },
-  {
-    id: "t4",
-    name: "Thabo Modise",
-    subjects: ["Mathematics", "Accounting"],
-    rating: 4.7,
-    reviewCount: 142,
-    hourlyRate: 200,
-    bio: "CA(SA) candidate. Past-paper drills and exam technique. NSC marker for 4 years.",
-    city: "Pretoria",
-    verified: true,
-    online: true,
-    avatarColor: "#FFB733",
-  },
-  {
-    id: "t5",
-    name: "Naledi Khumalo",
-    subjects: ["Afrikaans FAL", "isiZulu HL"],
-    rating: 4.9,
-    reviewCount: 73,
-    hourlyRate: 180,
-    bio: "Multilingual coach. Helps students think in the language they're tested in.",
-    city: "Online",
-    verified: true,
-    online: true,
-    avatarColor: "#2C7DCB",
-  },
-  {
-    id: "t6",
-    name: "Brent O'Reilly",
-    subjects: ["Geography", "History"],
-    rating: 4.6,
-    reviewCount: 38,
-    hourlyRate: 220,
-    bio: "Mapwork wizard. Will turn synoptic charts into a story you actually remember.",
-    city: "Port Elizabeth",
-    verified: true,
-    online: false,
-    avatarColor: "#5BA3E5",
-  },
-];
 
 export type Course = {
   id: string;
@@ -905,87 +855,9 @@ export type StudyGroup = {
   privacy: "open" | "invite";
   description: string;
   nextSession?: string;
+  isMember: boolean;
+  isOwner: boolean;
 };
-
-export const STUDY_GROUPS: StudyGroup[] = [
-  {
-    id: "sg1",
-    name: "Calculus Crew",
-    subjectId: "math",
-    members: 8,
-    privacy: "open",
-    description: "Wednesday + Saturday focus sessions on differentiation and integration.",
-    nextSession: today.add(2, "day").hour(18).toISOString(),
-  },
-  {
-    id: "sg2",
-    name: "Essay Writers Circle",
-    subjectId: "english",
-    members: 12,
-    privacy: "open",
-    description: "Peer feedback on argumentative essays. Sunday evening drafts.",
-    nextSession: today.add(4, "day").hour(19).toISOString(),
-  },
-  {
-    id: "sg3",
-    name: "Chem Equilibrium Squad",
-    subjectId: "physci",
-    members: 5,
-    privacy: "invite",
-    description: "Small group cracking Le Chatelier and Kc problems together.",
-    nextSession: today.add(1, "day").hour(17).toISOString(),
-  },
-];
-
-export type Bursary = {
-  id: string;
-  name: string;
-  field: string;
-  deadline: string;
-  amount: string;
-  requirements: string[];
-  status: "open" | "closing_soon" | "closed";
-  url?: string;
-};
-
-export const BURSARIES: Bursary[] = [
-  {
-    id: "b1",
-    name: "NSFAS",
-    field: "All NSC subjects",
-    deadline: today.add(45, "day").toISOString(),
-    amount: "Full tuition + allowance",
-    requirements: ["NSC pass", "Household income < R350k", "ID copy", "Proof of residence"],
-    status: "open",
-  },
-  {
-    id: "b2",
-    name: "Sasol Bursary",
-    field: "Engineering, Science",
-    deadline: today.add(20, "day").toISOString(),
-    amount: "R280,000 / year",
-    requirements: ["80%+ in Maths & Physics", "Grade 11 results", "Motivational letter"],
-    status: "closing_soon",
-  },
-  {
-    id: "b3",
-    name: "Allan Gray Orbis Fellowship",
-    field: "Any (entrepreneurship focus)",
-    deadline: today.add(60, "day").toISOString(),
-    amount: "Full undergrad + leadership programme",
-    requirements: ["Top 5% academically", "Entrepreneurial intent", "Two essays"],
-    status: "open",
-  },
-  {
-    id: "b4",
-    name: "Investec CSI Scholarship",
-    field: "Commerce, Finance",
-    deadline: today.subtract(5, "day").toISOString(),
-    amount: "Full tuition + book allowance",
-    requirements: ["75%+ in Maths", "Pass English", "Interview"],
-    status: "closed",
-  },
-];
 
 export type University = {
   id: string;

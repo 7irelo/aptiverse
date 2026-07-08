@@ -10,6 +10,13 @@ import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Chip from "@mui/material/Chip";
 import EditNoteIcon from "@mui/icons-material/EditNoteOutlined";
+import SentimentVeryDissatisfiedIcon from "@mui/icons-material/SentimentVeryDissatisfiedOutlined";
+import SentimentDissatisfiedIcon from "@mui/icons-material/SentimentDissatisfiedOutlined";
+import SentimentNeutralIcon from "@mui/icons-material/SentimentNeutralOutlined";
+import SentimentSatisfiedIcon from "@mui/icons-material/SentimentSatisfiedOutlined";
+import SentimentVerySatisfiedIcon from "@mui/icons-material/SentimentVerySatisfiedOutlined";
+import type { SvgIconComponent } from "@mui/icons-material";
+import { alpha, type Theme } from "@mui/material/styles";
 import { PageHeader } from "@/components/common/PageHeader";
 import { QueryStates } from "@/components/common/QueryStates";
 import { useDiaryEntries } from "@/lib/api/queries";
@@ -18,12 +25,22 @@ import { formatDate, formatRelative } from "@/lib/format";
 import { RelativeTime } from "@/components/common/RelativeTime";
 import { AtmosphericBackdrop } from "@/components/common/AtmosphericBackdrop";
 
-const MOOD_EMOJI: Record<number, { emoji: string; label: string; color: string }> = {
-  1: { emoji: "😞", label: "Really tough", color: "#D14B4B" },
-  2: { emoji: "😕", label: "Down", color: "#E89D14" },
-  3: { emoji: "😐", label: "Okay", color: "#9FB1C2" },
-  4: { emoji: "🙂", label: "Good", color: "#3D9762" },
-  5: { emoji: "😊", label: "Great", color: "#1F8079" },
+// Mood scale as face icons (not emojis), on a supportive valence gradient in
+// brand tokens: clay/terracotta for the low end (never a punitive red), forest
+// green for the good end, neutral in the middle.
+const MOOD: Record<number, { Icon: SvgIconComponent; label: string; color: string }> = {
+  1: { Icon: SentimentVeryDissatisfiedIcon, label: "Really tough", color: "warning.dark" },
+  2: { Icon: SentimentDissatisfiedIcon, label: "Down", color: "warning.main" },
+  3: { Icon: SentimentNeutralIcon, label: "Okay", color: "text.secondary" },
+  4: { Icon: SentimentSatisfiedIcon, label: "Good", color: "success.light" },
+  5: { Icon: SentimentVerySatisfiedIcon, label: "Great", color: "success.main" },
+};
+
+// Resolve a "family.shade" token to its hex so it can be alpha-tinted.
+const moodColor = (t: Theme, path: string): string => {
+  const [fam, shade = "main"] = path.split(".");
+  const family = (t.palette as unknown as Record<string, Record<string, string>>)[fam];
+  return family?.[shade] ?? path;
 };
 
 export default function DiaryPage() {
@@ -73,26 +90,34 @@ function CheckIn() {
         <Stack direction="row" spacing={1.5} sx={{ mb: 3 }}>
           {([1, 2, 3, 4, 5] as const).map((n) => {
             const selected = mood === n;
+            const m = MOOD[n];
             return (
               <Box
                 key={n}
                 onClick={() => setMood(n)}
+                role="button"
+                aria-pressed={selected}
+                aria-label={m.label}
                 sx={{
                   flex: 1,
                   py: 2,
                   borderRadius: 2,
                   border: 2,
-                  borderColor: selected ? MOOD_EMOJI[n].color : "divider",
+                  borderColor: selected ? m.color : "divider",
+                  color: selected ? m.color : "text.secondary",
                   cursor: "pointer",
                   textAlign: "center",
                   transition: "all 150ms",
-                  bgcolor: selected ? `${MOOD_EMOJI[n].color}10` : "transparent",
-                  "&:hover": { borderColor: MOOD_EMOJI[n].color },
+                  bgcolor: selected ? (t) => alpha(moodColor(t, m.color), 0.1) : "transparent",
+                  "&:hover": { borderColor: m.color },
                 }}
               >
-                <Typography sx={{ fontSize: "1.75rem" }}>{MOOD_EMOJI[n].emoji}</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {MOOD_EMOJI[n].label}
+                <m.Icon sx={{ fontSize: 28 }} />
+                <Typography
+                  variant="caption"
+                  sx={{ display: "block", color: "inherit", fontWeight: selected ? 600 : 400 }}
+                >
+                  {m.label}
                 </Typography>
               </Box>
             );
@@ -135,13 +160,15 @@ function EntriesList({ entries }: { entries: DiaryEntry[] }) {
   return (
     <Stack spacing={2}>
       {entries.map((e) => {
-        const m = MOOD_EMOJI[e.mood];
+        const m = MOOD[e.mood];
         return (
           <Card key={e.id}>
             <CardContent sx={{ p: 3 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 1 }}>
                 <Stack direction="row" spacing={1.5} alignItems="center">
-                  <Typography sx={{ fontSize: "1.75rem" }}>{m.emoji}</Typography>
+                  <Box sx={{ color: m.color, display: "grid", placeItems: "center" }}>
+                    <m.Icon sx={{ fontSize: 28 }} />
+                  </Box>
                   <Box>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {formatDate(e.date)} · <RelativeTime iso={e.date} />

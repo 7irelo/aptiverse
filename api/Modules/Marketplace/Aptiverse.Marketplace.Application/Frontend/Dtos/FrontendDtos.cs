@@ -2,19 +2,22 @@ using System.Text.Json.Serialization;
 
 namespace Aptiverse.Marketplace.Application.Frontend.Dtos
 {
+    // Student-facing tutor discovery. Id is the tutor's identity user id, which
+    // is what connect/review actions key on. No hourly rate or online status:
+    // Aptiverse doesn't facilitate the tutoring, so those aren't tracked.
     public record FrontendTutorDto
     {
         [JsonPropertyName("id")] public string Id { get; init; } = "";
         [JsonPropertyName("name")] public string Name { get; init; } = "";
         [JsonPropertyName("subjects")] public IList<string> Subjects { get; init; } = [];
+        [JsonPropertyName("qualification")] public string Qualification { get; init; } = "";
+        [JsonPropertyName("specialization")] public string Specialization { get; init; } = "";
+        [JsonPropertyName("bio")] public string Bio { get; init; } = "";
+        [JsonPropertyName("yearsOfExperience")] public int YearsOfExperience { get; init; }
+        [JsonPropertyName("teachingStyle")] public string TeachingStyle { get; init; } = "";
         [JsonPropertyName("rating")] public double Rating { get; init; }
         [JsonPropertyName("reviewCount")] public int ReviewCount { get; init; }
-        [JsonPropertyName("hourlyRate")] public int HourlyRate { get; init; }
-        [JsonPropertyName("bio")] public string Bio { get; init; } = "";
-        [JsonPropertyName("city")] public string City { get; init; } = "";
         [JsonPropertyName("verified")] public bool Verified { get; init; }
-        [JsonPropertyName("online")] public bool Online { get; init; }
-        [JsonPropertyName("avatarColor")] public string AvatarColor { get; init; } = "#1F8079";
     }
 
     public record FrontendCourseDto

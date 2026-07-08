@@ -16,7 +16,7 @@ import Link from "next/link";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import { useSnackbar } from "notistack";
 import { PageHeader } from "@/components/common/PageHeader";
-import { useSubjects, useCreateAssessment } from "@/lib/api/queries";
+import { useAcademicUnits, useCreateAssessment } from "@/lib/api/queries";
 import {
   ASSESSMENT_TYPES,
   ASSESSMENT_TYPE_LABELS,
@@ -28,8 +28,13 @@ import {
 export default function NewAssessmentPage() {
   const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
-  const subjectsQuery = useSubjects();
+  const academic = useAcademicUnits();
   const createAssessment = useCreateAssessment();
+
+  const units = academic.units;
+  const noun = academic.unitNoun; // "subject" | "course"
+  const Noun = noun.charAt(0).toUpperCase() + noun.slice(1);
+  const noUnits = academic.isReady && units.length === 0;
 
   const defaultDue = useMemo(() => {
     const d = new Date();
@@ -37,7 +42,7 @@ export default function NewAssessmentPage() {
     return d.toISOString().slice(0, 10);
   }, []);
 
-  const [subjectId, setSubjectId] = useState("");
+  const [unitId, setUnitId] = useState("");
   const [title, setTitle] = useState("");
   const [type, setType] = useState<AssessmentType>("test");
   const [weight, setWeight] = useState<number>(10);
@@ -47,16 +52,14 @@ export default function NewAssessmentPage() {
   const [actualMark, setActualMark] = useState<string>("");
   const [notes, setNotes] = useState("");
 
-  const subjects = subjectsQuery.data ?? [];
-
   const submit = async () => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
       enqueueSnackbar("Give the assessment a title.", { variant: "warning" });
       return;
     }
-    if (!subjectId) {
-      enqueueSnackbar("Pick a subject.", { variant: "warning" });
+    if (!unitId) {
+      enqueueSnackbar(`Pick a ${noun}.`, { variant: "warning" });
       return;
     }
     if (weight < 0 || weight > 100) {
@@ -65,7 +68,7 @@ export default function NewAssessmentPage() {
     }
     try {
       const created = await createAssessment.mutateAsync({
-        subjectId,
+        subjectId: unitId,
         title: trimmedTitle,
         type,
         weight,
@@ -97,17 +100,17 @@ export default function NewAssessmentPage() {
         ]}
       />
 
-      {subjectsQuery.data && subjects.length === 0 ? (
+      {noUnits ? (
         <Alert
           severity="info"
           action={
-            <Button component={Link} href="/dashboard/subjects" size="small" color="inherit">
-              Add subject
+            <Button component={Link} href={academic.addHref} size="small" color="inherit">
+              Add {noun}
             </Button>
           }
           sx={{ mb: 3 }}
         >
-          You need at least one subject before you can log an assessment.
+          You need at least one {noun} before you can log an assessment.
         </Alert>
       ) : null}
 
@@ -119,8 +122,8 @@ export default function NewAssessmentPage() {
                 width: 44,
                 height: 44,
                 borderRadius: 1.5,
-                bgcolor: "primary.main",
-                color: "primary.contrastText",
+                bgcolor: "brandSurface.main",
+                color: "brandSurface.contrastText",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -141,18 +144,18 @@ export default function NewAssessmentPage() {
 
           <Stack spacing={2.5}>
             <TextField
-              label="Subject"
+              label={Noun}
               select
-              value={subjectId}
-              onChange={(e) => setSubjectId(e.target.value)}
+              value={unitId}
+              onChange={(e) => setUnitId(e.target.value)}
               required
               fullWidth
-              disabled={subjects.length === 0}
-              helperText={subjects.length === 0 ? "Add a subject first." : undefined}
+              disabled={units.length === 0}
+              helperText={units.length === 0 ? `Add a ${noun} first.` : undefined}
             >
-              {subjects.map((s) => (
-                <MenuItem key={s.id} value={s.subjectId}>
-                  {s.name} · Grade {s.grade}
+              {units.map((u) => (
+                <MenuItem key={u.id} value={u.id}>
+                  {u.name}
                 </MenuItem>
               ))}
             </TextField>
@@ -245,7 +248,7 @@ export default function NewAssessmentPage() {
                   input: { endAdornment: <InputAdornment position="end">%</InputAdornment> },
                   htmlInput: { min: 0, max: 100, step: 1 },
                 }}
-                helperText="Fill in once your teacher returns the mark."
+                helperText="Fill in once your mark is returned."
               />
             </Stack>
 
@@ -263,7 +266,8 @@ export default function NewAssessmentPage() {
               <Button
                 onClick={submit}
                 variant="contained"
-                disabled={createAssessment.isPending || subjects.length === 0}
+                color="secondary"
+                disabled={createAssessment.isPending || units.length === 0}
               >
                 {createAssessment.isPending ? "Saving…" : "Save assessment"}
               </Button>

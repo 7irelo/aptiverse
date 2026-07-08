@@ -55,6 +55,11 @@ namespace Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning
         // returns an empty list when null.
         public List<AssessmentTask>? Tasks { get; set; }
 
+        // Set once the "due soon" reminder has fired to the owner, so the
+        // background poller notifies exactly once per assessment.
+        public bool DueReminderSent { get; set; }
+        public DateTime? DueReminderSentAt { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }

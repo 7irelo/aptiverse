@@ -307,6 +307,12 @@ namespace Aptiverse.Auth.Controllers
                 var result = await _oauthExchangeService.ExchangeAsync(request);
                 return Ok(result);
             }
+            catch (OAuthAccountNotFoundException ex)
+            {
+                // Invite-only: valid Google token, but no Aptiverse account for
+                // that email. 404 lets the web client show a specific message.
+                return NotFound(new { message = ex.Message, type = "AccountNotFound" });
+            }
             catch (AuthenticationException ex)
             {
                 return Unauthorized(new { message = ex.Message, type = "AuthenticationError" });

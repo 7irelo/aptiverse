@@ -9,26 +9,29 @@ import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import { alpha } from "@mui/material/styles";
-import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremiumOutlined";
-import LocalFireDepartmentIcon from "@mui/icons-material/LocalFireDepartmentOutlined";
+import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
 import CardGiftcardIcon from "@mui/icons-material/CardGiftcardOutlined";
+import Link from "next/link";
 import { PageHeader } from "@/components/common/PageHeader";
 import { QueryStates } from "@/components/common/QueryStates";
 import { useRewards } from "@/lib/api/queries";
 import type { Reward } from "@/lib/mockData";
 
 export default function RewardsPage() {
-  const points = 1840; // TODO: replace with useStudentPoints(currentUserId) once auth surfaces the id
   const query = useRewards();
 
   return (
     <>
       <PageHeader
         title="Rewards"
-        description="Points you've earned, spent on things worth having — tutor hours, masterclasses, and badges that go on your university applications."
+        description="Points you earn by completing goals can be spent on things worth having: tutor hours, masterclasses, and perks your school adds."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Rewards" }]}
       />
 
+      {/* Honest "how it works" panel in the gold achievement zone. No
+          fabricated balance, streak or badge counts: points come from real
+          completed goals, and a live balance surfaces here only once the
+          backend exposes it. */}
       <Card
         sx={{
           mb: 3,
@@ -36,45 +39,41 @@ export default function RewardsPage() {
           borderColor: (t) => alpha(t.palette.achievement.main, 0.3),
         }}
       >
-        <CardContent sx={{ p: 4 }}>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={3} justifyContent="space-between" alignItems={{ md: "center" }}>
-            <Box>
+        <CardContent sx={{ p: { xs: 2.5, sm: 4 } }}>
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={2}
+            alignItems={{ sm: "center" }}
+            justifyContent="space-between"
+          >
+            <Box sx={{ maxWidth: 520 }}>
               <Typography variant="overline" color="text.secondary">
-                Your rewards balance
+                How rewards work
               </Typography>
-              <Typography variant="h2" sx={{ fontWeight: 700 }}>
-                {points.toLocaleString()} pts
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                Complete goals, earn points, redeem them
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Earned from completed goals, verified by your school. Earn more by hitting goals, building streaks, and helping peers.
+                Every goal you finish and your school verifies is worth points. Spend them on the
+                perks below. Your live balance shows here once your school activates rewards.
               </Typography>
             </Box>
-            <Stack direction="row" spacing={3}>
-              <Stack alignItems="center">
-                <LocalFireDepartmentIcon sx={{ fontSize: 28, color: "achievement.dark" }} />
-                <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                  12
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  day streak
-                </Typography>
-              </Stack>
-              <Stack alignItems="center">
-                <WorkspacePremiumIcon sx={{ fontSize: 28, color: "achievement.dark" }} />
-                <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                  4
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  badges
-                </Typography>
-              </Stack>
-            </Stack>
+            <Button
+              component={Link}
+              href="/dashboard/goals"
+              variant="contained"
+              color="secondary"
+              startIcon={<FlagOutlinedIcon />}
+              sx={{ flexShrink: 0 }}
+            >
+              View goals
+            </Button>
           </Stack>
         </CardContent>
       </Card>
 
       <Typography variant="h5" sx={{ mb: 2 }}>
-        Redeem rewards
+        Available rewards
       </Typography>
 
       <QueryStates
@@ -82,14 +81,15 @@ export default function RewardsPage() {
         empty={{
           icon: <CardGiftcardIcon />,
           title: "No rewards available yet",
-          description: "Rewards unlock as you earn points and your school adds local perks. Keep at it.",
+          description:
+            "Rewards unlock as your school adds local perks. Keep hitting your goals in the meantime.",
         }}
       >
         {(rewards) => (
           <Grid container spacing={3}>
             {rewards.map((r) => (
               <Grid key={r.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-                <RewardCard reward={r} points={points} />
+                <RewardCard reward={r} />
               </Grid>
             ))}
           </Grid>
@@ -99,11 +99,19 @@ export default function RewardsPage() {
   );
 }
 
-function RewardCard({ reward: r, points }: { reward: Reward; points: number }) {
-  const affordable = points >= r.cost;
+function RewardCard({ reward: r }: { reward: Reward }) {
   return (
-    <Card sx={{ height: "100%", opacity: r.available ? 1 : 0.5 }}>
-      <Box sx={{ height: 80, bgcolor: r.imageColor, p: 2.5, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <Card sx={{ height: "100%", opacity: r.available ? 1 : 0.55 }}>
+      <Box
+        sx={{
+          height: 80,
+          bgcolor: r.imageColor,
+          p: 2.5,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <Chip label={r.category} size="small" sx={{ bgcolor: "rgba(0,0,0,0.35)", color: "white" }} />
         {r.cost === 0 && <Chip label="Free" size="small" color="secondary" />}
       </Box>
@@ -115,11 +123,14 @@ function RewardCard({ reward: r, points }: { reward: Reward; points: number }) {
           {r.description}
         </Typography>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Typography variant="h6" sx={{ fontWeight: 700, color: "primary.main" }}>
-            {r.cost === 0 ? "Free" : `${r.cost} pts`}
+          <Typography
+            variant="h6"
+            sx={{ fontWeight: 700, color: "primary.main", fontVariantNumeric: "tabular-nums" }}
+          >
+            {r.cost === 0 ? "Free" : `${r.cost.toLocaleString()} pts`}
           </Typography>
-          <Button variant={affordable ? "contained" : "outlined"} disabled={!r.available || !affordable}>
-            {!r.available ? "Locked" : affordable ? "Redeem" : `Need ${r.cost - points} more`}
+          <Button variant={r.available ? "contained" : "outlined"} disabled={!r.available}>
+            {r.available ? "Redeem" : "Locked"}
           </Button>
         </Stack>
       </CardContent>

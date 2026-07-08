@@ -20,15 +20,13 @@ import { useMyEntitlements } from "@/lib/api/queries";
 
 const ALL_PLAN_CODES: readonly PlanCode[] = [
   "free",
-  "student",
   "student.pro",
   "student.max",
   "family",
-  "family.pro",
-  "family.max",
+  "family.plus",
   "tutor.free",
   "tutor.pro",
-  "tutor.max",
+  "tutor.premium",
   "school",
 ];
 

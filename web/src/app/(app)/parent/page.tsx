@@ -1,207 +1,161 @@
 "use client";
 
+import Link from "next/link";
+import Box from "@mui/material/Box";
+import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
-import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import Box from "@mui/material/Box";
-import LinearProgress from "@mui/material/LinearProgress";
-import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
-import FamilyRestroomIcon from "@mui/icons-material/FamilyRestroomOutlined";
-import { AptiverseLineChart as LineChart } from "@/components/common/AptiverseLineChart";
+import Avatar from "@mui/material/Avatar";
+import Divider from "@mui/material/Divider";
+import Skeleton from "@mui/material/Skeleton";
+import PersonAddIcon from "@mui/icons-material/PersonAddAlt1Outlined";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForwardOutlined";
+import Diversity3Icon from "@mui/icons-material/Diversity3Outlined";
 import { PageHeader } from "@/components/common/PageHeader";
-import { StatCard } from "@/components/common/StatCard";
-import { Dot } from "@/components/common/Dot";
-import { QueryStates } from "@/components/common/QueryStates";
-import { LiveActivityFeed } from "@/components/dashboard/LiveActivityFeed";
-import { useChildren } from "@/lib/api/queries";
-import type { Child } from "@/lib/mockData";
+import { useMyParentLinks, type ParentLink } from "@/lib/api/queries";
 import { initials } from "@/lib/format";
-import Link from "next/link";
 
 export default function ParentDashboard() {
-  const query = useChildren();
+  const linksQuery = useMyParentLinks();
+  const links = linksQuery.data ?? [];
+  const accepted = links.filter((l) => l.status === "accepted");
+  const pending = links.filter((l) => l.status === "pending");
 
   return (
     <>
       <PageHeader
-        title="Family dashboard"
-        description="Real, useful insights — without surveillance. See how your kids are doing, and exactly how you can help."
+        title="Dashboard"
+        description="Follow how your students are doing, without surveillance. Link an account by invite, then see their progress read-only."
         breadcrumbs={[{ label: "Home" }]}
+        actions={
+          <Button
+            component={Link}
+            href="/parent/students"
+            variant="contained"
+            color="secondary"
+            startIcon={<PersonAddIcon />}
+          >
+            Invite student
+          </Button>
+        }
       />
 
-      <QueryStates
-        query={query}
-        empty={{
-          icon: <FamilyRestroomIcon />,
-          title: "No children linked to your account yet",
-          description: "Invite your child to Aptiverse, or ask your school admin to link an existing account.",
-          action: (
-            <Button component={Link} href="/parent/children" variant="contained">
-              Add a child
-            </Button>
-          ),
-        }}
-      >
-        {(children) => <FamilyOverview children={children} />}
-      </QueryStates>
-    </>
-  );
-}
-
-function FamilyOverview({ children }: { children: Child[] }) {
-  const studyingNow = children.filter((c) => c.isStudyingNow).length;
-  const weeklyMinutes = children.reduce((s, c) => s + c.weeklyMinutes, 0);
-  const moodAvg =
-    children.length > 0
-      ? (children.reduce((s, c) => s + c.moodAvg, 0) / children.length).toFixed(1)
-      : "—";
-
-  return (
-    <>
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard label="Children on plan" value={children.length} hint="Family plan" color="primary" />
+      {linksQuery.isLoading ? (
+        <Grid container spacing={2.5}>
+          {[0, 1].map((i) => (
+            <Grid key={i} size={{ xs: 6, md: 3 }}>
+              <Skeleton variant="rounded" height={96} />
+            </Grid>
+          ))}
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard label="Studying right now" value={studyingNow} hint="live" color="success" />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard label="This week's minutes" value={weeklyMinutes} delta={12} color="info" />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard label="Average wellbeing" value={`${moodAvg} / 5`} hint="Steady" color="secondary" />
-        </Grid>
-      </Grid>
+      ) : links.length === 0 ? (
+        <Box sx={{ py: 8, textAlign: "center", maxWidth: 460, mx: "auto" }}>
+          <Diversity3Icon sx={{ fontSize: 56, color: "text.disabled", mb: 1.5 }} />
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            No students linked yet
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5, mt: 0.5 }}>
+            Invite your child by their Aptiverse email. Once they accept, their progress shows up here.
+          </Typography>
+          <Button
+            component={Link}
+            href="/parent/students"
+            variant="contained"
+            startIcon={<PersonAddIcon />}
+          >
+            Invite your first student
+          </Button>
+        </Box>
+      ) : (
+        <Stack spacing={3}>
+          <Grid container spacing={2.5}>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <StatTile label="Linked students" value={accepted.length} />
+            </Grid>
+            <Grid size={{ xs: 6, md: 3 }}>
+              <StatTile label="Pending invites" value={pending.length} />
+            </Grid>
+          </Grid>
 
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, lg: 8 }}>
-          <Stack spacing={3}>
-            {children.map((c) => (
-              <ChildCard key={c.id} child={c} />
-            ))}
-
-            <Card>
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  Family weekly study minutes
+          <Card>
+            <CardContent sx={{ p: 3 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  Your students
                 </Typography>
-                <LineChart
-                  height={260}
-                  xAxis={[{ data: ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8"], scaleType: "point" }]}
-                  series={children.map((c) => ({
-                    data: Array.from({ length: 8 }, (_, i) => c.weeklyMinutes - 50 + i * 12 + Math.round(Math.sin(i) * 30)),
-                    label: c.name,
-                  }))}
-                />
-              </CardContent>
-            </Card>
-          </Stack>
-        </Grid>
+                <Button
+                  component={Link}
+                  href="/parent/students"
+                  size="small"
+                  variant="text"
+                  endIcon={<ArrowForwardIcon />}
+                >
+                  Manage
+                </Button>
+              </Stack>
 
-        <Grid size={{ xs: 12, lg: 4 }}>
-          <Stack spacing={3}>
-            <LiveActivityFeed
-              title="Live activity"
-              description="Your kids' Aptiverse activity, in real time"
-              height={420}
-            />
-            <Card>
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  Celebrations
-                </Typography>
+              {accepted.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                  Celebrations land here as your kids complete goals and streaks.
+                  {pending.length > 0
+                    ? "Your invite is waiting to be accepted. It'll appear here once the student accepts."
+                    : "No linked students yet."}
                 </Typography>
-              </CardContent>
-            </Card>
-          </Stack>
-        </Grid>
-      </Grid>
-    </>
-  );
-}
-
-function ChildCard({ child: c }: { child: Child }) {
-  return (
-    <Card>
-      <CardContent sx={{ p: 3 }}>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={3} alignItems={{ md: "center" }}>
-          <Stack direction="row" spacing={2} alignItems="center" sx={{ minWidth: 220 }}>
-            <Box sx={{ position: "relative" }}>
-              <Avatar sx={{ width: 56, height: 56, bgcolor: "primary.main", fontWeight: 700 }}>{initials(c.name)}</Avatar>
-              {c.isStudyingNow && (
-                <Box sx={{ position: "absolute", bottom: 0, right: 0, p: 0.4, bgcolor: "background.paper", borderRadius: "50%" }}>
-                  <Dot color="success" pulsing size={10} />
-                </Box>
-              )}
-            </Box>
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                {c.name}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Grade {c.grade} · {c.school}
-              </Typography>
-              {c.isStudyingNow && c.currentActivity && (
-                <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 0.75 }}>
-                  <Dot color="success" pulsing size={6} />
-                  <Typography variant="caption" sx={{ color: "success.main", fontWeight: 600 }}>
-                    {c.currentActivity}
-                  </Typography>
+              ) : (
+                <Stack divider={<Divider flexItem />}>
+                  {accepted.map((l) => (
+                    <StudentRow key={l.id} link={l} />
+                  ))}
                 </Stack>
               )}
-            </Box>
-          </Stack>
-          <Box sx={{ flex: 1 }}>
-            <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
-              <Typography variant="caption" color="text.secondary">
-                Predicted average
-              </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {c.predictedAverage}% ({c.trend > 0 ? "+" : ""}
-                {c.trend}pp)
-              </Typography>
-            </Stack>
-            <LinearProgress
-              variant="determinate"
-              value={c.predictedAverage}
-              color={c.trend >= 0 ? "primary" : "warning"}
-              sx={{ mb: 2 }}
-            />
-
-            <Stack direction="row" spacing={3}>
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Weekly study
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {Math.floor(c.weeklyMinutes / 60)}h {c.weeklyMinutes % 60}m
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Mood
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {c.moodAvg.toFixed(1)} / 5
-                </Typography>
-              </Box>
-            </Stack>
-          </Box>
-          <Stack spacing={1}>
-            <Button component={Link} href="/parent/help" variant="contained" size="small">
-              How can I help?
-            </Button>
-            <Button component={Link} href={`/parent/children/${c.id}`} variant="outlined" size="small">
-              Open profile
-            </Button>
-          </Stack>
+            </CardContent>
+          </Card>
         </Stack>
+      )}
+    </>
+  );
+}
+
+function StatTile({ label, value }: { label: string; value: number }) {
+  return (
+    <Card sx={{ height: "100%" }}>
+      <CardContent>
+        <Typography variant="h3" sx={{ fontWeight: 800, lineHeight: 1 }}>
+          {value}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          {label}
+        </Typography>
       </CardContent>
     </Card>
+  );
+}
+
+function StudentRow({ link }: { link: ParentLink }) {
+  const name = link.studentName ?? link.studentEmail;
+  return (
+    <Stack
+      component={Link}
+      href={`/parent/students/${link.studentUserId}`}
+      direction="row"
+      spacing={2}
+      alignItems="center"
+      sx={{ py: 1.5, textDecoration: "none", color: "inherit" }}
+    >
+      <Avatar sx={{ width: 40, height: 40, bgcolor: "primary.main", fontWeight: 700 }}>
+        {initials(name)}
+      </Avatar>
+      <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Typography variant="body1" sx={{ fontWeight: 600 }} noWrap>
+          {name}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
+          {link.studentEmail}
+        </Typography>
+      </Box>
+      <ArrowForwardIcon fontSize="small" sx={{ color: "text.secondary" }} />
+    </Stack>
   );
 }

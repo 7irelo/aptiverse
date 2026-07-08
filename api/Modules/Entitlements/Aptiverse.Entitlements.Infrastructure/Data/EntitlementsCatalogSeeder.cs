@@ -48,21 +48,11 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 // --- Student track --------------------------------------
                 new Plan
                 {
-                    Code = "student",
-                    Name = "Student",
-                    Description = "Entry tier — unlimited subjects, basic AI practice, daily diary, mastery snapshot.",
-                    MonthlyPriceZar = 79m,
-                    AnnualPriceZar = 790m,   // ≈17% off
-                    MaxMembers = 1,
-                    Kind = "paid",
-                },
-                new Plan
-                {
                     Code = "student.pro",
                     Name = "Student Pro",
                     Description = "Adds the moat features — curriculum-aware AI tutor, SBA coach, adaptive practice, past-paper walk-throughs, career navigator.",
-                    MonthlyPriceZar = 149m,
-                    AnnualPriceZar = 1490m,
+                    MonthlyPriceZar = 129m,
+                    AnnualPriceZar = 1290m,
                     MaxMembers = 1,
                     Kind = "paid",
                 },
@@ -71,8 +61,8 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                     Code = "student.max",
                     Name = "Student Max",
                     Description = "For matric finalists — exam simulator, weekly AI debrief, audio explanations, study-plan AI, contextual WhatsApp tutor.",
-                    MonthlyPriceZar = 299m,
-                    AnnualPriceZar = 2990m,
+                    MonthlyPriceZar = 229m,
+                    AnnualPriceZar = 2290m,
                     MaxMembers = 1,
                     Kind = "paid",
                 },
@@ -83,65 +73,57 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                     Code = "family",
                     Name = "Family",
                     Description = "Up to 2 learners on one bill. Parent dashboard, realtime activity, mastery forecast per child.",
-                    MonthlyPriceZar = 199m,
-                    AnnualPriceZar = 1990m,
+                    MonthlyPriceZar = 299m,
+                    AnnualPriceZar = 2990m,
                     MaxMembers = 2,
                     Kind = "paid",
                 },
+                // --- Family Plus (the top family tier offered on /pricing) ---
                 new Plan
                 {
-                    Code = "family.pro",
-                    Name = "Family Pro",
-                    Description = "Up to 4 learners — adds bursary pipeline tracker, university readiness, family WhatsApp recap, 1 counselling session / quarter.",
-                    MonthlyPriceZar = 349m,
-                    AnnualPriceZar = 3490m,
+                    Code = "family.plus",
+                    Name = "Family Plus",
+                    Description = "Up to 4 learners on one bill. Everything in Family, plus higher shared AI limits and per-child goal and progress tracking.",
+                    MonthlyPriceZar = 499m,
+                    AnnualPriceZar = 4990m,
                     MaxMembers = 4,
                     Kind = "paid",
                 },
-                new Plan
-                {
-                    Code = "family.max",
-                    Name = "Family Max",
-                    Description = "Up to 6 learners — adds AI parenting coach, custom intervention plans, tutor concierge, family wellbeing dashboard.",
-                    MonthlyPriceZar = 649m,
-                    AnnualPriceZar = 6490m,
-                    MaxMembers = 6,
-                    Kind = "paid",
-                },
 
-                // --- Tutor track (marketplace + commission) -------------
+                // --- Tutor track (profiles only — no marketplace, no commission) ---
                 new Plan
                 {
                     Code = "tutor.free",
                     Name = "Tutor Free",
-                    Description = "Pay-as-you-go for tutors — list on the marketplace, schedule, take payments. Aptiverse takes 15% commission on platform bookings.",
+                    Description = "List a public tutor profile at no cost. Show your subjects, qualifications, and rates, and be found by students and families. You arrange lessons and get paid directly; Aptiverse never takes a cut.",
                     MonthlyPriceZar = null,
                     AnnualPriceZar = null,
                     MaxMembers = 1,
                     Kind = "free",
-                    CommissionPercent = 0.15m,
+                    CommissionPercent = null,
                 },
                 new Plan
                 {
                     Code = "tutor.pro",
                     Name = "Tutor Pro",
-                    Description = "Unlocks the AI moat — lesson plan generator, mastery per client, auto parent reports, AI worksheets, featured marketplace listing. 10% commission.",
-                    MonthlyPriceZar = 149m,
-                    AnnualPriceZar = 1490m,
+                    Description = "Featured placement, AI lesson-plan and worksheet generator, curriculum-aware AI for your own prep, and profile-view insights. No commission, ever.",
+                    MonthlyPriceZar = 199m,
+                    AnnualPriceZar = 1990m,
                     MaxMembers = 1,
                     Kind = "paid",
-                    CommissionPercent = 0.10m,
+                    CommissionPercent = null,
                 },
+                // --- Tutor Premium (the top tutor tier offered on /pricing) ---
                 new Plan
                 {
-                    Code = "tutor.max",
-                    Name = "Tutor Max",
-                    Description = "The white-glove tier — AI SBA marker, white-label parent reports, SARS tax export, group mode, top marketplace placement. Zero commission.",
+                    Code = "tutor.premium",
+                    Name = "Tutor Premium",
+                    Description = "Top placement in search, every prep tool, the highest AI limits, and priority support. No commission, ever.",
                     MonthlyPriceZar = 349m,
                     AnnualPriceZar = 3490m,
                     MaxMembers = 1,
                     Kind = "paid",
-                    CommissionPercent = 0m,
+                    CommissionPercent = null,
                 },
 
                 // --- School ---------------------------------------------
@@ -149,7 +131,7 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 {
                     Code = "school",
                     Name = "School",
-                    Description = "Whole-school deployment — teacher AI tools, school analytics, SSO, bursary partner pipeline, success manager.",
+                    Description = "Whole-school deployment — teacher AI tools, school analytics, SSO, success manager.",
                     MonthlyPriceZar = null,
                     AnnualPriceZar = null,
                     MaxMembers = 5000,
@@ -177,6 +159,22 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                     current.CommissionPercent = p.CommissionPercent;
                 }
             }
+
+            // SYNC: remove tiers no longer in the catalog (e.g. pruned legacy
+            // plans). A plan is only deleted when nothing points at it — a
+            // live subscription keeps it alive so we never orphan a paying
+            // member. Its PlanFeature and PlanQuota rows are removed by the
+            // feature/quota syncs, and EF orders those child deletes before
+            // the plan delete (both declare a FK to Plan.Code).
+            var desiredCodes = desired.Select(p => p.Code).ToHashSet();
+            foreach (var current in existing.Values)
+            {
+                if (desiredCodes.Contains(current.Code)) continue;
+                var inUse = await db.Set<Subscription>()
+                    .AnyAsync(s => s.PlanCode == current.Code, ct);
+                if (inUse) continue;
+                db.Set<Plan>().Remove(current);
+            }
         }
 
         // -----------------------------------------------------------------
@@ -193,9 +191,6 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 ("free",         "ai.deep",     0),
                 ("free",         "whatsapp",    0),
 
-                ("student",      "ai.quick",   60),
-                ("student",      "ai.deep",     5),
-                ("student",      "whatsapp",   10),
                 ("student.pro",  "ai.quick",  300),
                 ("student.pro",  "ai.deep",    30),
                 ("student.pro",  "whatsapp",   50),
@@ -206,12 +201,9 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 ("family",       "ai.quick",  200),
                 ("family",       "ai.deep",    15),
                 ("family",       "whatsapp",   40),
-                ("family.pro",   "ai.quick",  800),
-                ("family.pro",   "ai.deep",    80),
-                ("family.pro",   "whatsapp",  200),
-                ("family.max",   "ai.quick", 2400),
-                ("family.max",   "ai.deep",   200),
-                ("family.max",   "whatsapp",  500),
+                ("family.plus",  "ai.quick", 1600),
+                ("family.plus",  "ai.deep",   150),
+                ("family.plus",  "whatsapp",  350),
 
                 ("tutor.free",   "ai.quick",   15),
                 ("tutor.free",   "ai.deep",     0),
@@ -219,13 +211,26 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 ("tutor.pro",    "ai.quick",  300),
                 ("tutor.pro",    "ai.deep",    20),
                 ("tutor.pro",    "whatsapp",  100),
-                ("tutor.max",    "ai.quick", 1500),
-                ("tutor.max",    "ai.deep",    80),
-                ("tutor.max",    "whatsapp",  500),
+                ("tutor.premium","ai.quick", 1500),
+                ("tutor.premium","ai.deep",    80),
+                ("tutor.premium","whatsapp",  500),
 
                 ("school",       "ai.quick",   -1),
                 ("school",       "ai.deep",    -1),
                 ("school",       "whatsapp",   -1),
+
+                // Claude-generated practice tests. Each generation is an
+                // Opus call (+ a verify pass for STEM), so allowances are
+                // deliberately tighter than the chat quotas above.
+                ("free",         "practice.generate",   3),
+                ("student.pro",  "practice.generate",  40),
+                ("student.max",  "practice.generate", 150),
+                ("family",       "practice.generate",  40),
+                ("family.plus",  "practice.generate", 150),
+                ("tutor.free",   "practice.generate",   5),
+                ("tutor.pro",    "practice.generate",  60),
+                ("tutor.premium","practice.generate", 200),
+                ("school",       "practice.generate",  -1),
             };
 
             var existing = await db.Set<PlanQuota>()
@@ -246,6 +251,18 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                         QuotaKey = quotaKey,
                         PerMonth = perMonth,
                     });
+                }
+            }
+
+            // SYNC: drop quota rows for tiers no longer in the catalog, so a
+            // pruned plan doesn't leave orphaned allowances behind. Mirrors
+            // the PlanFeature sync in UpsertFeaturesAsync.
+            var desiredKeys = desired.Select(d => $"{d.PlanCode}|{d.QuotaKey}").ToHashSet();
+            foreach (var (key, row) in existing)
+            {
+                if (!desiredKeys.Contains(key))
+                {
+                    db.Set<PlanQuota>().Remove(row);
                 }
             }
         }
@@ -305,7 +322,6 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 "ai_practice.basic",
                 "diary",
                 "wellbeing.basic",
-                "bursaries.read",
                 "past_papers.read",
                 "universities.read",
                 "calendar",
@@ -323,7 +339,6 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 "ai_practice.unlimited",
                 "mastery.snapshot",          // a one-off prediction, not the
                                              // continuous forecasts in Pro
-                "courses.enrol",
                 "psychologist.read",
             ];
 
@@ -339,9 +354,8 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 "sba.coach",                 // real-time SBA draft feedback
                 "mastery.predictions",       // continuous forecast w/ confidence
                 "career_navigator",
-                "bursaries.checklist",
                 "rewards.redeem",
-                "tutor_marketplace.book",
+                "tutor.connect",
                 "study_groups",
                 "workspace",
                 "support.priority",
@@ -370,10 +384,9 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 "family.linked_children",
             ];
 
-            // Pro — bursary + university pipelines + counselling.
+            // Pro — university pipelines + counselling.
             string[] familyProAdds =
             [
-                "parent.bursary_pipeline",   // eligibility + deadlines per child
                 "parent.uni_readiness",      // university match probability
                 "family.shared_calendar",
                 "family.whatsapp_recap",     // weekly WhatsApp recap to parent
@@ -389,14 +402,15 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 "family.wellbeing_dashboard",// aggregated trends over time
             ];
 
-            // ----- Tutor track (marketplace + commission) ---------------
+            // ----- Tutor track (profiles only — no marketplace, no commission) ---
             // All tutor tiers — the basics that justify having an account.
+            // Tutors subscribe to be discoverable and meet students; there is
+            // no course selling and no payouts.
             string[] tutorEntry =
             [
                 "tutor.dashboard",
-                "tutor.marketplace_listing",
+                "tutor.discoverable",
                 "tutor.scheduling",
-                "tutor.payments",
                 "tutor.client_tracker",
                 "tutor.messaging",
             ];
@@ -410,7 +424,6 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 "tutor.mastery_per_client",  // mastery forecast per learner
                 "tutor.parent_reports_auto", // AI-written weekly recap per client
                 "tutor.worksheets_ai",       // NSC/IEB-style problems at level
-                "tutor.marketplace_featured",
                 "ai_tutor",                  // tutor's own AI assistant
                 "ai_tutor.curriculum_aware",
             ];
@@ -422,7 +435,6 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 "tutor.parent_reports_whitelabel",
                 "tutor.sars_export",            // year-end income export
                 "tutor.group_mode",             // adaptive worksheets in 1 session
-                "tutor.marketplace_top",
                 "support.priority",
             ];
 
@@ -443,7 +455,6 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 "school_admin.teachers",
                 "school_admin.students",
                 "school_admin.classes",
-                "school.bursary_partners",
                 "school.sso",
                 "school.success_manager",
             ];
@@ -459,7 +470,6 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 foreach (var f in freeFeatures) rows.Add((code, f));
                 foreach (var f in studentEntry) rows.Add((code, f));
             }
-            AddStudent("student");
             AddStudent("student.pro");
             foreach (var f in studentProAdds) rows.Add(("student.pro", f));
             AddStudent("student.max");
@@ -477,11 +487,9 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 foreach (var f in familyEntryAdds) rows.Add((code, f));
             }
             AddFamily("family");
-            AddFamily("family.pro");
-            foreach (var f in familyProAdds) rows.Add(("family.pro", f));
-            AddFamily("family.max");
-            foreach (var f in familyProAdds) rows.Add(("family.max", f));
-            foreach (var f in familyMaxAdds) rows.Add(("family.max", f));
+            // Family Plus (the offered top tier) mirrors Family Pro's grants.
+            AddFamily("family.plus");
+            foreach (var f in familyProAdds) rows.Add(("family.plus", f));
 
             // Tutor track — each tier strictly includes the one below.
             // Tutor tiers also get free baseline so they can use the
@@ -494,9 +502,10 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
             AddTutor("tutor.free");
             AddTutor("tutor.pro");
             foreach (var f in tutorProAdds) rows.Add(("tutor.pro", f));
-            AddTutor("tutor.max");
-            foreach (var f in tutorProAdds) rows.Add(("tutor.max", f));
-            foreach (var f in tutorMaxAdds) rows.Add(("tutor.max", f));
+            // Tutor Premium (the offered top tier) mirrors Tutor Max's grants.
+            AddTutor("tutor.premium");
+            foreach (var f in tutorProAdds) rows.Add(("tutor.premium", f));
+            foreach (var f in tutorMaxAdds) rows.Add(("tutor.premium", f));
 
             // School — gets the entire stack plus the school extras.
             foreach (var f in freeFeatures) rows.Add(("school", f));

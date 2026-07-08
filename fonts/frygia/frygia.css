@@ -1,0 +1,93 @@
+/*
+ * Frygia webfont - local @font-face declarations.
+ * Place this file alongside the Frygia-*.woff2 / .woff / .ttf files.
+ * Family name is "Frygia" across all weights; use font-weight to select.
+ *
+ *   100 Thin      200 XLight    300 Light     400 Regular
+ *   500 Medium    700 Bold      900 Black
+ *
+ * For Claude Design or any sandbox that blocks external font URLs, use
+ * frygia-embedded.css instead (weights inlined as base64 data URIs).
+ */
+
+@font-face {
+  font-family: "Frygia";
+  src: url("./Frygia-Thin.woff2") format("woff2"),
+    url("./Frygia-Thin.woff") format("woff"),
+    url("./Frygia-Thin.ttf") format("truetype");
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Frygia";
+  src: url("./Frygia-XLight.woff2") format("woff2"),
+    url("./Frygia-XLight.woff") format("woff"),
+    url("./Frygia-XLight.ttf") format("truetype");
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Frygia";
+  src: url("./Frygia-Light.woff2") format("woff2"),
+    url("./Frygia-Light.woff") format("woff"),
+    url("./Frygia-Light.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Frygia";
+  src: url("./Frygia-Regular.woff2") format("woff2"),
+    url("./Frygia-Regular.woff") format("woff"),
+    url("./Frygia-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Frygia";
+  src: url("./Frygia-Italic.woff2") format("woff2"),
+    url("./Frygia-Italic.woff") format("woff"),
+    url("./Frygia-Italic.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Frygia";
+  src: url("./Frygia-Medium.woff2") format("woff2"),
+    url("./Frygia-Medium.woff") format("woff"),
+    url("./Frygia-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Frygia";
+  src: url("./Frygia-Bold.woff2") format("woff2"),
+    url("./Frygia-Bold.woff") format("woff"),
+    url("./Frygia-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Frygia";
+  src: url("./Frygia-BoldItalic.woff2") format("woff2"),
+    url("./Frygia-BoldItalic.woff") format("woff"),
+    url("./Frygia-BoldItalic.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Frygia";
+  src: url("./Frygia-Black.woff2") format("woff2"),
+    url("./Frygia-Black.woff") format("woff"),
+    url("./Frygia-Black.ttf") format("truetype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}

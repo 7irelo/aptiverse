@@ -1,7 +1,7 @@
 import type { Role } from "@/providers/RoleProvider";
 
 // Permissions are dot-notation strings: <resource>.<action>
-// Resources: users, schools, classes, students, tutors, courses, bursaries,
+// Resources: users, schools, classes, students, tutors,
 //           subscriptions, payments, content, audit, flags, system
 // Actions:   read, write, manage (full), delete, refund, impersonate
 
@@ -11,8 +11,6 @@ export type Permission =
   | "classes.read" | "classes.write" | "classes.manage"
   | "students.read" | "students.write" | "students.manage"
   | "tutors.read" | "tutors.write" | "tutors.manage" | "tutors.verify"
-  | "courses.read" | "courses.write" | "courses.manage"
-  | "bursaries.read" | "bursaries.write" | "bursaries.manage"
   | "subscriptions.read" | "subscriptions.write" | "subscriptions.manage"
   | "payments.read" | "payments.refund" | "payments.manage"
   | "content.read" | "content.moderate"
@@ -25,7 +23,7 @@ export type Permission =
 export type RbacRole = Role | "admin" | "super_admin";
 
 const STUDENT: Permission[] = [
-  "courses.read", "tutors.read", "bursaries.read", "subscriptions.read", "billing.read",
+  "tutors.read", "subscriptions.read", "billing.read",
 ];
 
 const PARENT: Permission[] = [
@@ -34,17 +32,17 @@ const PARENT: Permission[] = [
 ];
 
 const TEACHER: Permission[] = [
-  "classes.read", "classes.write", "students.read", "students.write", "courses.read", "audit.read",
+  "classes.read", "classes.write", "students.read", "students.write", "audit.read",
 ];
 
 const SCHOOL_ADMIN: Permission[] = [
   ...TEACHER,
   "classes.manage", "students.manage", "schools.read", "schools.write", "users.read",
-  "bursaries.read", "billing.read", "billing.write",
+  "billing.read", "billing.write",
 ];
 
 const TUTOR: Permission[] = [
-  "courses.read", "courses.write", "students.read", "billing.read",
+  "students.read", "billing.read",
 ];
 
 const ADMIN: Permission[] = [
@@ -53,8 +51,6 @@ const ADMIN: Permission[] = [
   "classes.read", "classes.write", "classes.manage",
   "students.read", "students.write", "students.manage",
   "tutors.read", "tutors.write", "tutors.manage", "tutors.verify",
-  "courses.read", "courses.write", "courses.manage",
-  "bursaries.read", "bursaries.write", "bursaries.manage",
   "subscriptions.read", "subscriptions.write", "subscriptions.manage",
   "payments.read", "payments.refund", "payments.manage",
   "billing.read", "billing.write", "billing.manage",

@@ -13,9 +13,9 @@ import { PageHeader } from "@/components/common/PageHeader";
 import DownloadIcon from "@mui/icons-material/DownloadOutlined";
 
 const COHORTS = [
-  { name: "Grade 12 (162 learners)", university: 64, bursary: 38, vocational: 22, undecided: 16 },
-  { name: "Grade 11 (188 learners)", university: 58, bursary: 30, vocational: 25, undecided: 30 },
-  { name: "Grade 10 (212 learners)", university: 46, bursary: 24, vocational: 28, undecided: 42 },
+  { name: "Grade 12 (162 learners)", university: 64, vocational: 22, undecided: 16 },
+  { name: "Grade 11 (188 learners)", university: 58, vocational: 25, undecided: 30 },
+  { name: "Grade 10 (212 learners)", university: 46, vocational: 28, undecided: 42 },
 ];
 
 export default function ReadinessPage() {
@@ -23,7 +23,7 @@ export default function ReadinessPage() {
     <>
       <PageHeader
         title="University readiness"
-        description="Per-cohort readiness for university, bursaries and vocational pathways. Exportable for funders and parents."
+        description="Per-cohort readiness for university and vocational pathways. Exportable for funders and parents."
         breadcrumbs={[{ label: "School", href: "/school-admin" }, { label: "Readiness" }]}
         actions={<Button variant="contained" startIcon={<DownloadIcon />}>Export PDF</Button>}
       />
@@ -38,7 +38,6 @@ export default function ReadinessPage() {
               <Grid container spacing={2}>
                 {[
                   { label: "University ready", value: c.university, color: "primary.main" },
-                  { label: "Bursary candidates", value: c.bursary, color: "success.main" },
                   { label: "Vocational track", value: c.vocational, color: "info.main" },
                   { label: "Undecided", value: c.undecided, color: "warning.main" },
                 ].map((m) => (

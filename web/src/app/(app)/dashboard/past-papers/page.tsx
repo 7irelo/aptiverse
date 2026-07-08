@@ -82,6 +82,7 @@ export default function PastPapersPage() {
         actions={
           <Button
             variant="contained"
+            color="secondary"
             endIcon={<OpenInNewIcon />}
             component="a"
             href={DBE_ROOT}
@@ -103,8 +104,8 @@ export default function PastPapersPage() {
                     width: 44,
                     height: 44,
                     borderRadius: 1.5,
-                    bgcolor: "primary.main",
-                    color: "primary.contrastText",
+                    bgcolor: "brandSurface.main",
+                    color: "brandSurface.contrastText",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",

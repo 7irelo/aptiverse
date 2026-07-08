@@ -34,7 +34,6 @@ mastery forecasts per child.
 
 8
 00:00:37,500 --> 00:00:42,000
-Bursary deadlines.
 Celebration alerts.
 
 9
