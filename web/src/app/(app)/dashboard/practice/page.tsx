@@ -20,7 +20,6 @@ import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
 import Alert from "@mui/material/Alert";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import GpsFixedIcon from "@mui/icons-material/GpsFixedOutlined";
 import QuizIcon from "@mui/icons-material/QuizOutlined";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -35,8 +34,14 @@ import {
   useAcademicProfile,
   useGenerateTest,
   useTopicMastery,
+  type PracticeFormat,
 } from "@/lib/api/queries";
-import type { PracticeTest, Subject } from "@/lib/mockData";
+import type { PracticeTest } from "@/lib/mockData";
+
+// A study unit the generator + list filter target: a CAPS subject (high
+// school) or an enrolled course (tertiary), unified to { id, name } where
+// id is the practice key that tests are keyed on.
+type StudyUnit = { id: string; name: string };
 
 export default function PracticePage() {
   const testsQuery = usePracticeTests();
@@ -46,14 +51,16 @@ export default function PracticePage() {
   const searchParams = useSearchParams();
   const [genOpen, setGenOpen] = useState(false);
 
-  const subjects = subjectsQuery.data ?? [];
   const isTertiary = profileQuery.data?.educationLevel === "tertiary";
+  const unitNoun = isTertiary ? "course" : "subject";
 
-  // What the generator can target: courses (tertiary) or subjects (HS). id is
-  // the practice key generation + mastery are keyed on.
-  const genOptions = isTertiary
+  // What the generator + list can target: courses (tertiary) or subjects
+  // (high school). id is the practice key generation, mastery, and every
+  // PracticeTest.subjectId are keyed on. A uni student never sees CAPS
+  // subjects here; they see the courses they enrolled in.
+  const units: StudyUnit[] = isTertiary
     ? (coursesQuery.data ?? []).map((c) => ({ id: c.practiceKey, name: c.name }))
-    : subjects.map((s) => ({ id: s.subjectId, name: s.name }));
+    : (subjectsQuery.data ?? []).map((s) => ({ id: s.subjectId, name: s.name }));
 
   const defaultSubjectId = searchParams.get("subject") ?? undefined;
 
@@ -69,103 +76,91 @@ export default function PracticePage() {
             color="secondary"
             startIcon={<AutoAwesomeIcon />}
             onClick={() => setGenOpen(true)}
-            disabled={genOptions.length === 0}
+            disabled={units.length === 0}
           >
             Generate a test
           </Button>
         }
       />
 
-      <Card sx={{ mb: 3, bgcolor: "brandSurface.main", color: "brandSurface.contrastText" }}>
-        <CardContent sx={{ p: 3 }}>
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={2}
-            alignItems={{ xs: "flex-start", md: "center" }}
-            justifyContent="space-between"
-          >
-            <Stack direction="row" spacing={2} alignItems="center">
-              <GpsFixedIcon sx={{ fontSize: 36 }} />
-              <Box>
-                <Typography variant="overline" sx={{ opacity: 0.85 }}>
-                  Target your weakest
-                </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  Generate a test aimed at your lowest topics
-                </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.92 }}>
-                  Claude writes questions on the topics you&apos;re scoring lowest on, with worked
-                  explanations. Each attempt sharpens your mastery signal.
-                </Typography>
-              </Box>
-            </Stack>
-            <Stack direction="row" spacing={1.5} alignItems="center">
-              <Button component={Link} href="/dashboard/mastery" color="inherit" sx={{ opacity: 0.9 }}>
-                View weak topics
-              </Button>
-              <Button
-                color="secondary"
-                variant="contained"
-                size="large"
-                startIcon={<AutoAwesomeIcon />}
-                onClick={() => setGenOpen(true)}
-                disabled={genOptions.length === 0}
-              >
-                Generate
-              </Button>
-            </Stack>
-          </Stack>
-        </CardContent>
-      </Card>
-
       <QueryStates
         query={testsQuery}
         empty={{
           icon: <QuizIcon />,
           title: "No practice tests yet",
-          description:
-            "Generate one targeted at your weakest topics, or add your subjects so tests can be matched to them.",
+          description: `Generate one targeted at your weakest topics, or add your ${unitNoun}s so tests can be matched to them.`,
           action: (
             <Button
               variant="contained"
               startIcon={<AutoAwesomeIcon />}
               onClick={() => setGenOpen(true)}
-              disabled={genOptions.length === 0}
+              disabled={units.length === 0}
             >
               Generate a test
             </Button>
           ),
         }}
       >
-        {(tests) => <PracticeList tests={tests} subjects={subjects} />}
+        {(tests) => <PracticeList tests={tests} units={units} unitNoun={unitNoun} />}
       </QueryStates>
 
-      <GenerateTestDialog open={genOpen} onClose={() => setGenOpen(false)} options={genOptions} defaultSubjectId={defaultSubjectId} />
+      <GenerateTestDialog
+        open={genOpen}
+        onClose={() => setGenOpen(false)}
+        options={units}
+        unitNoun={unitNoun}
+        defaultSubjectId={defaultSubjectId}
+      />
     </AtmosphericBackdrop>
   );
 }
 
 // ── Generation dialog ─────────────────────────────────────────────────
 
+const FORMAT_HELP: Record<PracticeFormat, string> = {
+  multiple_choice: "Four options, one correct. Timed and auto-marked.",
+  short_answer: "Type a brief answer, marked against the expected answer.",
+  reading: "A passage with questions that test your understanding of it.",
+  flashcards: "Flip cards and rate yourself. Not scored, retake anytime.",
+  essay: "A prompt with marking criteria. Write it and the tutor gives feedback.",
+};
+
+const FORMAT_LABELS: Record<PracticeFormat, string> = {
+  multiple_choice: "Multiple choice",
+  short_answer: "Short answer",
+  reading: "Reading",
+  flashcards: "Flashcards",
+  essay: "Essay",
+};
+
+const SCORED_FORMATS: PracticeFormat[] = ["multiple_choice", "short_answer", "reading"];
+
 function GenerateTestDialog({
   open,
   onClose,
   options,
+  unitNoun,
   defaultSubjectId,
 }: {
   open: boolean;
   onClose: () => void;
   // id is the practice key: a CAPS subject slug (HS) or a course
   // practiceKey "institution:slug" (tertiary).
-  options: { id: string; name: string }[];
+  options: StudyUnit[];
+  unitNoun: string;
   defaultSubjectId?: string;
 }) {
   const router = useRouter();
   const gen = useGenerateTest();
   const [subjectId, setSubjectId] = useState(defaultSubjectId ?? "");
+  const [format, setFormat] = useState<PracticeFormat>("multiple_choice");
   const [difficulty, setDifficulty] = useState<"foundation" | "core" | "challenge">("core");
   const [count, setCount] = useState(8);
   const [targetWeak, setTargetWeak] = useState(true);
+
+  const isEssay = format === "essay";
+  const isFlashcards = format === "flashcards";
+  const countLabel = isFlashcards ? "Cards" : "Questions";
 
   // Only fetch mastery once a subject is chosen and we're targeting weak topics.
   const masteryQ = useTopicMastery(targetWeak && subjectId ? subjectId : undefined);
@@ -190,6 +185,7 @@ function GenerateTestDialog({
     gen.mutate(
       {
         subjectId,
+        format,
         difficulty,
         questionCount: count,
         topics: weakTopics.length > 0 ? weakTopics : undefined,
@@ -198,7 +194,7 @@ function GenerateTestDialog({
         onSuccess: (test) => {
           gen.reset();
           onClose();
-          router.push(`/dashboard/practice/${test.id}`);
+          router.push(`/dashboard/workspace?test=${test.id}`);
         },
       },
     );
@@ -229,7 +225,7 @@ function GenerateTestDialog({
           <Stack spacing={2.5} sx={{ pt: 0.5 }}>
             <TextField
               select
-              label="Subject"
+              label={unitNoun === "course" ? "Course" : "Subject"}
               value={subjectId}
               onChange={(e) => setSubjectId(e.target.value)}
               fullWidth
@@ -244,29 +240,48 @@ function GenerateTestDialog({
 
             <TextField
               select
-              label="Difficulty"
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value as typeof difficulty)}
+              label="Type"
+              value={format}
+              onChange={(e) => setFormat(e.target.value as PracticeFormat)}
               fullWidth
+              helperText={FORMAT_HELP[format]}
             >
-              <MenuItem value="foundation">Foundation — recall and basics</MenuItem>
-              <MenuItem value="core">Core — standard exam level</MenuItem>
-              <MenuItem value="challenge">Challenge — multi-step analysis</MenuItem>
+              <MenuItem value="multiple_choice">Multiple choice</MenuItem>
+              <MenuItem value="short_answer">Short answer</MenuItem>
+              <MenuItem value="reading">Reading comprehension</MenuItem>
+              <MenuItem value="flashcards">Flashcards</MenuItem>
+              <MenuItem value="essay">Essay + criteria</MenuItem>
             </TextField>
 
-            <TextField
-              select
-              label="Questions"
-              value={count}
-              onChange={(e) => setCount(Number(e.target.value))}
-              fullWidth
-            >
-              {[5, 8, 10, 12, 15].map((n) => (
-                <MenuItem key={n} value={n}>
-                  {n} questions
-                </MenuItem>
-              ))}
-            </TextField>
+            {!isEssay && (
+              <TextField
+                select
+                label="Difficulty"
+                value={difficulty}
+                onChange={(e) => setDifficulty(e.target.value as typeof difficulty)}
+                fullWidth
+              >
+                <MenuItem value="foundation">Foundation — recall and basics</MenuItem>
+                <MenuItem value="core">Core — standard exam level</MenuItem>
+                <MenuItem value="challenge">Challenge — multi-step analysis</MenuItem>
+              </TextField>
+            )}
+
+            {!isEssay && (
+              <TextField
+                select
+                label={countLabel}
+                value={count}
+                onChange={(e) => setCount(Number(e.target.value))}
+                fullWidth
+              >
+                {[5, 8, 10, 12, 15].map((n) => (
+                  <MenuItem key={n} value={n}>
+                    {n} {countLabel.toLowerCase()}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
 
             <FormControlLabel
               control={
@@ -323,9 +338,19 @@ function GenerateTestDialog({
 
 // ── List ──────────────────────────────────────────────────────────────
 
-function PracticeList({ tests, subjects }: { tests: PracticeTest[]; subjects: Subject[] }) {
+function PracticeList({
+  tests,
+  units,
+  unitNoun,
+}: {
+  tests: PracticeTest[];
+  units: StudyUnit[];
+  unitNoun: string;
+}) {
   const [subjectFilter, setSubjectFilter] = useState("all");
   const [difficultyFilter, setDifficultyFilter] = useState("all");
+
+  const unitName = (id: string) => units.find((u) => u.id === id)?.name;
 
   const filtered = tests.filter(
     (p) =>
@@ -333,24 +358,28 @@ function PracticeList({ tests, subjects }: { tests: PracticeTest[]; subjects: Su
       (difficultyFilter === "all" || p.difficulty === difficultyFilter),
   );
 
+  const isCourse = unitNoun === "course";
+
   return (
     <>
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ mb: 3 }}>
-        <TextField
-          select
-          size="small"
-          label="Subject"
-          value={subjectFilter}
-          onChange={(e) => setSubjectFilter(e.target.value)}
-          sx={{ minWidth: 200 }}
-        >
-          <MenuItem value="all">All subjects</MenuItem>
-          {subjects.map((s) => (
-            <MenuItem key={s.id} value={s.id}>
-              {s.name}
-            </MenuItem>
-          ))}
-        </TextField>
+        {units.length > 1 && (
+          <TextField
+            select
+            size="small"
+            label={isCourse ? "Course" : "Subject"}
+            value={subjectFilter}
+            onChange={(e) => setSubjectFilter(e.target.value)}
+            sx={{ minWidth: 200 }}
+          >
+            <MenuItem value="all">{isCourse ? "All courses" : "All subjects"}</MenuItem>
+            {units.map((u) => (
+              <MenuItem key={u.id} value={u.id}>
+                {u.name}
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
         <TextField
           select
           size="small"
@@ -376,7 +405,7 @@ function PracticeList({ tests, subjects }: { tests: PracticeTest[]; subjects: Su
         <Grid container spacing={3}>
           {filtered.map((p) => (
             <Grid key={p.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-              <PracticeCard test={p} subject={subjects.find((s) => s.id === p.subjectId)} />
+              <PracticeCard test={p} unitName={unitName(p.subjectId)} />
             </Grid>
           ))}
         </Grid>
@@ -385,51 +414,73 @@ function PracticeList({ tests, subjects }: { tests: PracticeTest[]; subjects: Su
   );
 }
 
-function PracticeCard({ test: p, subject }: { test: PracticeTest; subject?: Subject }) {
+function PracticeCard({ test: p, unitName }: { test: PracticeTest; unitName?: string }) {
+  // A graded test is taken once. Once attempted, the card links to its
+  // results instead of restarting it. Both paths open in the workspace,
+  // which is where a test is actually taken and reviewed.
+  const completed = p.attempts > 0;
+  const format = (p.format ?? "multiple_choice") as PracticeFormat;
+  const scored = SCORED_FORMATS.includes(format);
+  const isCards = format === "flashcards";
+  const isEssay = format === "essay";
+  const startLabel = isEssay ? "Write" : isCards ? "Study" : completed ? "View result" : "Start";
   return (
     <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <CardContent sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column" }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-          <Chip
-            label={p.difficulty}
-            size="small"
-            color={p.difficulty === "challenge" ? "warning" : p.difficulty === "core" ? "primary" : "default"}
-            sx={{ textTransform: "capitalize" }}
-          />
+          <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+            <Chip label={FORMAT_LABELS[format]} size="small" color="secondary" variant="outlined" />
+            {scored && (
+              <Chip
+                label={p.difficulty}
+                size="small"
+                color={p.difficulty === "challenge" ? "warning" : p.difficulty === "core" ? "primary" : "default"}
+                sx={{ textTransform: "capitalize" }}
+              />
+            )}
+          </Stack>
           {p.aiGenerated && <Chip icon={<AutoAwesomeIcon />} label="AI" size="small" variant="outlined" />}
         </Stack>
         <Typography variant="h6" sx={{ fontWeight: 700 }}>
           {p.title}
         </Typography>
         <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5 }}>
-          {subject?.name}
+          {unitName}
         </Typography>
-        <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Questions
-            </Typography>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {p.questionCount}
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Time
-            </Typography>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {p.durationMinutes}m
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Attempts
-            </Typography>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {p.attempts}
-            </Typography>
-          </Box>
-        </Stack>
+        {isEssay ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            A prompt with marking criteria. Write it and the tutor gives feedback.
+          </Typography>
+        ) : (
+          <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                {isCards ? "Cards" : "Questions"}
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {p.questionCount}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Time
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {p.durationMinutes}m
+              </Typography>
+            </Box>
+            {scored && (
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Attempts
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {p.attempts}
+                </Typography>
+              </Box>
+            )}
+          </Stack>
+        )}
         {p.bestScore != null && (
           <Box sx={{ mb: 2 }}>
             <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
@@ -449,8 +500,13 @@ function PracticeCard({ test: p, subject }: { test: PracticeTest; subject?: Subj
           ))}
         </Stack>
         <Box sx={{ mt: "auto" }}>
-          <Button component={Link} href={`/dashboard/practice/${p.id}`} variant="contained" fullWidth>
-            Start
+          <Button
+            component={Link}
+            href={`/dashboard/workspace?test=${p.id}`}
+            variant={completed && scored ? "outlined" : "contained"}
+            fullWidth
+          >
+            {startLabel}
           </Button>
         </Box>
       </CardContent>

@@ -6,6 +6,7 @@ import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
+import Skeleton from "@mui/material/Skeleton";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import Link from "next/link";
 import { useFeatures } from "@/lib/hooks/useFeature";
@@ -38,7 +39,7 @@ export function FeatureGuard({
   variant = "card",
   upgradeHref = "/dashboard/billing",
 }: FeatureGuardProps) {
-  const { has, hasAny, hasAll } = useFeatures();
+  const { has, hasAny, hasAll, ready } = useFeatures();
   const features = Array.isArray(feature) ? feature : [feature];
 
   const allowed = features.length === 1
@@ -48,6 +49,15 @@ export function FeatureGuard({
       : hasAll(features);
 
   if (allowed) return <>{children}</>;
+
+  // Entitlements still resolving: don't flash a denial while only the
+  // (possibly stale) session is known. Wait for the real plan to load.
+  if (!ready) {
+    return variant === "inline" ? null : (
+      <Skeleton variant="rounded" sx={{ maxWidth: 520, mx: "auto", my: 4, height: 220 }} />
+    );
+  }
+
   if (fallback !== undefined) return <>{fallback}</>;
 
   // Suggest the lowest plan that unlocks the (first listed) feature.

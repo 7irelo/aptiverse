@@ -62,6 +62,9 @@ namespace Aptiverse.AI.Infrastructure
                 Messages = request.Messages.Select(m => new ApiMessage { Role = m.Role, Content = m.Content }).ToList(),
                 MaxTokens = request.MaxTokens,
                 Temperature = request.Temperature,
+                // Adaptive extended thinking, opt-in per request. Null (dropped
+                // from JSON) for standard calls so older models are unaffected.
+                Thinking = request.Thinking ? new ApiThinking() : null,
             };
             msg.Content = JsonContent.Create(body, options: JsonOpts);
 
@@ -142,7 +145,19 @@ namespace Aptiverse.AI.Infrastructure
             [JsonPropertyName("system")] public required string System { get; init; }
             [JsonPropertyName("messages")] public required IList<ApiMessage> Messages { get; init; }
             [JsonPropertyName("max_tokens")] public int MaxTokens { get; init; }
-            [JsonPropertyName("temperature")] public double Temperature { get; init; }
+            // Nullable so it's dropped from the JSON (WhenWritingNull) for models
+            // that reject `temperature`; only serialised when a caller sets it.
+            [JsonPropertyName("temperature")] public double? Temperature { get; init; }
+            // Nullable so it's dropped unless deep mode opts in.
+            [JsonPropertyName("thinking")] public ApiThinking? Thinking { get; init; }
+        }
+
+        // Adaptive extended thinking config. Supported on Claude 4.6+ models
+        // (Opus 4.8 here); `budget_tokens` is deliberately not sent (rejected
+        // by these models).
+        private record ApiThinking
+        {
+            [JsonPropertyName("type")] public string Type { get; init; } = "adaptive";
         }
 
         private record ApiMessage

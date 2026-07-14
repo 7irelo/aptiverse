@@ -11,7 +11,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <Box sx={{ display: "flex", alignItems: "flex-start", minHeight: "100vh", bgcolor: "background.default" }}>
+      <Box sx={{ display: "flex", alignItems: "stretch", minHeight: "100vh", bgcolor: "background.default" }}>
         {/* Full-height rail owns the brand (top) — Euphoria layout. */}
         <Sidebar open variant="permanent" onClose={() => setMobileOpen(false)} />
         <Sidebar open={mobileOpen} variant="temporary" onClose={() => setMobileOpen(false)} />

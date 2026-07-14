@@ -4,10 +4,6 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient, openEventStream, ApiError } from "@/lib/api/fetcher";
 import {
-  CHILDREN,
-  CLASSES,
-  NOTIFICATIONS,
-  CAREERS,
   type Assessment,
   type Goal,
   type Subject,
@@ -154,6 +150,8 @@ export const queryKeys = {
   counsellors: () => ["counsellors"] as const,
   rewards: () => ["rewards"] as const,
   careers: () => ["careers"] as const,
+  tutorConversations: () => ["ai", "conversations"] as const,
+  tutorConversation: (id: string) => ["ai", "conversation", id] as const,
   studyGroups: () => ["study-groups"] as const,
   liveActivity: () => ["live-activity"] as const,
   gaps: () => ["gaps"] as const,
@@ -659,11 +657,20 @@ export const usePracticeTest = (id: string) =>
 // (per-topic correctness) server-side, which is exactly what the Mastery
 // engine reads — so a submitted attempt feeds topic-mastery + predictions.
 
+export type PracticeQuestionKind = "mc" | "short" | "flashcard";
+
 export type PracticeQuestion = {
   id: string;
   question: string;
+  // How the question is taken + marked. Absent/"mc" is multiple choice.
+  kind?: PracticeQuestionKind;
   options: string[];
   answerIdx: number;
+  // Short-answer key (typed answer marked by normalized match).
+  expectedAnswer?: string | null;
+  acceptableAnswers?: string[];
+  // Flashcard back (answer / definition); front is `question`.
+  back?: string | null;
   explanation?: string | null;
   topic?: string | null;
 };
@@ -688,6 +695,8 @@ export type PracticeScoreSummary = {
 export type PracticeAnswerItem = {
   questionId: string;
   selectedIdx: number;
+  // Typed response for short-answer / reading short questions. Null for MC.
+  textAnswer?: string | null;
   timeMs: number;
 };
 
@@ -725,11 +734,12 @@ export const useSubmitAttempt = () => {
   return useMutation<
     PracticeAttemptResult,
     Error,
-    { attemptId: string; answerItems: PracticeAnswerItem[] }
+    { attemptId: string; answerItems: PracticeAnswerItem[]; focusLossCount?: number }
   >({
-    mutationFn: ({ attemptId, answerItems }) =>
+    mutationFn: ({ attemptId, answerItems, focusLossCount }) =>
       apiClient.patch<PracticeAttemptResult>(`/api/practice/attempts/${attemptId}`, {
         answerItems,
+        focusLossCount: focusLossCount ?? 0,
       }),
     onSuccess: () => {
       // A scored attempt moves practice best-scores, mastery, and predictions.
@@ -739,15 +749,44 @@ export const useSubmitAttempt = () => {
   });
 };
 
+// The student's most recent submitted attempt at a test — used to review a
+// completed test (their answers, the correct answers, explanations) without
+// retaking it. Returns null when there's no attempt yet, or gracefully when
+// the read endpoint isn't deployed (so the UI can fall back).
+export const useLatestAttempt = (testId: string, enabled = true) =>
+  useQuery<PracticeAttemptResult | null>({
+    queryKey: ["practice-latest-attempt", testId],
+    queryFn: async () => {
+      try {
+        return await apiClient.get<PracticeAttemptResult>(
+          `/api/practice/tests/${testId}/attempts/latest`,
+        );
+      } catch {
+        return null;
+      }
+    },
+    enabled: enabled && !!testId,
+    retry: false,
+    staleTime: 60_000,
+  });
+
 // Generate a private practice test with Claude. Topics are optional — pass
 // the student's weakest (from useTopicMastery) to target them, or omit for a
 // general test. Metered server-side by the practice.generate quota; a 402
 // ApiError means the monthly allowance is spent.
+export type PracticeFormat =
+  | "multiple_choice"
+  | "short_answer"
+  | "reading"
+  | "flashcards"
+  | "essay";
+
 export type GenerateTestInput = {
   subjectId: string;
   topics?: string[];
   difficulty?: "foundation" | "core" | "challenge";
   questionCount?: number;
+  format?: PracticeFormat;
 };
 
 export const useGenerateTest = () => {
@@ -1022,14 +1061,98 @@ export const useRewards = () =>
 
 // ── AI tutor (the /dashboard/chatbot academic assistant) ───────────────
 export type AiChatMessage = { role: "user" | "assistant"; content: string };
-export type AiTutorReply = { reply: string; remaining: number; limit: number; used: number };
+export type AiTutorReply = {
+  reply: string;
+  remaining: number;
+  limit: number;
+  used: number;
+  // Present since deep mode: which quota was charged, and whether the reply
+  // ran in deep mode (Opus + extended thinking).
+  quotaKey?: string;
+  deep?: boolean;
+};
+export type AiTutorInput = {
+  messages: AiChatMessage[];
+  deep?: boolean;
+  // Who the student is (name, level, enrolled subjects/courses). Injected into
+  // the tutor's system prompt server-side so replies are student-aware.
+  studentContext?: string;
+};
 
 // Sends the running conversation to the tutor endpoint and returns its reply.
+// `deep` runs the stronger model with extended thinking (ai.deep quota).
 // Throws ApiError on 402 (quota) / 503 (not configured) so the UI can explain.
 export const useAiTutor = () =>
-  useMutation<AiTutorReply, ApiError, AiChatMessage[]>({
-    mutationFn: (messages) => apiClient.post<AiTutorReply>("/api/ai/tutor", { messages }),
+  useMutation<AiTutorReply, ApiError, AiTutorInput>({
+    mutationFn: ({ messages, deep, studentContext }) =>
+      apiClient.post<AiTutorReply>("/api/ai/tutor", {
+        messages,
+        deep: deep ?? false,
+        studentContext: studentContext ?? null,
+      }),
   });
+
+// ── AI tutor conversation history (server-backed) ──────────────────────
+export type TutorConversationSummary = {
+  id: string;
+  title: string;
+  messageCount: number;
+  preview: string;
+  updatedAt: string;
+};
+export type TutorConversation = {
+  id: string;
+  title: string;
+  messages: AiChatMessage[];
+  createdAt: string;
+  updatedAt: string;
+};
+export type SaveConversationInput = { title?: string; messages?: AiChatMessage[] };
+
+export const useTutorConversations = () =>
+  useQuery<TutorConversationSummary[]>({
+    queryKey: queryKeys.tutorConversations(),
+    queryFn: () => apiClient.get<TutorConversationSummary[]>("/api/ai/conversations"),
+  });
+
+export const useTutorConversation = (id: string | null) =>
+  useQuery<TutorConversation>({
+    queryKey: queryKeys.tutorConversation(id ?? "none"),
+    queryFn: () => apiClient.get<TutorConversation>(`/api/ai/conversations/${id}`),
+    enabled: !!id,
+  });
+
+export const useCreateTutorConversation = () => {
+  const qc = useQueryClient();
+  return useMutation<TutorConversation, ApiError, SaveConversationInput>({
+    mutationFn: (input) => apiClient.post<TutorConversation>("/api/ai/conversations", input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.tutorConversations() });
+    },
+  });
+};
+
+export const useSaveTutorConversation = () => {
+  const qc = useQueryClient();
+  return useMutation<TutorConversation, ApiError, { id: string } & SaveConversationInput>({
+    mutationFn: ({ id, ...body }) =>
+      apiClient.put<TutorConversation>(`/api/ai/conversations/${id}`, body),
+    onSuccess: (data) => {
+      void qc.invalidateQueries({ queryKey: queryKeys.tutorConversations() });
+      qc.setQueryData(queryKeys.tutorConversation(data.id), data);
+    },
+  });
+};
+
+export const useDeleteTutorConversation = () => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (id) => apiClient.delete<void>(`/api/ai/conversations/${id}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.tutorConversations() });
+    },
+  });
+};
 
 export const useCareers = () =>
   useQuery<Career[]>({

@@ -26,8 +26,13 @@ namespace Aptiverse.Practice.Domain.Models.Practice
         public string QuestionId { get; set; } = "";
 
         // Index the student selected into the question's Options. -1 means
-        // the question was presented but left unanswered.
+        // the question was presented but left unanswered. Only meaningful for
+        // multiple-choice questions.
         public int SelectedIdx { get; set; } = -1;
+
+        // Typed answer for short-answer / reading short-response questions.
+        // Null for multiple-choice. Preserved raw for ML and any later regrade.
+        public string? TextAnswer { get; set; }
 
         // Wall-clock time the student spent on this question, in milliseconds.
         // 0 when the client didn't report timing. Core ML timing signal.

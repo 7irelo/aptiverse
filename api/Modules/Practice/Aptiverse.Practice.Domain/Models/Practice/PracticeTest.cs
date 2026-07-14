@@ -32,6 +32,24 @@ namespace Aptiverse.Practice.Domain.Models.Practice
 
         public string Title { get; set; } = "";
 
+        // Content format: multiple_choice (default, back-compatible) | short_answer
+        // | reading | flashcards | essay. Governs how the client renders + takes
+        // it and how the service marks it. Existing rows default to
+        // multiple_choice via the column default.
+        public string Format { get; set; } = "multiple_choice";
+
+        // Reading-comprehension passage the questions refer to. Null for other
+        // formats.
+        public string? Passage { get; set; }
+
+        // Essay prompt. Null for non-essay formats. An essay test is feedback-
+        // only: the student writes in the workspace and the tutor comments
+        // against Criteria; there is no scored attempt.
+        public string? Prompt { get; set; }
+
+        // Essay marking criteria (jsonb string[]). Empty for non-essay formats.
+        public List<string> Criteria { get; set; } = [];
+
         // Topic labels this test exercises. Drives the per-topic correctness
         // tagging at score time (each question references one of these topics).
         // Stored as a jsonb string[] — see configuration.
@@ -71,11 +89,27 @@ namespace Aptiverse.Practice.Domain.Models.Practice
 
         public string Question { get; set; } = "";
 
+        // How this question is taken + marked: mc (default) | short | flashcard.
+        // Reading tests mix mc and short. Defaults keep every existing jsonb
+        // question a multiple-choice one.
+        public string Kind { get; set; } = "mc";
+
         public List<string> Options { get; set; } = [];
 
         // Index into Options that is the correct choice. This is the answer
-        // key — never serialized to the student before they submit.
+        // key — never serialized to the student before they submit. Only
+        // meaningful for Kind == "mc".
         public int AnswerIdx { get; set; }
+
+        // Short-answer marking key: the canonical expected answer plus any
+        // acceptable alternates. Marked by case/whitespace/punctuation-
+        // insensitive match — no OCR, no free-form AI grading.
+        public string? ExpectedAnswer { get; set; }
+        public List<string> AcceptableAnswers { get; set; } = [];
+
+        // Flashcard back (the answer / definition). Front is Question. Only
+        // set for Kind == "flashcard".
+        public string? Back { get; set; }
 
         public string? Explanation { get; set; }
 

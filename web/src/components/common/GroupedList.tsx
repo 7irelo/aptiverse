@@ -25,6 +25,8 @@ export type GroupedListProps<T> = {
   groupLabel?: (key: string) => React.ReactNode;
   /** Optional leading icon per group. */
   groupIcon?: (key: string) => React.ReactNode;
+  /** Optional right-aligned summary for a group (aggregates, progress). */
+  groupSummary?: (key: string, items: T[]) => React.ReactNode;
   /** Explicit group order; unknown keys keep their first-seen order after these. */
   groupOrder?: string[];
   /** Start every group collapsed. Default false. */
@@ -39,6 +41,7 @@ export function GroupedList<T>({
   renderItem,
   groupLabel,
   groupIcon,
+  groupSummary,
   groupOrder,
   defaultCollapsed = false,
   itemSpacing = 1,
@@ -130,6 +133,11 @@ export function GroupedList<T>({
                   color: "primary.main",
                 }}
               />
+              {groupSummary && (
+                <Box sx={{ ml: "auto", display: "flex", alignItems: "center", pl: 1 }}>
+                  {groupSummary(group.key, group.items)}
+                </Box>
+              )}
             </Box>
             <Collapse in={!isCollapsed} unmountOnExit>
               <Stack spacing={itemSpacing} sx={{ pb: 1 }}>

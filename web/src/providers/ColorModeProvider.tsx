@@ -30,7 +30,12 @@ export function ColorModeProvider({ children }: { children: React.ReactNode }) {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  const theme = useMemo(() => buildTheme(resolvedMode), [resolvedMode]);
+  // `buildTheme` is intentionally in the deps. In production it's a stable
+  // module import, so the theme still only rebuilds when the colour mode
+  // changes. In development, editing the theme files makes Fast Refresh hand
+  // us a new `buildTheme` identity, which re-runs this memo so theme edits
+  // apply live without a hard refresh.
+  const theme = useMemo(() => buildTheme(resolvedMode), [resolvedMode, buildTheme]);
   const value = useMemo(() => ({ resolvedMode }), [resolvedMode]);
 
   return (

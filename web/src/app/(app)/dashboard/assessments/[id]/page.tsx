@@ -8,7 +8,6 @@ import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
-import LinearProgress from "@mui/material/LinearProgress";
 import Chip from "@mui/material/Chip";
 import Link from "next/link";
 import dayjs from "dayjs";
@@ -47,6 +46,9 @@ export default function AssessmentDetail({ params }: { params: Promise<{ id: str
         ]}
         actions={
           <>
+            <Button component={Link} href={`/dashboard/assessments/${id}/edit`} variant="outlined">
+              Edit
+            </Button>
             <Button component={Link} href="/dashboard/practice" variant="outlined">
               Generate practice
             </Button>
@@ -156,7 +158,6 @@ function AssessmentBody({
         </Grid>
         <Grid size={{ xs: 12, lg: 5 }}>
           <Stack spacing={3}>
-            <RubricCard rubric={a.rubric} />
             {a.notes && <NotesCard notes={a.notes} />}
             <RelatedCard unitName={subjectName} unitId={a.subjectId} isTertiary={isTertiary} />
           </Stack>
@@ -214,57 +215,6 @@ function TasksCard({
             </Box>
           </Stack>
           <TasksEditor assessmentId={assessmentId} tasks={tasks ?? []} />
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-}
-
-// ─── Rubric ─────────────────────────────────────────────────────────
-
-function RubricCard({ rubric }: { rubric?: Assessment["rubric"] }) {
-  const hasRubric = Array.isArray(rubric) && rubric.length > 0;
-
-  return (
-    <motion.div {...enter}>
-      <Card>
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: "0.08em" }}>
-            Marking
-          </Typography>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: hasRubric ? 2 : 1 }}>
-            Rubric
-          </Typography>
-
-          {hasRubric ? (
-            <Stack spacing={2}>
-              {rubric!.map((r) => (
-                <Box key={r.criterion}>
-                  <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {r.criterion}
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {r.weight}%
-                    </Typography>
-                  </Stack>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-                    {r.description}
-                  </Typography>
-                  <LinearProgress
-                    variant="determinate"
-                    value={r.weight}
-                    color="primary"
-                    sx={{ height: 4, borderRadius: 999 }}
-                  />
-                </Box>
-              ))}
-            </Stack>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              No rubric attached. When your teacher shares one, it'll appear here with criteria and weights.
-            </Typography>
-          )}
         </CardContent>
       </Card>
     </motion.div>

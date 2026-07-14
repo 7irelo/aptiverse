@@ -40,14 +40,15 @@ import {
   type LiveActivity,
 } from "@/lib/api/queries";
 import { type Goal, type Subject, type MoodPoint } from "@/lib/mockData";
-import { useCountUp } from "@/lib/hooks/useCountUp";
 import { enter } from "@/lib/motion";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForwardOutlined";
-import ArrowDropUpIcon from "@mui/icons-material/ArrowDropUp";
-import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
-import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorderOutlined";
-import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
-import QuizOutlinedIcon from "@mui/icons-material/QuizOutlined";
+import {
+  ArrowRight,
+  TrendingUp,
+  TrendingDown,
+  Heart,
+  Flag,
+  NotebookPen,
+} from "lucide-react";
 
 dayjs.extend(relativeTime);
 
@@ -201,7 +202,7 @@ function QuickActionsRail() {
           href="/dashboard/wellbeing"
           size="small"
           variant="outlined"
-          startIcon={<FavoriteBorderIcon />}
+          startIcon={<Heart size={18} />}
         >
           Log mood
         </Button>
@@ -210,7 +211,7 @@ function QuickActionsRail() {
           href="/dashboard/goals"
           size="small"
           variant="outlined"
-          startIcon={<FlagOutlinedIcon />}
+          startIcon={<Flag size={18} />}
         >
           Add goal
         </Button>
@@ -219,8 +220,7 @@ function QuickActionsRail() {
           href="/dashboard/practice"
           size="small"
           variant="contained"
-          color="secondary"
-          startIcon={<QuizOutlinedIcon />}
+          startIcon={<NotebookPen size={18} />}
         >
           Practice
         </Button>
@@ -271,7 +271,7 @@ function UpcomingAssessmentsCard({
             <Button
               component={Link}
               href="/dashboard/assessments"
-              endIcon={<ArrowForwardIcon />}
+              endIcon={<ArrowRight size={16} />}
               size="small"
             >
               All
@@ -516,7 +516,6 @@ function AcademicStandingCard({
   const predictedAverage = rawPredicted != null ? Math.round(rawPredicted) : null;
   const delta =
     rawPredicted != null && rawCurrent != null ? Math.round(rawPredicted - rawCurrent) : null;
-  const animated = useCountUp(predictedAverage);
 
   const focus = weakTopics.slice(0, 3);
   const empty = !loading && n === 0 && focus.length === 0;
@@ -531,7 +530,7 @@ function AcademicStandingCard({
             <Button
               component={Link}
               href="/dashboard/mastery"
-              endIcon={<ArrowForwardIcon />}
+              endIcon={<ArrowRight size={16} />}
               size="small"
             >
               Details
@@ -581,7 +580,7 @@ function AcademicStandingCard({
                         fontVariantNumeric: "tabular-nums",
                       }}
                     >
-                      {animated}
+                      {predictedAverage}
                     </Typography>
                     <Typography
                       sx={{ fontSize: "1rem", fontWeight: 500, color: "primary.main", lineHeight: 1 }}
@@ -598,9 +597,9 @@ function AcademicStandingCard({
                     sx={{ color: delta > 0 ? "success.main" : "warning.main", pb: 1 }}
                   >
                     {delta > 0 ? (
-                      <ArrowDropUpIcon fontSize="small" />
+                      <TrendingUp size={18} />
                     ) : (
-                      <ArrowDropDownIcon fontSize="small" />
+                      <TrendingDown size={18} />
                     )}
                     <Typography
                       variant="body2"
@@ -670,7 +669,7 @@ function SubjectPredictionRow({ p }: { p: TermPrediction }) {
           >
             {p.currentTerm}%
           </Typography>
-          <ArrowForwardIcon sx={{ fontSize: 14, color: "text.disabled" }} />
+          <Box component={ArrowRight} sx={{ width: 14, height: 14, color: "text.disabled", flexShrink: 0 }} />
           <Typography
             variant="subtitle2"
             sx={{
@@ -719,7 +718,7 @@ function ActiveGoalsCard({
             <Button
               component={Link}
               href="/dashboard/goals"
-              endIcon={<ArrowForwardIcon />}
+              endIcon={<ArrowRight size={16} />}
               size="small"
             >
               All
@@ -846,7 +845,7 @@ function WellbeingSnapshotCard() {
             <Button
               component={Link}
               href="/dashboard/wellbeing"
-              endIcon={<ArrowForwardIcon />}
+              endIcon={<ArrowRight size={16} />}
               size="small"
             >
               More
@@ -870,7 +869,7 @@ function WellbeingSnapshotCard() {
               variant="contained"
               color="secondary"
               size="small"
-              startIcon={<FavoriteBorderIcon />}
+              startIcon={<Heart size={18} />}
             >
               Log today&apos;s mood
             </Button>

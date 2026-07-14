@@ -27,7 +27,14 @@ namespace Aptiverse.AI.Core
         // claude-haiku-4-5 / claude-sonnet-4-6 etc. — see https://docs.anthropic.com/.
         public string Model { get; init; } = "claude-haiku-4-5";
         public int MaxTokens { get; init; } = 1024;
-        public double Temperature { get; init; } = 0.4;
+        // Optional. Newer models (Opus 4.7/4.8, Sonnet 5, Fable 5) reject
+        // `temperature` with a 400, so it's omitted from the request when null.
+        // Only set it for older models that still accept it.
+        public double? Temperature { get; init; }
+        // When true, enable adaptive extended thinking (Claude 4.6+ models).
+        // The client sends `thinking: { type: "adaptive" }`; thinking blocks
+        // are stripped from the returned text. Used by the tutor's deep mode.
+        public bool Thinking { get; init; }
     }
 
     public record AnthropicMessage
