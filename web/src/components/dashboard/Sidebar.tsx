@@ -21,7 +21,7 @@ import { Logo, LogoMark } from "@/components/common/Logo";
 import { usePathname } from "next/navigation";
 import { navForRole } from "./nav-config";
 import { useRoleStore } from "@/providers/RoleProvider";
-import { useNavigation } from "@/lib/api/queries";
+import { useNavigation, useAcademicProfile } from "@/lib/api/queries";
 import { iconForKey } from "./nav-icons";
 import { sectionsToTree, isNodeActive, isLeafActive, type NavNode } from "./nav-tree";
 import { ExpandedMenu } from "./ExpandedMenu";
@@ -44,6 +44,8 @@ type SidebarProps = {
 function useNavTree(): NavNode[] {
   const role = useRoleStore((s) => s.role);
   const { data } = useNavigation();
+  const profileQuery = useAcademicProfile();
+  const isTertiary = profileQuery.data?.educationLevel === "tertiary";
 
   const sections = data
     ? data.map((s) => ({
@@ -57,7 +59,22 @@ function useNavTree(): NavNode[] {
       }))
     : navForRole(role);
 
-  return sectionsToTree(sections);
+  // Tertiary students study Courses, not CAPS Subjects. Relabel and repoint
+  // the one "Subjects" nav item so the rail matches their world and skips the
+  // subjects -> courses redirect bounce. The data layer already unifies both
+  // behind a single study-unit id (practiceKey), so this is label-only.
+  const resolved = isTertiary
+    ? sections.map((s) => ({
+        ...s,
+        items: s.items.map((i) =>
+          i.href === "/dashboard/subjects"
+            ? { ...i, label: "Courses", href: "/dashboard/courses" }
+            : i,
+        ),
+      }))
+    : sections;
+
+  return sectionsToTree(resolved);
 }
 
 export function Sidebar({ open, onClose, variant = "permanent" }: SidebarProps) {

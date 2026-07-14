@@ -1,3 +1,4 @@
+using System.Text;
 using Aptiverse.Practice.Application.Frontend.Dtos;
 using Aptiverse.Practice.Domain.Models.Practice;
 using Aptiverse.Practice.Domain.Repositories;
@@ -96,8 +97,12 @@ namespace Aptiverse.Practice.Application.Practice.Services
                 {
                     Id = q.Id,
                     Question = q.Question,
+                    Kind = string.IsNullOrWhiteSpace(q.Kind) ? "mc" : q.Kind,
                     Options = q.Options.ToList(),
                     AnswerIdx = q.AnswerIdx,
+                    ExpectedAnswer = q.ExpectedAnswer,
+                    AcceptableAnswers = q.AcceptableAnswers.ToList(),
+                    Back = q.Back,
                     Explanation = q.Explanation,
                     Topic = q.Topic,
                 })
@@ -113,6 +118,22 @@ namespace Aptiverse.Practice.Application.Practice.Services
             if (!exists)
                 return null;
 
+            // A graded test is taken once. If the student already has a
+            // submitted attempt, don't create a second one — hand back the
+            // existing graded attempt so the client shows results, not a
+            // fresh run. This is the server-side guard behind the UI gate.
+            var priorSubmitted = await _attempts.GetManyAsync(
+                predicate: a =>
+                    a.StudentId == studentId &&
+                    a.TestId == testId &&
+                    a.Status == AttemptStatus.Submitted,
+                orderBy: q => q.OrderByDescending(a => a.SubmittedAt),
+                include: q => q.Include(a => a.Items).Include(a => a.ScoreSummary),
+                cancellationToken: cancellationToken);
+            var existingAttempt = priorSubmitted.FirstOrDefault();
+            if (existingAttempt is not null)
+                return MapAttempt(existingAttempt, existingAttempt.ScoreSummary);
+
             var attempt = new PracticeAttempt
             {
                 TestId = testId,
@@ -123,6 +144,23 @@ namespace Aptiverse.Practice.Application.Practice.Services
 
             await _attempts.AddAsync(attempt, cancellationToken);
             return MapAttempt(attempt, summary: null);
+        }
+
+        public async Task<FrontendAttemptDto?> GetLatestAttemptAsync(
+            long testId,
+            string studentId,
+            CancellationToken cancellationToken = default)
+        {
+            var submitted = await _attempts.GetManyAsync(
+                predicate: a =>
+                    a.StudentId == studentId &&
+                    a.TestId == testId &&
+                    a.Status == AttemptStatus.Submitted,
+                orderBy: q => q.OrderByDescending(a => a.SubmittedAt),
+                include: q => q.Include(a => a.Items).Include(a => a.ScoreSummary),
+                cancellationToken: cancellationToken);
+            var attempt = submitted.FirstOrDefault();
+            return attempt is null ? null : MapAttempt(attempt, attempt.ScoreSummary);
         }
 
         public async Task<FrontendAttemptDto?> SubmitAttemptAsync(
@@ -174,11 +212,32 @@ namespace Aptiverse.Practice.Application.Practice.Services
             foreach (var q in questions)
             {
                 var hasSel = selections.TryGetValue(q.Id, out var sel);
-                var selectedIdx = hasSel ? sel.SelectedIdx : -1;
                 var timeMs = hasSel ? sel.TimeMs : 0;
                 var topic = string.IsNullOrWhiteSpace(q.Topic) ? fallbackTopic : q.Topic!;
-                var isAnswered = selectedIdx >= 0;
-                var isCorrect = isAnswered && selectedIdx == q.AnswerIdx;
+                var isShort = string.Equals(q.Kind, "short", StringComparison.OrdinalIgnoreCase);
+
+                // Short-answer questions carry a typed answer marked by
+                // normalized string match; multiple-choice carry an index
+                // compared to the answer key. Flashcard/essay formats never
+                // reach a scored attempt.
+                int selectedIdx;
+                string? textAnswer;
+                bool isAnswered;
+                bool isCorrect;
+                if (isShort)
+                {
+                    selectedIdx = -1;
+                    textAnswer = hasSel ? sel.Text : null;
+                    isAnswered = !string.IsNullOrWhiteSpace(textAnswer);
+                    isCorrect = isAnswered && ShortAnswerMatches(textAnswer!, q);
+                }
+                else
+                {
+                    selectedIdx = hasSel ? sel.SelectedIdx : -1;
+                    textAnswer = null;
+                    isAnswered = selectedIdx >= 0;
+                    isCorrect = isAnswered && selectedIdx == q.AnswerIdx;
+                }
 
                 if (!isAnswered) unanswered++;
                 else if (isCorrect) correct++;
@@ -192,6 +251,7 @@ namespace Aptiverse.Practice.Application.Practice.Services
                 {
                     QuestionId = q.Id,
                     SelectedIdx = selectedIdx,
+                    TextAnswer = textAnswer,
                     TimeMs = timeMs,
                 };
                 submissions.Add(sub);
@@ -201,7 +261,9 @@ namespace Aptiverse.Practice.Application.Practice.Services
                     QuestionId = q.Id,
                     Topic = topic,
                     GivenAnswerIdx = selectedIdx,
-                    CorrectAnswerIdx = q.AnswerIdx,
+                    CorrectAnswerIdx = isShort ? -1 : q.AnswerIdx,
+                    GivenAnswerText = textAnswer,
+                    ExpectedAnswerText = isShort ? q.ExpectedAnswer : null,
                     IsCorrect = isCorrect,
                     TimeMs = timeMs,
                     AnswerSubmission = sub,   // EF wires AnswerSubmissionId on save
@@ -250,6 +312,8 @@ namespace Aptiverse.Practice.Application.Practice.Services
             attempt.Status = AttemptStatus.Submitted;
             attempt.SubmittedAt = DateTime.UtcNow;
             attempt.Score = scorePercent;
+            // Proctoring signal from the client — clamp to non-negative.
+            attempt.FocusLossCount = Math.Max(0, submission.FocusLossCount);
 
             await _attempts.UpdateAsync(attempt, cancellationToken);
 
@@ -258,18 +322,18 @@ namespace Aptiverse.Practice.Application.Practice.Services
 
         // --- mapping / helpers -------------------------------------------------
 
-        private static Dictionary<string, (int SelectedIdx, int TimeMs)> BuildSelections(
+        private static Dictionary<string, (int SelectedIdx, string? Text, int TimeMs)> BuildSelections(
             FrontendAttemptDto submission,
             List<PracticeQuestion> questions)
         {
-            var map = new Dictionary<string, (int, int)>(StringComparer.Ordinal);
+            var map = new Dictionary<string, (int, string?, int)>(StringComparer.Ordinal);
 
             if (submission.AnswerItems is { Count: > 0 })
             {
                 foreach (var ai in submission.AnswerItems)
                 {
                     if (!string.IsNullOrEmpty(ai.QuestionId))
-                        map[ai.QuestionId] = (ai.SelectedIdx, ai.TimeMs);
+                        map[ai.QuestionId] = (ai.SelectedIdx, ai.TextAnswer, ai.TimeMs);
                 }
                 return map;
             }
@@ -277,9 +341,45 @@ namespace Aptiverse.Practice.Application.Practice.Services
             // Flat answers[] path — positionally aligned to question order.
             for (var i = 0; i < questions.Count && i < submission.Answers.Count; i++)
             {
-                map[questions[i].Id] = (submission.Answers[i], 0);
+                map[questions[i].Id] = (submission.Answers[i], null, 0);
             }
             return map;
+        }
+
+        // Short-answer marking: a case/whitespace/punctuation-insensitive match
+        // of the typed answer against the expected answer or any acceptable
+        // alternate. Deterministic, no AI, no OCR — a fair fit for recall-style
+        // short answers without pretending to grade free prose.
+        private static bool ShortAnswerMatches(string given, PracticeQuestion q)
+        {
+            var g = NormalizeAnswer(given);
+            if (g.Length == 0) return false;
+            if (!string.IsNullOrWhiteSpace(q.ExpectedAnswer) && NormalizeAnswer(q.ExpectedAnswer) == g)
+                return true;
+            foreach (var alt in q.AcceptableAnswers)
+                if (!string.IsNullOrWhiteSpace(alt) && NormalizeAnswer(alt) == g)
+                    return true;
+            return false;
+        }
+
+        private static string NormalizeAnswer(string s)
+        {
+            var sb = new StringBuilder(s.Length);
+            var prevSpace = false;
+            foreach (var ch in s.Trim().ToLowerInvariant())
+            {
+                if (char.IsLetterOrDigit(ch))
+                {
+                    sb.Append(ch);
+                    prevSpace = false;
+                }
+                else if (!prevSpace && sb.Length > 0)
+                {
+                    sb.Append(' ');
+                    prevSpace = true;
+                }
+            }
+            return sb.ToString().Trim();
         }
 
         private static FrontendPracticeTestDto MapTest(PracticeTest t, int attempts, int? bestScore) =>
@@ -288,10 +388,14 @@ namespace Aptiverse.Practice.Application.Practice.Services
                 Id = t.Id.ToString(),
                 SubjectId = t.SubjectId,
                 Title = t.Title,
+                Format = string.IsNullOrWhiteSpace(t.Format) ? "multiple_choice" : t.Format,
                 Topics = t.Topics.ToList(),
                 QuestionCount = t.Questions.Count,
                 Difficulty = t.Difficulty,
                 DurationMinutes = t.DurationMinutes,
+                Passage = t.Passage,
+                Prompt = t.Prompt,
+                Criteria = t.Criteria.ToList(),
                 BestScore = bestScore,
                 Attempts = attempts,
                 AlignedSBA = t.AlignedSBA,
@@ -307,6 +411,7 @@ namespace Aptiverse.Practice.Application.Practice.Services
                 Status = StatusToWire(a.Status),
                 StartedAt = a.StartedAt,
                 SubmittedAt = a.SubmittedAt,
+                FocusLossCount = a.FocusLossCount,
                 Score = a.Score,
                 Answers = a.Items
                     .OrderBy(i => i.Id)
@@ -318,6 +423,7 @@ namespace Aptiverse.Practice.Application.Practice.Services
                     {
                         QuestionId = i.QuestionId,
                         SelectedIdx = i.GivenAnswerIdx,
+                        TextAnswer = i.GivenAnswerText,
                         TimeMs = i.TimeMs,
                     })
                     .ToList(),

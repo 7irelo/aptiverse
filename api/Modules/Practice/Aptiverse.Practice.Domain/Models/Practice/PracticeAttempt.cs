@@ -28,6 +28,11 @@ namespace Aptiverse.Practice.Domain.Models.Practice
         public DateTime StartedAt { get; set; }
         public DateTime? SubmittedAt { get; set; }
 
+        // Proctoring signal: how many times the student left the test tab
+        // (switched tab / app / minimised) while the attempt was live and not
+        // paused. Reported by the client at submit; 0 for a clean run.
+        public int FocusLossCount { get; set; }
+
         // Persisted as text via the enum-as-string convention.
         public AttemptStatus Status { get; set; } = AttemptStatus.InProgress;
 

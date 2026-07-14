@@ -21,9 +21,6 @@ import Skeleton from "@mui/material/Skeleton";
 import Drawer from "@mui/material/Drawer";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import useMediaQuery from "@mui/material/useMediaQuery";
@@ -39,24 +36,27 @@ import CloseIcon from "@mui/icons-material/CloseOutlined";
 import ChecklistIcon from "@mui/icons-material/ChecklistOutlined";
 import ViewColumnIcon from "@mui/icons-material/ViewColumnOutlined";
 import ViewStreamIcon from "@mui/icons-material/ViewStreamOutlined";
-import KeyboardIcon from "@mui/icons-material/KeyboardOutlined";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForwardOutlined";
 import { AtmosphericBackdrop } from "@/components/common/AtmosphericBackdrop";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { TasksEditor } from "@/components/workspace/TasksEditor";
-import { MathEditor } from "@/components/workspace/MathEditor";
-import { UploadsStrip } from "@/components/workspace/UploadsStrip";
+import { PracticeRunner } from "@/components/practice/PracticeRunner";
+import { Markdown } from "@/components/common/Markdown";
+import { ChevronLeft } from "lucide-react";
 import {
   useAssessments,
   useSubjects,
   useUpdateAssessment,
   usePracticeTests,
+  useAiTutor,
+  type AiChatMessage,
 } from "@/lib/api/queries";
 import type { Assessment, AssessmentType, Subject, PracticeTest } from "@/lib/mockData";
+import { ASSESSMENT_TYPE_LABELS } from "@/lib/mockData";
 import { useWorkspaceDraft, type AutosaveState } from "@/lib/hooks/useWorkspaceDraft";
-import { useAiHelp, type AiHelpMessage } from "@/lib/hooks/useAiHelp";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import dayjs from "dayjs";
 
 // ─── Tab model — adapts to assessment type ────────────────────────────
@@ -66,12 +66,11 @@ import dayjs from "dayjs";
 // not an essay editor that doesn't apply. Investigations and practicals
 // fall in between — notes plus a working area for observations / data.
 
-type TabKey = "notes" | "draft" | "working" | "practice";
+type TabKey = "notes" | "draft" | "practice";
 
 const TAB_LABELS: Record<TabKey, string> = {
   notes:    "Notes",
   draft:    "Draft",
-  working:  "Working",
   practice: "Practice",
 };
 
@@ -82,11 +81,11 @@ function tabsForType(type: AssessmentType): TabKey[] {
       return ["notes", "draft"];
     case "test":
     case "exam":
-      return ["practice", "working"];
+      return ["practice"];
     case "investigation":
     case "practical":
     case "project":
-      return ["notes", "working"];
+      return ["notes"];
     default:
       return ["notes"];
   }
@@ -96,24 +95,19 @@ type ViewMode = "tabbed" | "split";
 
 const AI_TUTOR_INPUT_ID = "workspace-ai-tutor-input";
 
-function platformModifier(): { key: "metaKey" | "ctrlKey"; label: string } {
-  if (typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform)) {
-    return { key: "metaKey", label: "⌘" };
-  }
-  return { key: "ctrlKey", label: "Ctrl" };
-}
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  const tag = target.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable;
-}
-
 // ──────────────────────────────────────────────────────────────────────
 
 export default function WorkspacePage() {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // A standalone practice test opened from the Practice tab (`?test=<id>`).
+  // Practice tests aren't SBAs, so they bypass the assessment workspace
+  // entirely: the runner gates itself (fresh test -> instructions, an
+  // already-taken one -> its results), and Back returns to the catalogue.
+  const directTestId = searchParams.get("test");
 
   const assessmentsQuery = useAssessments();
   const subjectsQuery = useSubjects();
@@ -187,8 +181,15 @@ export default function WorkspacePage() {
 
   const [viewMode, setViewMode] = useState<ViewMode>("tabbed");
   const [aiOpen, setAiOpen] = useState(false);
+  // Desktop AI-tutor panel is open by default: the tutor is a first-class
+  // part of the workspace, always present as a full-height right panel. The
+  // toolbar toggle hides it when the student wants the room. Mobile and focus
+  // mode reach the same panel via the drawer (`aiOpen`).
+  const [aiRailOpen, setAiRailOpen] = useState(true);
   const [contextOpen, setContextOpen] = useState(false);
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  // True while the student is inside a practice attempt. The tutor is turned
+  // off and the rails clear so the only thing on screen is the timed test.
+  const [testInProgress, setTestInProgress] = useState(false);
 
   // Focus mode: the workspace transforms when a Pomodoro session is
   // running. Context cards (SBA, Tasks) and the AI tutor rail fade
@@ -206,47 +207,21 @@ export default function WorkspacePage() {
     if (!splitEligible && viewMode === "split") setViewMode("tabbed");
   }, [splitEligible, viewMode]);
 
-  // Keyboard shortcuts. The mapping adapts to the available tabs:
-  // ⌘1 = first tab, ⌘2 = second tab (if present).
-  useEffect(() => {
-    const mod = platformModifier();
-    const onKey = (e: KeyboardEvent) => {
-      const editing = isEditableTarget(e.target);
-
-      if (!editing && e.key === "?" && !e[mod.key] && !e.altKey) {
-        e.preventDefault();
-        setShortcutsOpen(true);
-        return;
-      }
-
-      if (!e[mod.key]) return;
-
-      if (e.key === "1" && tabs[0]) {
-        e.preventDefault();
-        setViewMode("tabbed");
-        setTab(tabs[0]);
-        return;
-      }
-      if (e.key === "2" && tabs[1]) {
-        e.preventDefault();
-        setViewMode("tabbed");
-        setTab(tabs[1]);
-        return;
-      }
-      if (e.key === "\\") {
-        e.preventDefault();
-        if (splitEligible) setViewMode((v) => (v === "split" ? "tabbed" : "split"));
-        return;
-      }
-      if (e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        if (!isDesktop) setAiOpen(true);
-        setTimeout(() => document.getElementById(AI_TUTOR_INPUT_ID)?.focus(), 0);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [isDesktop, splitEligible, tabs]);
+  if (directTestId) {
+    return (
+      <AtmosphericBackdrop>
+        <PageHeader
+          title="Workspace"
+          description="Your timed run and results, in the workspace."
+          breadcrumbs={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Workspace" },
+          ]}
+        />
+        <PracticeRunner testId={directTestId} onExit={() => router.push("/dashboard/practice")} />
+      </AtmosphericBackdrop>
+    );
+  }
 
   if (assessmentsQuery.isLoading || subjectsQuery.isLoading) {
     return (
@@ -286,9 +261,8 @@ export default function WorkspacePage() {
   const editorSlots = (
     <>
       {safeTab === "notes"    && <NotesPanel    assessmentId={activeId} />}
-      {safeTab === "draft"    && <DraftPanel    assessmentId={activeId} draftTitle={activeAssessment.title} />}
-      {safeTab === "working"  && <WorkingPanel  assessmentId={activeId} subjectName={subject?.name} subjectCategory={subject?.category} />}
-      {safeTab === "practice" && <PracticePanel assessment={activeAssessment} subject={subject} />}
+      {safeTab === "draft"    && <DraftPanel    assessmentId={activeId} draftTitle={activeAssessment.title} type={activeAssessment.type} />}
+      {safeTab === "practice" && <PracticePanel assessment={activeAssessment} subject={subject} onRunningChange={setTestInProgress} />}
     </>
   );
 
@@ -389,7 +363,7 @@ export default function WorkspacePage() {
                 color="text.secondary"
                 sx={{ mt: 1 }}
               >
-                {subject?.name ?? activeAssessment.subjectId} · {activeAssessment.type}
+                {subject?.name ?? activeAssessment.subjectId} · {ASSESSMENT_TYPE_LABELS[activeAssessment.type]}
               </Typography>
               {heroDueChip && (
                 <Stack
@@ -419,25 +393,53 @@ export default function WorkspacePage() {
             </Typography>
           )}
         </Box>
-        <TextField
-          select
-          size="small"
-          value={activeId ?? ""}
-          onChange={(e) => setActiveId(e.target.value)}
-          sx={{ minWidth: { xs: "100%", sm: 280 }, flexShrink: 0 }}
-        >
-          {activeAssessments.map((a) => {
-            const subj = (subjectsQuery.data ?? []).find((s) => s.id === a.subjectId);
-            return (
-              <MenuItem key={a.id} value={a.id}>
-                {subj?.name ?? a.subjectId} · {a.title}
-              </MenuItem>
-            );
-          })}
-        </TextField>
+        {activeAssessments.length > 1 && (
+          <TextField
+            select
+            size="small"
+            label="Switch SBA"
+            value={activeId ?? ""}
+            onChange={(e) => setActiveId(e.target.value)}
+            sx={{ minWidth: { xs: "100%", sm: 300 }, flexShrink: 0 }}
+            SelectProps={{
+              // The trigger shows just the active SBA's title — the subject
+              // and type already sit in the hero to its left, so repeating
+              // them (or worse, the raw subject key) is noise.
+              renderValue: (val) => {
+                const a = activeAssessments.find((x) => x.id === val);
+                return (
+                  <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
+                    {a?.title ?? "Select an SBA"}
+                  </Typography>
+                );
+              },
+              MenuProps: { PaperProps: { sx: { maxWidth: 360 } } },
+            }}
+          >
+            {activeAssessments.map((a) => {
+              // Match on the canonical slug — Assessment.subjectId stores the
+              // slug, which lives on Subject.subjectId, not Subject.id.
+              const subj = (subjectsQuery.data ?? []).find((s) => s.subjectId === a.subjectId);
+              const days = dayjs(a.dueDate).diff(dayjs(), "day");
+              return (
+                <MenuItem key={a.id} value={a.id} sx={{ py: 1 }}>
+                  <Stack sx={{ minWidth: 0, width: "100%" }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+                      {a.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" noWrap>
+                      {subj?.name ?? a.subjectId} · {ASSESSMENT_TYPE_LABELS[a.type]}
+                      {days < 0 ? " · overdue" : days === 0 ? " · due today" : ` · due in ${days}d`}
+                    </Typography>
+                  </Stack>
+                </MenuItem>
+              );
+            })}
+          </TextField>
+        )}
       </Stack>
 
-      {!isDesktop && (
+      {!isDesktop && !testInProgress && (
         <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
           <Button
             fullWidth
@@ -465,8 +467,17 @@ export default function WorkspacePage() {
           display: "grid",
           gridTemplateColumns: {
             xs: "1fr",
-            // Focus mode: drop the right rail, narrow the left.
-            md: focusMode ? "220px 1fr" : "300px 1fr 340px",
+            // A running test collapses to a single full-width column so
+            // nothing distracts from it — this must win over focus mode, else
+            // the lone centre column lands in focus mode's narrow 220px track.
+            // Focus mode otherwise narrows the left and drops the right rail.
+            md: testInProgress
+              ? "1fr"
+              : focusMode
+                ? "220px 1fr"
+                : aiRailOpen
+                  ? "300px 1fr 360px"
+                  : "300px 1fr",
           },
           gap: { xs: 2, md: 3 },
           alignItems: "start",
@@ -474,13 +485,15 @@ export default function WorkspacePage() {
             "grid-template-columns 220ms cubic-bezier(0.25, 1, 0.5, 1)",
         }}
       >
-        <Box sx={{ display: { xs: "none", md: "block" } }}>
-          <LeftRail
-            assessment={activeAssessment}
-            focusMode={focusMode}
-            onPomodoroStateChange={setPomodoroState}
-          />
-        </Box>
+        {!testInProgress && (
+          <Box sx={{ display: { xs: "none", md: "block" } }}>
+            <LeftRail
+              assessment={activeAssessment}
+              focusMode={focusMode}
+              onPomodoroStateChange={setPomodoroState}
+            />
+          </Box>
+        )}
 
         <Card sx={{ minHeight: { xs: 420, md: 620 } }}>
           <CardContent sx={{ p: 0, pb: "0 !important" }}>
@@ -545,11 +558,18 @@ export default function WorkspacePage() {
                     </Tooltip>
                   </>
                 )}
-                <Tooltip title="Keyboard shortcuts (?)">
-                  <IconButton size="small" onClick={() => setShortcutsOpen(true)} aria-label="Keyboard shortcuts">
-                    <KeyboardIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+                {isDesktop && !focusMode && !testInProgress && (
+                  <Tooltip title={aiRailOpen ? "Hide AI tutor" : "Show AI tutor"}>
+                    <IconButton
+                      size="small"
+                      onClick={() => setAiRailOpen((v) => !v)}
+                      aria-label={aiRailOpen ? "Hide AI tutor" : "Show AI tutor"}
+                      color={aiRailOpen ? "primary" : "default"}
+                    >
+                      <SmartToyIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
               </Stack>
             </Stack>
 
@@ -561,14 +581,12 @@ export default function WorkspacePage() {
           </CardContent>
         </Card>
 
-        {!focusMode && (
+        {!focusMode && aiRailOpen && !testInProgress && (
           <Box sx={{ display: { xs: "none", md: "block" } }}>
             <RightRail assessment={activeAssessment} subject={subject} />
           </Box>
         )}
       </Box>
-
-      <ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
       <Drawer
         anchor="left"
@@ -586,7 +604,7 @@ export default function WorkspacePage() {
         // Drawer works for two cases now: mobile (rails always
         // drawer-only) and desktop-in-focus-mode (right rail hidden
         // but student still needs AI tutor access).
-        open={(focusMode || !isDesktop) && aiOpen}
+        open={(focusMode || !isDesktop) && aiOpen && !testInProgress}
         onClose={() => setAiOpen(false)}
         PaperProps={{ sx: { width: { xs: "100vw", sm: 380 } } }}
       >
@@ -612,8 +630,7 @@ function PanelByKey({
 }) {
   switch (tabKey) {
     case "notes":    return <NotesPanel    assessmentId={activeId} />;
-    case "draft":    return <DraftPanel    assessmentId={activeId} draftTitle={assessment.title} />;
-    case "working":  return <WorkingPanel  assessmentId={activeId} subjectName={subject?.name} subjectCategory={subject?.category} />;
+    case "draft":    return <DraftPanel    assessmentId={activeId} draftTitle={assessment.title} type={assessment.type} />;
     case "practice": return <PracticePanel assessment={assessment} subject={subject} />;
   }
 }
@@ -627,68 +644,6 @@ function PaneHeader({ label }: { label: string }) {
     >
       {label}
     </Typography>
-  );
-}
-
-function ShortcutsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const mod = platformModifier();
-  const rows: { keys: string[]; label: string }[] = [
-    { keys: [mod.label, "1"],  label: "Open first tab" },
-    { keys: [mod.label, "2"],  label: "Open second tab" },
-    { keys: [mod.label, "\\"], label: "Toggle split view (desktop)" },
-    { keys: [mod.label, "K"],  label: "Focus AI tutor input" },
-    { keys: ["?"],             label: "Show this cheatsheet" },
-  ];
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle sx={{ pb: 1 }}>
-        <Typography
-          component="div"
-          variant="overline"
-          color="text.secondary"
-          sx={{ letterSpacing: "0.08em", lineHeight: 1.2 }}
-        >
-          Keyboard
-        </Typography>
-        <Typography component="span" variant="h6" sx={{ fontWeight: 600 }}>
-          Shortcuts
-        </Typography>
-      </DialogTitle>
-      <DialogContent>
-        <Stack spacing={1.5}>
-          {rows.map((r) => (
-            <Stack key={r.label} direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="body2">{r.label}</Typography>
-              <Stack direction="row" spacing={0.5}>
-                {r.keys.map((k) => (
-                  <Box
-                    key={k}
-                    component="kbd"
-                    sx={{
-                      px: 0.75,
-                      py: 0.25,
-                      borderRadius: 1,
-                      border: 1,
-                      borderColor: "divider",
-                      fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace",
-                      fontSize: "0.7rem",
-                      fontWeight: 600,
-                      minWidth: 22,
-                      textAlign: "center",
-                      lineHeight: "20px",
-                      color: "text.secondary",
-                    }}
-                  >
-                    {k}
-                  </Box>
-                ))}
-              </Stack>
-            </Stack>
-          ))}
-        </Stack>
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -721,12 +676,20 @@ function LeftRail({
   focusMode?: boolean;
   onPomodoroStateChange?: (state: PomodoroState) => void;
 }) {
+  // Test/exam SBAs carry their own countdown inside the runner, so a generic
+  // 25-minute Pomodoro here would be a second, contradictory clock. Drop it
+  // for those types; keep it for essays, projects, and the like where a focus
+  // timer genuinely helps.
+  const hasOwnTimer = assessment.type === "test" || assessment.type === "exam";
+
   return (
     <Stack spacing={2.5} sx={{ position: { md: "sticky" }, top: { md: 88 } }}>
-      <FocusTimer
-        assessmentId={assessment.id}
-        onStateChange={onPomodoroStateChange}
-      />
+      {!hasOwnTimer && (
+        <FocusTimer
+          assessmentId={assessment.id}
+          onStateChange={onPomodoroStateChange}
+        />
+      )}
 
       {!focusMode && (
         <Card>
@@ -945,8 +908,18 @@ function NotesPanel({ assessmentId }: { assessmentId: string | null }) {
   );
 }
 
-// Long-form draft — only shown for essay/oral assessments.
-function DraftPanel({ assessmentId, draftTitle }: { assessmentId: string | null; draftTitle: string }) {
+// Long-form draft — shown for essay and oral assessments. Oral reframes it
+// as a speech script (you're writing to be spoken, not read).
+function DraftPanel({
+  assessmentId,
+  draftTitle,
+  type,
+}: {
+  assessmentId: string | null;
+  draftTitle: string;
+  type: AssessmentType;
+}) {
+  const isOral = type === "oral";
   const draft = useWorkspaceDraft(assessmentId, "essay");
   const [value, setValue] = useState(draft.initialContent);
   const [snackbar, setSnackbar] = useState<{ open: boolean; msg: string; severity: "success" | "error" }>({
@@ -959,7 +932,10 @@ function DraftPanel({ assessmentId, draftTitle }: { assessmentId: string | null;
   const trimmed = value.trim();
   const wordCount = trimmed ? trimmed.split(/\s+/).length : 0;
   const sentenceCount = trimmed ? (trimmed.match(/[.!?]+(\s|$)/g) ?? []).length || 1 : 0;
-  const readMinutes = wordCount === 0 ? 0 : Math.max(1, Math.round(wordCount / 200));
+  // Reading pace ~200 wpm; spoken delivery is slower (~130 wpm), so an oral
+  // of the same length runs longer out loud.
+  const paceWpm = isOral ? 130 : 200;
+  const readMinutes = wordCount === 0 ? 0 : Math.max(1, Math.round(wordCount / paceWpm));
 
   const submit = async () => {
     if (!assessmentId) return;
@@ -979,7 +955,11 @@ function DraftPanel({ assessmentId, draftTitle }: { assessmentId: string | null;
         fullWidth
         multiline
         minRows={14}
-        placeholder="Open with a hook your reader can't ignore…"
+        placeholder={
+          isOral
+            ? "Write your speech the way you'll say it — open strong, mark your pauses…"
+            : "Open with a hook your reader can't ignore…"
+        }
         value={value}
         onChange={(e) => { setValue(e.target.value); draft.queueSave(e.target.value); }}
         sx={{ "& textarea": { fontSize: "1rem", lineHeight: 1.7 } }}
@@ -997,13 +977,13 @@ function DraftPanel({ assessmentId, draftTitle }: { assessmentId: string | null;
               <Box sx={{ width: 3, height: 3, borderRadius: "50%", bgcolor: "text.disabled" }} />
               <Typography variant="caption" color="text.secondary">{sentenceCount} {sentenceCount === 1 ? "sentence" : "sentences"}</Typography>
               <Box sx={{ width: 3, height: 3, borderRadius: "50%", bgcolor: "text.disabled" }} />
-              <Typography variant="caption" color="text.secondary">~{readMinutes} min read</Typography>
+              <Typography variant="caption" color="text.secondary">~{readMinutes} min {isOral ? "spoken" : "read"}</Typography>
             </>
           )}
           <AutosaveBadge state={draft.state} />
         </Stack>
         <Button variant="contained" onClick={submit} disabled={!assessmentId || updateAssessment.isPending || !trimmed}>
-          {updateAssessment.isPending ? "Submitting…" : "Submit draft"}
+          {updateAssessment.isPending ? "Submitting…" : isOral ? "Submit script" : "Submit draft"}
         </Button>
       </Stack>
       <Snackbar
@@ -1020,98 +1000,20 @@ function DraftPanel({ assessmentId, draftTitle }: { assessmentId: string | null;
   );
 }
 
-// Working surface.
-//
-// Maths + natural-science subjects get MathEditor — a single MathLive
-// math-field rendered WYSIWYG (fractions stack, roots cover, integrals
-// show bounds) with our own toolbar inserting structure templates.
-// MathLive's virtual keyboard is off; students use their device's
-// keyboard for letters/numbers and the toolbar for math structures.
-//
-// Other subjects get a plain mono textarea — no maths rendering, no
-// bundle weight for content they don't need.
-//
-// Both modes share the `scratchpad` draft channel and pair with the
-// UploadsStrip below so students can attach a photo of handwritten
-// working alongside whatever they type.
-function WorkingPanel({
-  assessmentId,
-  subjectName,
-  subjectCategory,
-}: {
-  assessmentId: string | null;
-  subjectName?: string;
-  subjectCategory?: string;
-}) {
-  const draft = useWorkspaceDraft(assessmentId, "scratchpad");
-  const [value, setValue] = useState(draft.initialContent);
-  useEffect(() => { setValue(draft.initialContent); }, [draft.initialContent]);
-
-  const showMathEditor =
-    subjectCategory === "mathematics" || subjectCategory === "natural_science";
-
-  return (
-    <Stack spacing={3}>
-      {showMathEditor ? (
-        <Stack spacing={1.5}>
-          <MathEditor
-            value={value}
-            onChange={(v) => {
-              setValue(v);
-              draft.queueSave(v);
-            }}
-          />
-          <Stack direction="row" justifyContent="flex-end">
-            <AutosaveBadge state={draft.state} />
-          </Stack>
-        </Stack>
-      ) : (
-        <Stack spacing={1.5}>
-          <TextField
-            fullWidth
-            multiline
-            minRows={12}
-            placeholder={
-              subjectName
-                ? `${subjectName} — type out your reasoning, observations, or what you tried on paper.`
-                : "Type out your reasoning, observations, or what you tried on paper."
-            }
-            value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-              draft.queueSave(e.target.value);
-            }}
-            sx={{
-              "& .MuiOutlinedInput-root": { bgcolor: "transparent", border: 0 },
-              "& fieldset": { border: 0 },
-              "& textarea": {
-                fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace",
-                fontSize: "0.95rem",
-                lineHeight: 1.6,
-              },
-            }}
-          />
-          <Stack direction="row" justifyContent="flex-end">
-            <AutosaveBadge state={draft.state} />
-          </Stack>
-        </Stack>
-      )}
-      {/* Attachments — photograph paper working, drop in a PDF brief,
-          screenshot reference material. */}
-      {assessmentId && <UploadsStrip assessmentId={assessmentId} />}
-    </Stack>
-  );
-}
-
-// Practice tab — shown for tests/exams. Lists real practice tests
-// filtered to the SBA's subject, with one-click "Start" jumping to the
-// existing /dashboard/practice/[id] route.
+// Practice tab — shown for tests/exams. Lists real practice tests filtered
+// to the SBA's subject; "Start" runs the test inline via <PracticeRunner>
+// so the student stays in the workspace instead of routing to a separate
+// page. Results and review render in place; "Back to tests" returns here.
 function PracticePanel({
   assessment,
   subject,
+  onRunningChange,
 }: {
   assessment: Assessment;
   subject?: Subject;
+  // Fired when a test starts / stops running, so the page can shut off the
+  // AI tutor and clear the rails for the duration of an attempt.
+  onRunningChange?: (running: boolean) => void;
 }) {
   const query = usePracticeTests();
   const all = query.data ?? [];
@@ -1119,6 +1021,37 @@ function PracticePanel({
     () => all.filter((t) => t.subjectId === assessment.subjectId),
     [all, assessment.subjectId],
   );
+
+  const [runningTestId, setRunningTestId] = useState<string | null>(null);
+
+  useEffect(() => {
+    onRunningChange?.(runningTestId != null);
+  }, [runningTestId, onRunningChange]);
+
+  // Leaving the workspace / switching assessment must not strand the page in
+  // test mode.
+  useEffect(() => {
+    return () => onRunningChange?.(false);
+  }, [onRunningChange]);
+
+  // Taking a test: render the runner inline, with a back control so the
+  // student can bail out to the list at any point.
+  if (runningTestId) {
+    return (
+      <Stack spacing={2}>
+        <Button
+          onClick={() => setRunningTestId(null)}
+          startIcon={<ChevronLeft size={16} />}
+          color="inherit"
+          size="small"
+          sx={{ alignSelf: "flex-start" }}
+        >
+          Back to tests
+        </Button>
+        <PracticeRunner testId={runningTestId} onExit={() => setRunningTestId(null)} />
+      </Stack>
+    );
+  }
 
   if (query.isLoading) {
     return (
@@ -1155,10 +1088,10 @@ function PracticePanel({
           No practice yet for {subject?.name ?? "this subject"}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 380, mx: "auto", mb: 2 }}>
-          Once we have aligned practice for {subject?.name ?? "your subject"}, you'll be able to start a timed run from here.
+          Generate a test for {subject?.name ?? "your subject"} from the Practice page, then start it right here.
         </Typography>
         <Button component={Link} href="/dashboard/practice" variant="outlined" endIcon={<ArrowForwardIcon />}>
-          Browse all practice
+          Go to Practice
         </Button>
       </Box>
     );
@@ -1167,14 +1100,17 @@ function PracticePanel({
   return (
     <Stack spacing={1.5}>
       <Typography variant="body2" color="text.secondary">
-        Practice for {subject?.name ?? "this subject"} — pick one to start a timed run.
+        Practice for {subject?.name ?? "this subject"} — pick one to start a timed run here.
       </Typography>
-      {forSubject.map((p) => <PracticeRow key={p.id} test={p} />)}
+      {forSubject.map((p) => (
+        <PracticeRow key={p.id} test={p} onStart={() => setRunningTestId(p.id)} />
+      ))}
     </Stack>
   );
 }
 
-function PracticeRow({ test }: { test: PracticeTest }) {
+function PracticeRow({ test, onStart }: { test: PracticeTest; onStart: () => void }) {
+  const completed = test.attempts > 0;
   return (
     <Box
       sx={{
@@ -1219,21 +1155,19 @@ function PracticeRow({ test }: { test: PracticeTest }) {
         </Stack>
       </Box>
       <Button
-        component={Link}
-        href={`/dashboard/practice/${test.id}`}
-        variant="contained"
+        onClick={onStart}
+        variant={completed ? "outlined" : "contained"}
         size="small"
         sx={{ flexShrink: 0 }}
       >
-        Start
+        {completed ? "View results" : "Start"}
       </Button>
     </Box>
   );
 }
 
 // ============================================================
-// RIGHT RAIL — AI tutor only (rubric moved to the assessment page —
-// it's a marking surface, not a "while working" surface)
+// RIGHT RAIL — AI tutor only
 // ============================================================
 
 function RightRail({ assessment, subject }: { assessment: Assessment; subject: Subject | undefined }) {
@@ -1244,86 +1178,205 @@ function RightRail({ assessment, subject }: { assessment: Assessment; subject: S
   );
 }
 
+// Bound the tutor history. The tail is all that matters for context, so we
+// never let a long session grow localStorage or the tokens re-sent each turn
+// without limit. Storage keeps a little more than we send.
+const MAX_STORED_MESSAGES = 50;
+const MAX_SENT_MESSAGES = 24;
+
 function AiTutorChat({ assessment, subject }: { assessment: Assessment; subject: Subject | undefined }) {
-  const [messages, setMessages] = useState<AiHelpMessage[]>([
-    {
+  const storageKey = `aptiverse.workspace.chat.${assessment.id}`;
+  const greeting = useMemo<AiChatMessage>(
+    () => ({
       role: "assistant",
-      content: `Ask me anything about ${assessment.title}${subject ? ` (${subject.name})` : ""}.`,
-    },
-  ]);
+      content: `Ask me anything about ${assessment.title}${subject ? ` (${subject.name})` : ""}. I can explain the concepts, work through problems step by step, and check your reasoning.`,
+    }),
+    [assessment.title, subject?.name],
+  );
+  const [messages, setMessages] = useState<AiChatMessage[]>([greeting]);
   const [input, setInput] = useState("");
-  const ask = useAiHelp();
+  // The reply currently being revealed on screen, character by character, so
+  // it reads as though the tutor is typing rather than pasting a wall of text
+  // at once. Null when nothing is streaming; the finished reply is committed
+  // to `messages` when the reveal completes.
+  const [streaming, setStreaming] = useState<string | null>(null);
+  const ask = useAiTutor();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const revealRef = useRef<number | null>(null);
+  const busy = ask.isPending || streaming !== null;
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, ask.isPending]);
+  }, [messages, ask.isPending, streaming]);
+
+  // Stop the reveal loop if the panel unmounts mid-type.
+  useEffect(
+    () => () => {
+      if (revealRef.current) cancelAnimationFrame(revealRef.current);
+    },
+    [],
+  );
+
+  // Persist the conversation per assessment (device-local) so a reload, or
+  // switching assessment and back, restores what was said. A lone greeting
+  // is not stored: an untouched tutor should leave no trace.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = window.localStorage.getItem(storageKey);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as AiChatMessage[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+          return;
+        }
+      } catch {
+        /* fall through to a fresh greeting */
+      }
+    }
+    setMessages([greeting]);
+    // Reload only when the assessment (storage key) changes, not whenever the
+    // greeting identity churns.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (messages.length <= 1) {
+      window.localStorage.removeItem(storageKey);
+      return;
+    }
+    // Keep the greeting plus the most recent turns, not the whole transcript,
+    // so one assessment's chat stays a few KB no matter how long it runs.
+    const capped =
+      messages.length > MAX_STORED_MESSAGES
+        ? [messages[0], ...messages.slice(-(MAX_STORED_MESSAGES - 1))]
+        : messages;
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(capped));
+    } catch {
+      // Quota exceeded or storage disabled: drop this conversation rather
+      // than throwing. The live session keeps working from memory.
+      try {
+        window.localStorage.removeItem(storageKey);
+      } catch {
+        /* storage unavailable entirely — nothing more to do */
+      }
+    }
+  }, [messages, storageKey]);
+
+  // Reveal a finished reply word by word, then commit it. Driven by
+  // requestAnimationFrame (so it's paced to the display and never fights the
+  // browser's paint) and stepped in whole words: text never reflows in the
+  // middle of a word, which is what made the character version stutter.
+  const revealReply = (full: string) => {
+    if (revealRef.current) cancelAnimationFrame(revealRef.current);
+    // Keep whitespace as its own tokens so joining a prefix preserves spacing.
+    const tokens = full.split(/(\s+)/);
+    const total = tokens.length;
+    const perFrame = Math.max(1, Math.ceil(total / 90)); // ~1.5s for long replies
+    let shown = 0;
+    setStreaming("");
+    const tick = () => {
+      shown = Math.min(total, shown + perFrame);
+      setStreaming(tokens.slice(0, shown).join(""));
+      if (shown < total) {
+        revealRef.current = requestAnimationFrame(tick);
+      } else {
+        revealRef.current = null;
+        setStreaming(null);
+        setMessages((m) => [...m, { role: "assistant", content: full }]);
+      }
+    };
+    revealRef.current = requestAnimationFrame(tick);
+  };
 
   const send = () => {
     const text = input.trim();
-    if (!text) return;
-    const contextLine = `[Context: working on "${assessment.title}"${subject ? ` for ${subject.name}` : ""}, due ${dayjs(assessment.dueDate).format("DD MMM")}.]`;
-    const userMessage: AiHelpMessage = {
-      role: "user",
-      content: messages.length <= 1 ? `${contextLine}\n\n${text}` : text,
-    };
+    if (!text || busy) return;
+    const isFirstUserTurn = messages.length <= 1;
+    // The chat bubble shows only what the student typed. The working
+    // context is injected into the first user turn for the API alone, so
+    // the tutor is oriented without the "[Context: …]" line leaking on screen.
+    const userMessage: AiChatMessage = { role: "user", content: text };
     const next = [...messages, userMessage];
     setMessages(next);
     setInput("");
-    ask.mutate(
-      { messages: next },
-      {
-        onSuccess: (data) => setMessages((m) => [...m, { role: "assistant", content: data.reply }]),
-        onError: (err) =>
-          setMessages((m) => [
-            ...m,
-            {
-              role: "assistant",
-              content:
-                err.status === 503
-                  ? "The AI is unavailable right now. Try again in a moment."
-                  : err.status === 402
-                    ? "You've used this month's quick AI replies. Upgrade your plan or wait for next month."
-                    : "Something went wrong on my side. Try again in a moment.",
-            },
-          ]),
-      },
-    );
+    const contextLine = `[Context: working on "${assessment.title}"${subject ? ` for ${subject.name}` : ""}, due ${dayjs(assessment.dueDate).format("DD MMM")}.]`;
+    const withContext = isFirstUserTurn
+      ? next.map((m, i) =>
+          i === next.length - 1 ? { ...m, content: `${contextLine}\n\n${m.content}` } : m,
+        )
+      : next;
+    // Send only the recent tail so the request (and its token cost) stays
+    // bounded as the conversation grows.
+    const payload =
+      withContext.length > MAX_SENT_MESSAGES ? withContext.slice(-MAX_SENT_MESSAGES) : withContext;
+    ask.mutate({ messages: payload }, {
+      onSuccess: (data) => revealReply(data.reply),
+      onError: (err) =>
+        setMessages((m) => [
+          ...m,
+          {
+            role: "assistant",
+            content:
+              err.status === 503
+                ? "The AI is unavailable right now. Try again in a moment."
+                : err.status === 402
+                  ? "You've used this month's AI replies. Upgrade your plan or wait for next month."
+                  : "Something went wrong on my side. Try again in a moment.",
+          },
+        ]),
+    });
   };
 
   return (
-    <Card sx={{ height: { xs: 420, md: 540 }, display: "flex", flexDirection: "column" }}>
+    <Card sx={{ height: { xs: "calc(100dvh - 150px)", md: "calc(100dvh - 132px)" }, minHeight: 420, maxHeight: { md: 820 }, display: "flex", flexDirection: "column" }}>
       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ p: 2, borderBottom: 1, borderColor: "divider" }}>
         <Avatar sx={{ bgcolor: "primary.main", width: 32, height: 32 }}>
           <SmartToyIcon fontSize="small" sx={{ color: "primary.contrastText" }} />
         </Avatar>
         <Box sx={{ flex: 1 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>AI tutor</Typography>
-          <Typography variant="caption" color={ask.isPending ? "warning.main" : "success.main"}>
-            {ask.isPending ? "Thinking…" : "Online"}
+          <Typography
+            variant="caption"
+            color={ask.isPending ? "warning.main" : streaming !== null ? "secondary.main" : "success.main"}
+          >
+            {ask.isPending ? "Thinking…" : streaming !== null ? "Typing…" : "Online"}
           </Typography>
         </Box>
       </Stack>
       <Box ref={scrollRef} sx={{ flex: 1, overflowY: "auto", p: 2 }}>
-        <Stack spacing={1.5}>
-          {messages.map((m, i) => (
-            <Box
-              key={i}
-              sx={{
-                alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                maxWidth: "85%",
-                px: 1.5,
-                py: 1,
-                borderRadius: 2,
-                bgcolor: m.role === "user" ? "primary.main" : "action.hover",
-                color: m.role === "user" ? "primary.contrastText" : "text.primary",
-              }}
-            >
-              <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{m.content}</Typography>
-            </Box>
-          ))}
+        <Stack spacing={1.25}>
+          {messages.map((m, i) =>
+            m.role === "assistant" ? (
+              <ChatBubble key={i} role="assistant" markdown={m.content} />
+            ) : (
+              <ChatBubble key={i} role="user">
+                {m.content}
+              </ChatBubble>
+            ),
+          )}
+          {streaming !== null && (
+            <ChatBubble role="assistant">
+              {streaming}
+              <Box
+                component="span"
+                sx={{
+                  display: "inline-block",
+                  width: "2px",
+                  height: "1.05em",
+                  ml: "1px",
+                  verticalAlign: "text-bottom",
+                  bgcolor: "text.secondary",
+                  animation: "caret 1s steps(1) infinite",
+                  "@keyframes caret": { "50%": { opacity: 0 } },
+                }}
+              />
+            </ChatBubble>
+          )}
           {ask.isPending && (
-            <Box sx={{ alignSelf: "flex-start", px: 1.5, py: 1, borderRadius: 2, bgcolor: "action.hover", display: "flex", gap: 0.5 }}>
+            <Box sx={{ alignSelf: "flex-start", px: 1.75, py: 1.25, borderRadius: "14px 14px 14px 4px", bgcolor: "action.hover", border: 1, borderColor: "divider", display: "flex", gap: 0.5 }}>
               {[0, 1, 2].map((i) => (
                 <Box key={i} sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "primary.main", animation: "blink 1.4s ease-in-out infinite", animationDelay: `${i * 0.15}s`, "@keyframes blink": { "0%, 80%, 100%": { opacity: 0.25 }, "40%": { opacity: 1 } } }} />
               ))}
@@ -1346,14 +1399,54 @@ function AiTutorChat({ assessment, subject }: { assessment: Assessment; subject:
                 send();
               }
             }}
-            disabled={ask.isPending}
+            disabled={busy}
             inputProps={{ id: AI_TUTOR_INPUT_ID }}
           />
-          <IconButton color="primary" onClick={send} disabled={!input.trim() || ask.isPending} aria-label="Send">
+          <IconButton color="primary" onClick={send} disabled={!input.trim() || busy} aria-label="Send">
             <SendIcon />
           </IconButton>
         </Stack>
       </Box>
     </Card>
+  );
+}
+
+// A single chat bubble. Assistant bubbles are a bordered surface tail-left,
+// the student's are the primary fill tail-right, so the two speakers read at
+// a glance in the narrow rail. `markdown` renders a finished reply as rich
+// text (headings, lists, code, math); plain children (the student's message,
+// or a reply mid-reveal) stay pre-wrap so nothing reflows while it types.
+function ChatBubble({
+  role,
+  markdown,
+  children,
+}: {
+  role: "user" | "assistant";
+  markdown?: string;
+  children?: React.ReactNode;
+}) {
+  const isUser = role === "user";
+  return (
+    <Box
+      sx={{
+        alignSelf: isUser ? "flex-end" : "flex-start",
+        maxWidth: "88%",
+        px: 1.75,
+        py: 1.25,
+        borderRadius: isUser ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+        bgcolor: isUser ? "primary.main" : "action.hover",
+        color: isUser ? "primary.contrastText" : "text.primary",
+        border: isUser ? "none" : 1,
+        borderColor: "divider",
+      }}
+    >
+      {markdown != null ? (
+        <Markdown>{markdown}</Markdown>
+      ) : (
+        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.55 }}>
+          {children}
+        </Typography>
+      )}
+    </Box>
   );
 }

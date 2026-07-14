@@ -35,15 +35,24 @@ export default function AssessmentsPage() {
   const assessmentsQuery = useAssessments();
   const academic = useAcademicUnits();
 
+  // "SBA" (school-based assessment) is CAPS high-school language. Tertiary
+  // students just have "assessments", so the calls to action follow the
+  // education level the same way the course/subject wording does.
+  const isTertiary = academic.isTertiary;
+  const addLabel = isTertiary ? "Add assessment" : "Add SBA";
+  const description = isTertiary
+    ? "Every test, essay, project and exam. Schedule, weighting, and predicted vs actual marks."
+    : "Every SBA, test, project and exam. Schedule, weighting, and predicted vs actual marks.";
+
   return (
     <AtmosphericBackdrop>
       <PageHeader
         title="Assessments"
-        description="Every SBA, test, project and exam. Schedule, weighting, and predicted vs actual marks."
+        description={description}
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Assessments" }]}
         actions={
           <Button variant="contained" color="secondary" startIcon={<AddIcon />} component={Link} href="/dashboard/assessments/new">
-            Add SBA
+            {addLabel}
           </Button>
         }
       />
@@ -53,10 +62,12 @@ export default function AssessmentsPage() {
         empty={{
           icon: <AssignmentIcon />,
           title: "No assessments yet",
-          description: "Add an SBA, test, or project so we can plan the lead-up and predict your mark.",
+          description: isTertiary
+            ? "Add an assessment, test, or project so we can plan the lead-up and predict your mark."
+            : "Add an SBA, test, or project so we can plan the lead-up and predict your mark.",
           action: (
             <Button variant="contained" startIcon={<AddIcon />} component={Link} href="/dashboard/assessments/new">
-              Add an SBA
+              {addLabel}
             </Button>
           ),
         }}
@@ -147,6 +158,7 @@ function AssessmentsList({
           <GroupedList
             items={[...filtered].sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate))}
             groupBy={(a) => unitName(a.subjectId)}
+            groupSummary={(_, items) => <CourseSummary items={items} />}
             renderItem={(a) => <AssessmentGroupRow a={a} />}
           />
         )
@@ -234,6 +246,37 @@ function AssessmentsList({
   );
 }
 
+// Per-course roll-up shown on the group header: weight covered, how many are
+// graded, and the average mark so far. Turns "By course" from a plain bucket
+// list into a quick standing-per-course read.
+function CourseSummary({ items }: { items: Assessment[] }) {
+  const graded = items.filter((a) => a.actualMark != null);
+  const avg =
+    graded.length > 0
+      ? Math.round(graded.reduce((s, a) => s + (a.actualMark ?? 0), 0) / graded.length)
+      : null;
+  const weight = items.reduce((s, a) => s + a.weight, 0);
+
+  return (
+    <Stack direction="row" spacing={1.25} alignItems="center">
+      {avg != null && (
+        <Typography
+          variant="caption"
+          sx={{ fontWeight: 700, color: avg >= 50 ? "success.main" : "warning.main", fontVariantNumeric: "tabular-nums" }}
+        >
+          {avg}% avg
+        </Typography>
+      )}
+      <Typography variant="caption" color="text.secondary" sx={{ display: { xs: "none", sm: "block" } }}>
+        {graded.length}/{items.length} graded
+      </Typography>
+      <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: "tabular-nums" }}>
+        {weight}% weight
+      </Typography>
+    </Stack>
+  );
+}
+
 function AssessmentGroupRow({ a }: { a: Assessment }) {
   const kind =
     a.status === "graded"
@@ -243,6 +286,7 @@ function AssessmentGroupRow({ a }: { a: Assessment }) {
       : a.status === "submitted"
       ? "primary"
       : "neutral";
+  const daysOut = dayjs(a.dueDate).diff(dayjs(), "day");
   return (
     <Box
       component={Link}
@@ -253,8 +297,14 @@ function AssessmentGroupRow({ a }: { a: Assessment }) {
         gap: 2,
         width: "100%",
         minWidth: 0,
+        p: 1.5,
+        borderRadius: 1.5,
+        border: 1,
+        borderColor: "divider",
         textDecoration: "none",
         color: "inherit",
+        transition: "border-color 150ms ease, background-color 150ms ease",
+        "&:hover": { borderColor: "text.secondary", bgcolor: "action.hover" },
       }}
     >
       <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -274,13 +324,16 @@ function AssessmentGroupRow({ a }: { a: Assessment }) {
           ~{a.predictedMark}%
         </Typography>
       ) : null}
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ flexShrink: 0, display: { xs: "none", sm: "block" } }}
-      >
-        {formatDate(a.dueDate)}
-      </Typography>
+      <Stack sx={{ flexShrink: 0, display: { xs: "none", sm: "flex" }, minWidth: 88 }} alignItems="flex-end">
+        <Typography variant="caption" color="text.secondary">
+          {formatDate(a.dueDate)}
+        </Typography>
+        {a.status !== "graded" && (
+          <Typography variant="caption" color={daysOut < 7 ? "warning.main" : "text.secondary"}>
+            {daysOut < 0 ? "overdue" : daysOut === 0 ? "due today" : `in ${daysOut}d`}
+          </Typography>
+        )}
+      </Stack>
       <StatusChip kind={kind} label={ASSESSMENT_STATUS_LABELS[a.status] ?? a.status} />
     </Box>
   );

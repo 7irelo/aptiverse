@@ -39,5 +39,13 @@ namespace Aptiverse.Practice.Application.Practice.Services
             string studentId,
             FrontendAttemptDto submission,
             CancellationToken cancellationToken = default);
+
+        // The student's most recent submitted attempt at a test, with its
+        // items + score summary, for reviewing a completed test without
+        // retaking it. Null when they have no submitted attempt yet.
+        Task<FrontendAttemptDto?> GetLatestAttemptAsync(
+            long testId,
+            string studentId,
+            CancellationToken cancellationToken = default);
     }
 }

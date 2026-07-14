@@ -30,13 +30,20 @@ namespace Aptiverse.Practice.Domain.Models.Practice
         // Topic label resolved from the question (used for per-topic rollup).
         public string Topic { get; set; } = "";
 
-        // What the student chose (index into Options); -1 = unanswered.
+        // What the student chose (index into Options); -1 = unanswered or a
+        // non-multiple-choice question.
         public int GivenAnswerIdx { get; set; } = -1;
 
         // The correct option index, copied from the test's answer key at
         // score time so the item is self-contained for ML even if the test
-        // is later edited.
+        // is later edited. -1 for non-multiple-choice questions.
         public int CorrectAnswerIdx { get; set; }
+
+        // Typed answer + expected answer for short-answer / reading short parts,
+        // copied in at score time so the graded item stands alone for review
+        // and ML. Null for multiple-choice.
+        public string? GivenAnswerText { get; set; }
+        public string? ExpectedAnswerText { get; set; }
 
         // Resolved correctness.
         public bool IsCorrect { get; set; }

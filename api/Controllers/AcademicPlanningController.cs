@@ -711,14 +711,36 @@ namespace Aptiverse.AcademicPlanning.Controllers
 
             if (body.Weight < 0 || body.Weight > 100) return BadRequest("Weight must be between 0 and 100.");
 
-            // The subject must be one the student is actually enrolled in
-            // — otherwise they'd create an orphan assessment that doesn't
-            // tie back to their dashboard.
+            // The subject must be one the student is actually enrolled in —
+            // otherwise they'd create an orphan assessment that doesn't tie
+            // back to their dashboard. Study units share one string id with
+            // the frontend: a CAPS subject slug for high-school, or a Course
+            // practiceKey ("institutionId:slug") for tertiary. Accept either.
             var enrolled = await _db.Set<StudentSubject>()
                 .AsNoTracking()
                 .AnyAsync(ss => ss.StudentId == userId &&
                                 _db.Set<CurriculumSubject>()
                                     .Any(cs => cs.Id == ss.CurriculumSubjectId && cs.SubjectId == body.SubjectId));
+
+            if (!enrolled)
+            {
+                // Tertiary: body.SubjectId is a Course practiceKey. Split it
+                // and match the institution-shared Course the student is
+                // enrolled in, via the unique (InstitutionId, Slug) index.
+                var sep = body.SubjectId.IndexOf(':');
+                if (sep > 0)
+                {
+                    var institutionId = body.SubjectId[..sep];
+                    var slug = body.SubjectId[(sep + 1)..];
+                    enrolled = await _db.Set<StudentCourse>()
+                        .AsNoTracking()
+                        .AnyAsync(sc => sc.StudentId == userId &&
+                                        _db.Set<Course>().Any(c => c.Id == sc.CourseId &&
+                                                                   c.InstitutionId == institutionId &&
+                                                                   c.Slug == slug));
+                }
+            }
+
             if (!enrolled) return BadRequest("You're not enrolled in that subject — add it first on the Subjects page.");
 
             var a = new Assessment

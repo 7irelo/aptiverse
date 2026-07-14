@@ -14,7 +14,10 @@ namespace Aptiverse.Entitlements.Application
             services.AddScoped<IUsageMeter, UsageMeter>();
 
             // AI client uses HttpClient — let the factory manage the pool.
-            services.AddHttpClient<IAnthropicClient, AnthropicClient>();
+            // Timeout is generous: the tutor's deep mode runs Opus 4.8 with
+            // extended thinking, which can take well over the default 100s.
+            services.AddHttpClient<IAnthropicClient, AnthropicClient>(c =>
+                c.Timeout = TimeSpan.FromSeconds(180));
 
             // Paystack billing: typed client via IHttpClientFactory, plus
             // the webhook-driven Subscription lifecycle service. Secret key

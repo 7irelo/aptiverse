@@ -179,37 +179,143 @@ export const componentOverrides = (theme: Theme): Components<Theme> => {
     MuiInputLabel: {
       defaultProps: { shrink: true },
       styleOverrides: {
+        // The label leaves the outline notch entirely and sits ABOVE the
+        // field, in normal flow, as a small weighted caption. This is the
+        // single biggest move away from the stock Material "floating label in
+        // a notch" look, and it lets the field's top border stay solid.
+        root: {
+          position: "static",
+          transform: "none",
+          transformOrigin: "top left",
+          maxWidth: "100%",
+          fontSize: "0.78rem",
+          fontWeight: 600,
+          lineHeight: 1.4,
+          letterSpacing: "0.005em",
+          color: theme.palette.text.secondary,
+          marginBottom: 7,
+          "&.Mui-focused": { color: theme.palette.text.primary },
+          "&.Mui-error": { color: theme.palette.error.main },
+          "&.Mui-disabled": { color: theme.palette.text.disabled },
+        },
         outlined: {
-          // The label is always floated into the outline's notch. Give it the
-          // form surface colour with a little horizontal padding so neither
-          // the outline border nor the focus/error halo ever draws across the
-          // text — this is what fixes the green (focus) and red (error)
-          // bleeding over the label.
+          position: "static",
+          transform: "none",
           "&.MuiInputLabel-shrink": {
-            backgroundColor: theme.palette.background.default,
-            paddingLeft: 4,
-            paddingRight: 4,
+            backgroundColor: "transparent",
+            paddingLeft: 0,
+            paddingRight: 0,
+            transform: "none",
           },
         },
       },
     },
     MuiOutlinedInput: {
-      // Keep the outline notch open so it always matches the floated label.
-      defaultProps: { notched: true },
+      // Label lives above the field now, so the outline never notches.
+      defaultProps: { notched: false },
       styleOverrides: {
         root: {
-          borderRadius: 10,
-          minHeight: 52,
-          transition: "box-shadow 140ms ease, border-color 140ms ease",
-          "&.Mui-focused": { boxShadow: focusRing },
+          borderRadius: 12,
+          minHeight: 48,
+          // A solid, clearly-elevated tray — the same read as the dropdown
+          // menus — so a field is an object on the surface, not a hollow
+          // outline that vanishes in dark mode. Keeps its fill on focus; the
+          // accent ring and a brighter border add the state on top.
+          backgroundColor: isDark
+            ? alpha(theme.palette.common.white, 0.06)
+            : alpha(theme.palette.brandSurface.main, 0.025),
+          transition:
+            "box-shadow 140ms ease, border-color 140ms ease, background-color 140ms ease",
+          "&:hover": {
+            backgroundColor: isDark
+              ? alpha(theme.palette.common.white, 0.09)
+              : alpha(theme.palette.brandSurface.main, 0.05),
+          },
+          "&:hover .MuiOutlinedInput-notchedOutline": {
+            borderColor: isDark
+              ? alpha(theme.palette.common.white, 0.22)
+              : theme.palette.text.disabled,
+          },
+          "&.Mui-focused": {
+            boxShadow: focusRing,
+            backgroundColor: isDark
+              ? alpha(theme.palette.common.white, 0.06)
+              : alpha(theme.palette.brandSurface.main, 0.025),
+          },
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
             borderColor: theme.palette.primary.main,
-            borderWidth: 1,
+            borderWidth: 1.5,
           },
           "&.Mui-error.Mui-focused": { boxShadow: errorRing },
+          "&.Mui-disabled": { backgroundColor: "transparent" },
         },
-        notchedOutline: { borderColor: theme.palette.divider },
-        input: { paddingTop: 16, paddingBottom: 16 },
+        notchedOutline: {
+          // A visible hairline so the tray has a crisp edge in both modes.
+          borderColor: isDark ? alpha(theme.palette.common.white, 0.12) : theme.palette.divider,
+          transition: "border-color 140ms ease",
+          // No label riding the border → collapse any residual notch legend.
+          "& legend": { width: 0 },
+        },
+        input: {
+          paddingTop: 13,
+          paddingBottom: 13,
+          "&::placeholder": { color: theme.palette.text.disabled, opacity: 1 },
+        },
+      },
+    },
+    MuiFilledInput: {
+      // Bring the filled variant in line with the outlined tray: rounded, no
+      // underline, same soft fill + focus ring, so every text input reads as
+      // the same family regardless of which variant a page reached for.
+      defaultProps: { disableUnderline: true },
+      styleOverrides: {
+        root: {
+          borderRadius: 12,
+          backgroundColor: isDark
+            ? alpha(theme.palette.common.white, 0.06)
+            : alpha(theme.palette.brandSurface.main, 0.03),
+          transition: "box-shadow 140ms ease, background-color 140ms ease",
+          "&:hover": {
+            backgroundColor: isDark
+              ? alpha(theme.palette.common.white, 0.09)
+              : alpha(theme.palette.brandSurface.main, 0.05),
+          },
+          "&.Mui-focused": {
+            backgroundColor: isDark
+              ? alpha(theme.palette.common.white, 0.06)
+              : alpha(theme.palette.brandSurface.main, 0.03),
+            boxShadow: focusRing,
+          },
+          "&::before, &::after": { display: "none" },
+        },
+      },
+    },
+    MuiMenu: {
+      styleOverrides: {
+        paper: {
+          borderRadius: 12,
+          marginTop: 6,
+          border: `1px solid ${theme.palette.divider}`,
+          boxShadow: cardShadowHover,
+          backgroundImage: "none",
+        },
+        list: { padding: 6 },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          fontSize: "0.9rem",
+          paddingTop: 8,
+          paddingBottom: 8,
+          "&.Mui-selected": {
+            backgroundColor: alpha(theme.palette.secondary.main, isDark ? 0.2 : 0.14),
+            "&:hover": {
+              backgroundColor: alpha(theme.palette.secondary.main, isDark ? 0.26 : 0.2),
+            },
+          },
+        },
       },
     },
     MuiChip: {

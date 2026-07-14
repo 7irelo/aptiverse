@@ -9,6 +9,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Chip from "@mui/material/Chip";
+import Alert from "@mui/material/Alert";
 import EditNoteIcon from "@mui/icons-material/EditNoteOutlined";
 import SentimentVeryDissatisfiedIcon from "@mui/icons-material/SentimentVeryDissatisfiedOutlined";
 import SentimentDissatisfiedIcon from "@mui/icons-material/SentimentDissatisfiedOutlined";
@@ -19,7 +20,7 @@ import type { SvgIconComponent } from "@mui/icons-material";
 import { alpha, type Theme } from "@mui/material/styles";
 import { PageHeader } from "@/components/common/PageHeader";
 import { QueryStates } from "@/components/common/QueryStates";
-import { useDiaryEntries } from "@/lib/api/queries";
+import { useDiaryEntries, useLogDiary } from "@/lib/api/queries";
 import type { DiaryEntry } from "@/lib/mockData";
 import { formatDate, formatRelative } from "@/lib/format";
 import { RelativeTime } from "@/components/common/RelativeTime";
@@ -77,6 +78,20 @@ export default function DiaryPage() {
 function CheckIn() {
   const [entry, setEntry] = useState("");
   const [mood, setMood] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
+  const log = useLogDiary();
+
+  const save = () => {
+    if (!mood || !entry.trim() || log.isPending) return;
+    log.mutate(
+      { mood, content: entry.trim() },
+      {
+        onSuccess: () => {
+          setEntry("");
+          setMood(null);
+        },
+      },
+    );
+  };
 
   return (
     <Card sx={{ mb: 3 }}>
@@ -146,9 +161,18 @@ function CheckIn() {
             />
           ))}
         </Stack>
+        {log.isError && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            Could not save your entry. Please try again.
+          </Alert>
+        )}
         <Stack direction="row" justifyContent="flex-end" sx={{ mt: 2 }}>
-          <Button variant="contained" disabled={!mood || !entry.trim()}>
-            Save entry
+          <Button
+            variant="contained"
+            onClick={save}
+            disabled={!mood || !entry.trim() || log.isPending}
+          >
+            {log.isPending ? "Saving..." : "Save entry"}
           </Button>
         </Stack>
       </CardContent>

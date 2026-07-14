@@ -28,6 +28,16 @@ namespace Aptiverse.Practice.Domain.Models.Practice
                         : JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>())
                 .Metadata.SetValueComparer(topicsComparer);
 
+            // Essay marking criteria share the same jsonb string[] treatment.
+            builder.Property(t => t.Criteria)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v ?? new List<string>(), (JsonSerializerOptions?)null),
+                    v => string.IsNullOrWhiteSpace(v)
+                        ? new List<string>()
+                        : JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>())
+                .Metadata.SetValueComparer(topicsComparer);
+
             var questionsComparer = new ValueComparer<List<PracticeQuestion>>(
                 (a, b) =>
                     (a == null && b == null) ||
@@ -53,8 +63,12 @@ namespace Aptiverse.Practice.Domain.Models.Practice
         {
             Id = q.Id,
             Question = q.Question,
+            Kind = q.Kind,
             Options = q.Options.ToList(),
             AnswerIdx = q.AnswerIdx,
+            ExpectedAnswer = q.ExpectedAnswer,
+            AcceptableAnswers = q.AcceptableAnswers.ToList(),
+            Back = q.Back,
             Explanation = q.Explanation,
             Topic = q.Topic,
         };

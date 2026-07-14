@@ -61,6 +61,10 @@ export function useFeatures(): {
   has: (f: FeatureKey) => boolean;
   hasAny: (fs: FeatureKey[]) => boolean;
   hasAll: (fs: FeatureKey[]) => boolean;
+  // False until live entitlements have resolved (success or error). Gates use
+  // this to avoid flashing a denial while the real plan is still loading and
+  // only the (possibly stale) session features are known.
+  ready: boolean;
 } {
   const { data: session } = useSession();
   const live = useMyEntitlements();
@@ -76,6 +80,7 @@ export function useFeatures(): {
     has: (f) => set.has(f),
     hasAny: (fs) => fs.some((f) => set.has(f)),
     hasAll: (fs) => fs.every((f) => set.has(f)),
+    ready: !live.isLoading,
   };
 }
 

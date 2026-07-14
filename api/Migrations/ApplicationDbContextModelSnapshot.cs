@@ -22,6 +22,52 @@ namespace Aptiverse.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Aptiverse.AI.Domain.Models.TutorConversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Messages")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("messages");
+
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("student_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_tutor_conversations");
+
+                    b.HasIndex("StudentId", "UpdatedAt")
+                        .HasDatabaseName("ix_tutor_conversations_student_id_updated_at");
+
+                    b.ToTable("tutor_conversations", "a_i");
+                });
+
             modelBuilder.Entity("Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning.Assessment", b =>
                 {
                     b.Property<long>("Id")
@@ -4631,6 +4677,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("selected_idx");
 
+                    b.Property<string>("TextAnswer")
+                        .HasColumnType("text")
+                        .HasColumnName("text_answer");
+
                     b.Property<int>("TimeMs")
                         .HasColumnType("integer")
                         .HasColumnName("time_ms");
@@ -4737,6 +4787,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<int>("FocusLossCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("focus_loss_count");
+
                     b.Property<int?>("Score")
                         .HasColumnType("integer")
                         .HasColumnName("score");
@@ -4816,9 +4870,17 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("ExpectedAnswerText")
+                        .HasColumnType("text")
+                        .HasColumnName("expected_answer_text");
+
                     b.Property<int>("GivenAnswerIdx")
                         .HasColumnType("integer")
                         .HasColumnName("given_answer_idx");
+
+                    b.Property<string>("GivenAnswerText")
+                        .HasColumnType("text")
+                        .HasColumnName("given_answer_text");
 
                     b.Property<bool>("IsCorrect")
                         .HasColumnType("boolean")
@@ -4888,6 +4950,11 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("Criteria")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("criteria");
+
                     b.Property<string>("Difficulty")
                         .IsRequired()
                         .HasColumnType("text")
@@ -4897,9 +4964,22 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("duration_minutes");
 
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("format");
+
                     b.Property<string>("OwnerStudentId")
                         .HasColumnType("text")
                         .HasColumnName("owner_student_id");
+
+                    b.Property<string>("Passage")
+                        .HasColumnType("text")
+                        .HasColumnName("passage");
+
+                    b.Property<string>("Prompt")
+                        .HasColumnType("text")
+                        .HasColumnName("prompt");
 
                     b.Property<string>("Questions")
                         .IsRequired()
