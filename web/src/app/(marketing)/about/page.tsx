@@ -64,7 +64,7 @@ export default function Page() {
             Start free and see what a calmer way to study feels like.
           </Typography>
           <Stack direction="row" spacing={1.5} sx={{ pt: 1 }} flexWrap="wrap" useFlexGap justifyContent="center">
-            <Button component={Link} href="/register" variant="contained" size="large">
+            <Button component={Link} href="/register" variant="contained" color="secondary" size="large">
               Start free
             </Button>
             <Button component={Link} href="/features" variant="outlined" size="large">

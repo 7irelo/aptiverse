@@ -46,7 +46,7 @@ export default function FeaturesPage() {
               One place for your learning and your wellbeing, from your first term to your last exam.
             </Typography>
             <Stack direction="row" spacing={1.5} sx={{ pt: 2 }} flexWrap="wrap" useFlexGap>
-              <Button component={Link} href="/register" variant="contained" size="large">
+              <Button component={Link} href="/register" variant="contained" color="secondary" size="large">
                 Start free
               </Button>
               <Button component={Link} href="/pricing" variant="outlined" size="large">
@@ -197,7 +197,7 @@ export default function FeaturesPage() {
             The free tier gets you goals, the diary, basic practice, and wellbeing tools, no card needed.
           </Typography>
           <Stack direction="row" spacing={1.5} sx={{ pt: 1 }} flexWrap="wrap" useFlexGap>
-            <Button component={Link} href="/register" variant="contained" size="large">
+            <Button component={Link} href="/register" variant="contained" color="secondary" size="large">
               Start free
             </Button>
             <Button component={Link} href="/pricing" variant="outlined" size="large">

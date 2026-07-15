@@ -61,7 +61,7 @@ export default function ForStudentsPage() {
                 Know what to practise next, watch where your marks are heading, and get a nudge to rest before you burn out. From Grade R to your final year at university.
               </Typography>
               <Stack direction="row" spacing={1.5} sx={{ pt: 1 }} flexWrap="wrap" useFlexGap>
-                <Button component={Link} href="/register" variant="contained" size="large">
+                <Button component={Link} href="/register" variant="contained" color="secondary" size="large">
                   Start free
                 </Button>
                 <Button component={Link} href="/pricing" variant="outlined" size="large">
@@ -239,7 +239,7 @@ export default function ForStudentsPage() {
             Goals, the diary, basic practice, and the wellbeing tools are free, no card needed. Upgrade only when you are ready.
           </Typography>
           <Stack direction="row" spacing={1.5} sx={{ pt: 1 }} flexWrap="wrap" useFlexGap justifyContent="center">
-            <Button component={Link} href="/register" variant="contained" size="large">
+            <Button component={Link} href="/register" variant="contained" color="secondary" size="large">
               Create free account
             </Button>
             <Button component={Link} href="/pricing" variant="outlined" size="large">

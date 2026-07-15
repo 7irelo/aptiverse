@@ -50,7 +50,7 @@ export default function ForFamiliesPage() {
                 See how each of your children is really doing, in class and out, and get real suggestions for how to help, not hover. One subscription for the whole family.
               </Typography>
               <Stack direction="row" spacing={1.5} sx={{ pt: 1 }} flexWrap="wrap" useFlexGap>
-                <Button component={Link} href="/register" variant="contained" size="large">
+                <Button component={Link} href="/register" variant="contained" color="secondary" size="large">
                   Start free
                 </Button>
                 <Button component={Link} href="/pricing" variant="outlined" size="large">
@@ -190,7 +190,7 @@ export default function ForFamiliesPage() {
             Add each child and manage everything from one place. Start free and upgrade to a Family plan when you are ready.
           </Typography>
           <Stack direction="row" spacing={1.5} sx={{ pt: 1 }} flexWrap="wrap" useFlexGap justifyContent="center">
-            <Button component={Link} href="/register" variant="contained" size="large">
+            <Button component={Link} href="/register" variant="contained" color="secondary" size="large">
               Start free
             </Button>
             <Button component={Link} href="/pricing" variant="outlined" size="large">

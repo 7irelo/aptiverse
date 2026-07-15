@@ -97,7 +97,7 @@ export function TopNav() {
             >
               Sign in
             </Button>
-            <Button component={Link} href="/register" variant="contained">
+            <Button component={Link} href="/register" variant="contained" color="secondary">
               Get started
             </Button>
             <IconButton
@@ -152,7 +152,7 @@ export function TopNav() {
             <Button component={Link} href="/login" fullWidth variant="outlined">
               Sign in
             </Button>
-            <Button component={Link} href="/register" fullWidth variant="contained">
+            <Button component={Link} href="/register" fullWidth variant="contained" color="secondary">
               Get started
             </Button>
           </Stack>

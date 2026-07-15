@@ -306,7 +306,7 @@ export default function PricingClient({ plans: allPlans }: { plans: PlanDto[] })
               Plan details are refreshing. Please check back shortly, or start free in the meantime.
             </Typography>
             <Box sx={{ pt: 1 }}>
-              <Button component={Link} href="/register" variant="contained" size="large">
+              <Button component={Link} href="/register" variant="contained" color="secondary" size="large">
                 Create free account
               </Button>
             </Box>

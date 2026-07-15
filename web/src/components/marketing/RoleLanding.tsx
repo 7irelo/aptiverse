@@ -28,15 +28,19 @@ export type RoleLandingProps = {
 };
 
 function CtaButton({ cta, variant }: { cta: Cta; variant: "contained" | "outlined" }) {
+  // The filled CTA is the conversion action, so it carries the citron accent
+  // used for primary actions everywhere else in the product.
+  const color = variant === "contained" ? "secondary" : undefined;
+
   if (cta.disabled) {
     return (
-      <Button variant={variant} size="large" disabled>
+      <Button variant={variant} color={color} size="large" disabled>
         {cta.label}
       </Button>
     );
   }
   return (
-    <Button component={Link} href={cta.href!} variant={variant} size="large">
+    <Button component={Link} href={cta.href!} variant={variant} color={color} size="large">
       {cta.label}
     </Button>
   );
