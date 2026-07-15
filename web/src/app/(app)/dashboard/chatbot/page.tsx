@@ -352,13 +352,17 @@ export default function ChatbotPage() {
   );
 
   return (
+    // Full-bleed: the shell drops its padding and measure for this route, so
+    // the chat fills everything under the top bar (64 mobile / 68 desktop)
+    // instead of sitting in a card. History is a rail with a single dividing
+    // line, the way a chat surface reads, not a floating panel.
     <Box
       sx={{
-        height: { xs: "calc(100dvh - 124px)", md: "calc(100dvh - 140px)" },
+        height: { xs: "calc(100dvh - 64px)", md: "calc(100dvh - 68px)" },
         display: "flex",
-        gap: 2,
         minHeight: 420,
         overflow: "hidden",
+        bgcolor: "background.default",
       }}
     >
       {mdUp && (
@@ -366,9 +370,8 @@ export default function ChatbotPage() {
           sx={{
             width: 264,
             flexShrink: 0,
-            border: 1,
+            borderRight: 1,
             borderColor: "divider",
-            borderRadius: 3,
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
@@ -393,7 +396,14 @@ export default function ChatbotPage() {
           direction="row"
           alignItems="center"
           spacing={1.5}
-          sx={{ pb: 1.5, mb: 1, borderBottom: 1, borderColor: "divider" }}
+          sx={{
+            px: { xs: 2, sm: 3 },
+            py: 1.5,
+            flexShrink: 0,
+            borderBottom: 1,
+            borderColor: "divider",
+            bgcolor: "background.paper",
+          }}
         >
           {!mdUp && (
             <Tooltip title="Chat history">
@@ -433,8 +443,8 @@ export default function ChatbotPage() {
         </Stack>
 
         {/* Conversation */}
-        <Box ref={scrollRef} sx={{ flex: 1, overflowY: "auto", px: { xs: 0, sm: 1 } }}>
-          <Box sx={{ maxWidth: 780, mx: "auto", py: 2 }}>
+        <Box ref={scrollRef} sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: { xs: 2, sm: 3 } }}>
+          <Box sx={{ maxWidth: 780, mx: "auto", py: 3 }}>
             {loadingConvo ? (
               <Stack alignItems="center" justifyContent="center" sx={{ minHeight: 240 }}>
                 <CircularProgress size={26} />
@@ -459,23 +469,12 @@ export default function ChatbotPage() {
                     </ChatBubble>
                   ),
                 )}
+                {/* Streams as rendered markdown, not plain text that reflows
+                    into markdown at the end — headings, bold, lists and math
+                    resolve as they arrive, so the reply never visibly restyles
+                    itself once it settles. */}
                 {streaming !== null && (
-                  <ChatBubble role="assistant">
-                    {streaming}
-                    <Box
-                      component="span"
-                      sx={{
-                        display: "inline-block",
-                        width: "2px",
-                        height: "1.05em",
-                        ml: "1px",
-                        verticalAlign: "text-bottom",
-                        bgcolor: "text.secondary",
-                        animation: "caret 1s steps(1) infinite",
-                        "@keyframes caret": { "50%": { opacity: 0 } },
-                      }}
-                    />
-                  </ChatBubble>
+                  <ChatBubble role="assistant" markdown={streaming} caret />
                 )}
                 {tutor.isPending && <ThinkingRow deep={deep} />}
               </Stack>
@@ -483,8 +482,18 @@ export default function ChatbotPage() {
           </Box>
         </Box>
 
-        {/* Composer */}
-        <Box sx={{ pt: 1.5 }}>
+        {/* Composer — docked to the bottom of the surface. */}
+        <Box
+          sx={{
+            flexShrink: 0,
+            px: { xs: 2, sm: 3 },
+            pt: 1.5,
+            pb: { xs: 1.5, sm: 2 },
+            borderTop: 1,
+            borderColor: "divider",
+            bgcolor: "background.paper",
+          }}
+        >
           <Box sx={{ maxWidth: 780, mx: "auto" }}>
             <Stack
               direction="row"
@@ -811,11 +820,16 @@ function ChatBubble({
   role,
   markdown,
   error,
+  caret,
   children,
 }: {
   role: "user" | "assistant";
   markdown?: string;
   error?: boolean;
+  // Blinking caret trailing the last line while a reply streams in. Attached
+  // via ::after on the final block so it sits inline at the end of the text
+  // rather than orphaned on its own line under a rendered markdown block.
+  caret?: boolean;
   children?: React.ReactNode;
 }) {
   const isUser = role === "user";
@@ -856,7 +870,30 @@ function ChatBubble({
         }}
       >
         {markdown != null ? (
-          <Markdown>{markdown}</Markdown>
+          <Box
+            sx={
+              caret
+                ? {
+                    "& > *:last-child::after": {
+                      content: '""',
+                      display: "inline-block",
+                      width: "2px",
+                      height: "1.05em",
+                      marginLeft: "2px",
+                      verticalAlign: "text-bottom",
+                      backgroundColor: "text.secondary",
+                      animation: "caret 1s steps(1) infinite",
+                    },
+                    "@keyframes caret": { "50%": { opacity: 0 } },
+                    "@media (prefers-reduced-motion: reduce)": {
+                      "& > *:last-child::after": { animation: "none" },
+                    },
+                  }
+                : undefined
+            }
+          >
+            <Markdown>{markdown}</Markdown>
+          </Box>
         ) : (
           <Typography
             component="div"

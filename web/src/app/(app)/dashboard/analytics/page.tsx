@@ -23,6 +23,7 @@ import { CardError } from "@/components/common/CardError";
 import { AtmosphericBackdrop } from "@/components/common/AtmosphericBackdrop";
 import { AptiverseLineChart } from "@/components/common/AptiverseLineChart";
 import { AptiverseDonut } from "@/components/common/AptiverseDonut";
+import { masteryBandRamp, courseColor } from "@/components/common/chartPalette";
 import {
   useAcademicUnits,
   useTermPredictions,
@@ -53,7 +54,6 @@ export default function AnalyticsPage() {
     predictionsQuery.isLoading || masteryQuery.isLoading || assessmentsQuery.isLoading;
   const isError = predictionsQuery.isError || masteryQuery.isError || assessmentsQuery.isError;
 
-  // Graded marks in chronological order — the spine of the marks-over-time view.
   const graded = assessments
     .filter((a) => a.actualMark != null)
     .sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate));
@@ -70,7 +70,7 @@ export default function AnalyticsPage() {
     <AtmosphericBackdrop>
       <PageHeader
         title="Analytics"
-        description="Your term at a glance: how your marks, mastery, and wellbeing are trending."
+        description="Your term, course by course: where each one stands, what is moving, and how you are holding up."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Analytics" }]}
         actions={
           <Button
@@ -108,11 +108,74 @@ export default function AnalyticsPage() {
           graded={graded}
           mood={mood}
           moodAvg7d={wellbeing?.moodAvg7d ?? 0}
-          labelFor={(p) => academic.nameFor(p.subjectId) ?? prettifySubject(p.subject)}
+          nameOf={(id, fallback) => academic.nameFor(id) ?? prettifySubject(fallback ?? id)}
         />
       )}
     </AtmosphericBackdrop>
   );
+}
+
+// ── model ─────────────────────────────────────────────────────────────
+
+// One course's whole story, assembled from the three sources that each hold
+// only a slice of it: predictions (standing), topic mastery, and graded marks.
+type CourseStory = {
+  id: string;
+  name: string;
+  marks: { date: string; mark: number; title: string }[];
+  current: number | null;
+  predicted: number | null;
+  confidence: number;
+  topics: TopicMastery[];
+  mastery: number | null;
+  bands: { label: string; count: number }[];
+};
+
+function bandsOf(topics: TopicMastery[]) {
+  return [
+    { label: "Needs work", count: topics.filter((t) => t.mastery < 50).length },
+    { label: "Developing", count: topics.filter((t) => t.mastery >= 50 && t.mastery < 80).length },
+    { label: "Strong", count: topics.filter((t) => t.mastery >= 80).length },
+  ];
+}
+
+// Courses are the unit of the story, so they get built from every source
+// rather than whichever one happens to be populated. Weakest first: the
+// course in trouble is the one worth reading first.
+function buildCourses(
+  predictions: TermPrediction[],
+  topics: TopicMastery[],
+  graded: Assessment[],
+  nameOf: (id: string, fallback?: string) => string,
+): CourseStory[] {
+  const ids = new Set<string>([
+    ...predictions.map((p) => p.subjectId),
+    ...topics.map((t) => t.subjectId),
+    ...graded.map((g) => g.subjectId),
+  ]);
+
+  return [...ids]
+    .map((id) => {
+      const p = predictions.find((x) => x.subjectId === id);
+      const ts = topics.filter((t) => t.subjectId === id);
+      const marks = graded
+        .filter((g) => g.subjectId === id && g.actualMark != null)
+        .map((g) => ({ date: g.dueDate.slice(0, 10), mark: g.actualMark as number, title: g.title }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      return {
+        id,
+        name: nameOf(id, p?.subject),
+        marks,
+        current: p?.currentTerm ?? (marks.length ? marks[marks.length - 1].mark : null),
+        predicted: p?.predictedNextTerm ?? null,
+        confidence: p?.confidence ?? 0,
+        topics: ts,
+        mastery: ts.length ? Math.round(ts.reduce((s, t) => s + t.mastery, 0) / ts.length) : null,
+        bands: bandsOf(ts),
+      };
+    })
+    .sort((a, b) => (a.current ?? 101) - (b.current ?? 101));
 }
 
 // ── main view ─────────────────────────────────────────────────────────
@@ -123,16 +186,18 @@ function AnalyticsView({
   graded,
   mood,
   moodAvg7d,
-  labelFor,
+  nameOf,
 }: {
   predictions: TermPrediction[];
   topics: TopicMastery[];
   graded: Assessment[];
   mood: MoodPoint[];
   moodAvg7d: number;
-  labelFor: (p: TermPrediction) => string;
+  nameOf: (id: string, fallback?: string) => string;
 }) {
   const theme = useTheme();
+  const mode = theme.palette.mode === "dark" ? "dark" : "light";
+  const courses = buildCourses(predictions, topics, graded, nameOf);
 
   const predictedAvg =
     predictions.length > 0
@@ -150,13 +215,6 @@ function AnalyticsView({
       ? Math.round(topics.reduce((s, t) => s + t.mastery, 0) / topics.length)
       : null;
 
-  // Mastery band distribution — a genuinely different cut from the topic list.
-  const bands = [
-    { label: "Needs work", count: topics.filter((t) => t.mastery < 50).length },
-    { label: "Developing", count: topics.filter((t) => t.mastery >= 50 && t.mastery < 80).length },
-    { label: "Strong", count: topics.filter((t) => t.mastery >= 80).length },
-  ];
-
   return (
     <>
       <Grid container spacing={{ xs: 2, md: 3 }} sx={{ mb: { xs: 2, md: 3 } }}>
@@ -168,7 +226,11 @@ function AnalyticsView({
             deltaLabel="vs current"
             icon={<TrendingUpIcon />}
             color="primary"
-            hint={predictedAvg == null ? "Log marks to project" : undefined}
+            hint={
+              predictedAvg == null
+                ? "Log marks to project"
+                : `Across ${courses.length} course${courses.length === 1 ? "" : "s"}`
+            }
           />
         </Grid>
         <Grid size={{ xs: 6, md: 3 }}>
@@ -200,8 +262,31 @@ function AnalyticsView({
         </Grid>
       </Grid>
 
+      {/* Each course gets its own read. Averaging them into one number, or
+          pooling their topics into one pie, hides the only thing worth
+          knowing: which course needs you, and why. */}
+      {courses.length > 0 && (
+        <Box sx={{ mb: { xs: 2, md: 3 } }}>
+          <Typography variant="overline" color="text.secondary">
+            By course
+          </Typography>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Where each course actually stands
+          </Typography>
+          <Grid container spacing={{ xs: 2, md: 3 }}>
+            {courses.map((c, i) => (
+              <Grid key={c.id} size={{ xs: 12, md: 6, lg: 4 }}>
+                <CourseCard course={c} accent={courseColor(i, mode)} mode={mode} />
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+      )}
+
       <Grid container spacing={{ xs: 2, md: 3 }}>
-        {/* Marks over time — the time-series Home and Mastery don't show. */}
+        {/* One line per course. Plotting every course as a single series
+            invented trends that never happened: a 95% calculus test followed
+            by an 85% english essay is not a decline, it is two courses. */}
         <Grid size={{ xs: 12, lg: 8 }}>
           <Card sx={{ height: "100%" }}>
             <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
@@ -209,31 +294,13 @@ function AnalyticsView({
                 Trajectory
               </Typography>
               <Typography variant="h6" sx={{ mb: 2 }}>
-                Marks over time
+                Marks over time, by course
               </Typography>
-              {graded.length >= 2 ? (
-                <AptiverseLineChart
-                  height={300}
-                  xAxis={[
-                    {
-                      data: graded.map((g) => dayjs(g.dueDate).format("DD MMM")),
-                      scaleType: "point",
-                    },
-                  ]}
-                  yAxis={[{ min: 0, max: 100 }]}
-                  series={[
-                    {
-                      data: graded.map((g) => g.actualMark ?? 0),
-                      label: "Mark",
-                      area: true,
-                      color: theme.palette.primary.main,
-                    },
-                  ]}
-                  margin={{ top: 16, right: 16, bottom: 28, left: 36 }}
-                />
+              {graded.length > 0 ? (
+                <MarksByCourse courses={courses} mode={mode} />
               ) : (
                 <SectionEmpty
-                  text="Log at least two graded marks to see your term trajectory."
+                  text="Log a graded mark and each course starts charting its own line here."
                   href="/dashboard/assessments"
                   cta="Log a mark"
                 />
@@ -242,31 +309,8 @@ function AnalyticsView({
           </Card>
         </Grid>
 
-        {/* Mastery distribution. */}
+        {/* Wellbeing trend: the academics-plus-wellbeing cut nothing else shows. */}
         <Grid size={{ xs: 12, lg: 4 }}>
-          <Card sx={{ height: "100%" }}>
-            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
-              <Typography variant="overline" color="text.secondary">
-                Spread
-              </Typography>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Topics by mastery
-              </Typography>
-              {topics.length > 0 ? (
-                <MasteryDonut bands={bands} total={topics.length} />
-              ) : (
-                <SectionEmpty
-                  text="Take practice tests to map your topics by mastery."
-                  href="/dashboard/practice"
-                  cta="Practise"
-                />
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Wellbeing trend — the platform's distinctive academics-plus-wellbeing cut. */}
-        <Grid size={{ xs: 12, lg: 8 }}>
           <Card sx={{ height: "100%" }}>
             <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
               <Typography variant="overline" color="text.secondary">
@@ -302,106 +346,157 @@ function AnalyticsView({
             </CardContent>
           </Card>
         </Grid>
-
-        {/* Per-subject standing. */}
-        <Grid size={{ xs: 12, lg: 4 }}>
-          <Card sx={{ height: "100%" }}>
-            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
-              <Typography variant="overline" color="text.secondary">
-                By subject
-              </Typography>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Where each subject stands
-              </Typography>
-              {predictions.length > 0 ? (
-                <Stack spacing={1.75}>
-                  {[...predictions]
-                    .sort((a, b) => a.currentTerm - b.currentTerm)
-                    .map((p) => (
-                      <SubjectStanding key={p.subjectId} p={p} name={labelFor(p)} />
-                    ))}
-                </Stack>
-              ) : (
-                <SectionEmpty
-                  text="Log graded marks to see each subject's standing."
-                  href="/dashboard/assessments"
-                  cta="Log a mark"
-                />
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
       </Grid>
     </>
   );
 }
 
-// Mastery distribution as a donut: three bands, colored, with the topic total
-// in the middle. Zero-count bands are dropped so labels stay clean.
-function MasteryDonut({
-  bands,
-  total,
+// ── course card ───────────────────────────────────────────────────────
+
+// A course, whole: its standing, where it is heading, and how its topics are
+// spread. The donut is per course rather than one global pie, because "8
+// topics" pooled across every course is a number nobody can act on.
+function CourseCard({
+  course,
+  accent,
+  mode,
 }: {
-  bands: { label: string; count: number }[];
-  total: number;
+  course: CourseStory;
+  accent: string;
+  mode: "light" | "dark";
 }) {
-  const theme = useTheme();
+  const ramp = masteryBandRamp(mode);
   const colorFor: Record<string, string> = {
-    "Needs work": theme.palette.warning.main,
-    Developing: theme.palette.primary.main,
-    Strong: theme.palette.success.main,
+    "Needs work": ramp.needsWork,
+    Developing: ramp.developing,
+    Strong: ramp.strong,
   };
+  const delta =
+    course.predicted != null && course.current != null ? course.predicted - course.current : null;
+  const weakest = [...course.topics].sort((a, b) => a.mastery - b.mastery)[0];
 
   return (
-    <AptiverseDonut
-      height={232}
-      centerValue={total}
-      centerLabel="topics"
-      data={bands.map((b) => ({ label: b.label, value: b.count, color: colorFor[b.label] }))}
-    />
+    <Card sx={{ height: "100%" }}>
+      <CardContent sx={{ p: 3 }}>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+          <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: accent, flexShrink: 0 }} />
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, minWidth: 0 }} noWrap>
+            {course.name}
+          </Typography>
+        </Stack>
+
+        <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mb: 1.5 }}>
+          <Typography sx={{ fontWeight: 800, fontSize: "1.9rem", lineHeight: 1 }}>
+            {course.current != null ? `${course.current}%` : "—"}
+          </Typography>
+          {course.predicted != null && delta != null && (
+            <Stack direction="row" alignItems="center" spacing={0.5}>
+              <ArrowForwardIcon sx={{ fontSize: 14, color: "text.disabled" }} />
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontWeight: 700,
+                  color: delta >= 0 ? "success.main" : "warning.main",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {course.predicted}%
+              </Typography>
+              {delta !== 0 && (
+                <Box
+                  sx={{
+                    px: 0.75,
+                    py: 0.125,
+                    borderRadius: 1,
+                    fontSize: "0.7rem",
+                    fontWeight: 700,
+                    fontVariantNumeric: "tabular-nums",
+                    color: delta > 0 ? "success.main" : "warning.main",
+                    bgcolor: (t) =>
+                      alpha(delta > 0 ? t.palette.success.main : t.palette.warning.main, 0.14),
+                  }}
+                >
+                  {delta > 0 ? "+" : ""}
+                  {delta}
+                </Box>
+              )}
+            </Stack>
+          )}
+        </Stack>
+
+        {course.topics.length > 0 ? (
+          <AptiverseDonut
+            height={184}
+            innerRadius={46}
+            outerRadius={76}
+            centerValue={course.mastery != null ? `${course.mastery}%` : "—"}
+            centerLabel="mastery"
+            data={course.bands.map((b) => ({
+              label: b.label,
+              value: b.count,
+              color: colorFor[b.label],
+            }))}
+          />
+        ) : (
+          <Box sx={{ py: 3, textAlign: "center" }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              No practised topics yet.
+            </Typography>
+            <Button component={Link} href="/dashboard/practice" variant="outlined" size="small">
+              Map this course
+            </Button>
+          </Box>
+        )}
+
+        <Stack spacing={0.25} sx={{ mt: 1.5 }}>
+          <Typography variant="caption" color="text.secondary">
+            {course.marks.length} mark{course.marks.length === 1 ? "" : "s"} logged
+            {course.confidence > 0 && ` · ${Math.round(course.confidence * 100)}% confidence`}
+          </Typography>
+          {weakest && (
+            <Typography variant="caption" color="text.secondary" noWrap>
+              Focus: {weakest.topic} · {weakest.mastery}%
+            </Typography>
+          )}
+        </Stack>
+      </CardContent>
+    </Card>
   );
 }
 
-function SubjectStanding({ p, name }: { p: TermPrediction; name: string }) {
-  const delta = p.predictedNextTerm - p.currentTerm;
-  const up = delta >= 0;
-  const tint = up ? "success.main" : "warning.main";
+// ── marks by course ───────────────────────────────────────────────────
+
+// Shared date axis, one line per course, gaps connected so a course with marks
+// weeks apart still reads as its own line rather than breaking in two.
+function MarksByCourse({ courses, mode }: { courses: CourseStory[]; mode: "light" | "dark" }) {
+  const withMarks = courses.filter((c) => c.marks.length > 0);
+  const dates = [...new Set(withMarks.flatMap((c) => c.marks.map((m) => m.date)))].sort();
+
+  const series = withMarks.map((c) => ({
+    label: c.name,
+    data: dates.map((d) => c.marks.find((m) => m.date === d)?.mark ?? null),
+    color: courseColor(courses.indexOf(c), mode),
+    showMark: true,
+    connectNulls: true,
+    curve: "linear" as const,
+  }));
+
+  if (series.length === 0) return null;
+
   return (
-    <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, minWidth: 0 }} noWrap>
-        {name}
+    <>
+      <AptiverseLineChart
+        height={300}
+        xAxis={[{ data: dates.map((d) => dayjs(d).format("DD MMM")), scaleType: "point" }]}
+        yAxis={[{ min: 0, max: 100 }]}
+        series={series}
+        margin={{ top: 16, right: 16, bottom: 28, left: 36 }}
+      />
+      <Typography variant="caption" color="text.secondary">
+        Each course keeps its own line. A single mark stays a point until there is a second one to
+        join it to.
       </Typography>
-      <Stack direction="row" alignItems="center" spacing={0.75} sx={{ flexShrink: 0 }}>
-        <Typography variant="body2" color="text.secondary" sx={{ fontVariantNumeric: "tabular-nums" }}>
-          {p.currentTerm}%
-        </Typography>
-        <ArrowForwardIcon sx={{ fontSize: 14, color: "text.disabled" }} />
-        <Typography
-          variant="subtitle2"
-          sx={{ fontWeight: 700, color: tint, fontVariantNumeric: "tabular-nums" }}
-        >
-          {p.predictedNextTerm}%
-        </Typography>
-        {delta !== 0 && (
-          <Box
-            sx={{
-              px: 0.75,
-              py: 0.125,
-              borderRadius: 1,
-              fontSize: "0.7rem",
-              fontWeight: 700,
-              fontVariantNumeric: "tabular-nums",
-              color: tint,
-              bgcolor: (t) =>
-                alpha(up ? t.palette.success.main : t.palette.warning.main, 0.14),
-            }}
-          >
-            {up ? "+" : ""}
-            {delta}
-          </Box>
-        )}
-      </Stack>
-    </Stack>
+    </>
   );
 }
 
@@ -477,6 +572,13 @@ function AnalyticsSkeleton() {
         {[0, 1, 2, 3].map((i) => (
           <Grid key={i} size={{ xs: 6, md: 3 }}>
             <Skeleton variant="rounded" height={116} />
+          </Grid>
+        ))}
+      </Grid>
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        {[0, 1, 2].map((i) => (
+          <Grid key={i} size={{ xs: 12, md: 6, lg: 4 }}>
+            <Skeleton variant="rounded" height={360} />
           </Grid>
         ))}
       </Grid>

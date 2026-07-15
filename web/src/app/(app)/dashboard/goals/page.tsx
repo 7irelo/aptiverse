@@ -30,8 +30,16 @@ import { CardRow } from "@/components/common/CardRow";
 import { PriorityList } from "@/components/common/PriorityList";
 import { QueryStates } from "@/components/common/QueryStates";
 import { useConfirm } from "@/components/common/ConfirmDialog";
-import { useGoals, useSubjects, useCreateGoal, useDeleteGoal, useReorderGoals, type CreateGoalInput } from "@/lib/api/queries";
-import type { Goal, Subject } from "@/lib/mockData";
+import {
+  useGoals,
+  useAcademicUnits,
+  useCreateGoal,
+  useDeleteGoal,
+  useReorderGoals,
+  type CreateGoalInput,
+  type AcademicUnit,
+} from "@/lib/api/queries";
+import type { Goal } from "@/lib/mockData";
 import { RelativeTime } from "@/components/common/RelativeTime";
 import { AtmosphericBackdrop } from "@/components/common/AtmosphericBackdrop";
 
@@ -47,10 +55,12 @@ const CATEGORIES: { value: NonNullable<CreateGoalInput["category"]>; label: stri
 
 export default function GoalsPage() {
   const goalsQuery = useGoals();
-  const subjectsQuery = useSubjects();
+  // Academic units, not subjects — a tertiary student has courses, and
+  // useSubjects() returns nothing for them, which left the picker empty.
+  const academic = useAcademicUnits();
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const subjects = subjectsQuery.data ?? [];
+  const units = academic.units;
 
   return (
     <AtmosphericBackdrop>
@@ -70,8 +80,7 @@ export default function GoalsPage() {
         empty={{
           icon: <FlagIcon />,
           title: "No goals yet",
-          description:
-            "Goals turn your subjects and SBAs into a plan you can actually follow. Start with one. You can always add more.",
+          description: `Goals turn your ${academic.unitNounPlural} and assessments into a plan you can actually follow. Start with one. You can always add more.`,
           action: (
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => setDialogOpen(true)}>
               Add your first goal
@@ -79,13 +88,14 @@ export default function GoalsPage() {
           ),
         }}
       >
-        {(goals) => <GoalsList goals={goals} subjects={subjects} />}
+        {(goals) => <GoalsList goals={goals} units={units} />}
       </QueryStates>
 
       <NewGoalDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        subjects={subjects}
+        units={units}
+        unitNoun={academic.unitNoun}
       />
     </AtmosphericBackdrop>
   );
@@ -94,11 +104,13 @@ export default function GoalsPage() {
 function NewGoalDialog({
   open,
   onClose,
-  subjects,
+  units,
+  unitNoun,
 }: {
   open: boolean;
   onClose: () => void;
-  subjects: Subject[];
+  units: AcademicUnit[];
+  unitNoun: string;
 }) {
   const { enqueueSnackbar } = useSnackbar();
   const createGoal = useCreateGoal();
@@ -198,7 +210,7 @@ function NewGoalDialog({
               ))}
             </TextField>
             <TextField
-              label="Subject (optional)"
+              label={`${unitNoun.charAt(0).toUpperCase()}${unitNoun.slice(1)} (optional)`}
               value={subjectId}
               onChange={(e) => setSubjectId(e.target.value)}
               select
@@ -206,9 +218,9 @@ function NewGoalDialog({
               disabled={category !== "academic"}
             >
               <MenuItem value="">None</MenuItem>
-              {subjects.map((s) => (
-                <MenuItem key={s.id} value={s.id}>
-                  {s.name}
+              {units.map((u) => (
+                <MenuItem key={u.id} value={u.id}>
+                  {u.name}
                 </MenuItem>
               ))}
             </TextField>
@@ -251,7 +263,7 @@ function NewGoalDialog({
   );
 }
 
-function GoalsList({ goals, subjects }: { goals: Goal[]; subjects: Subject[] }) {
+function GoalsList({ goals, units }: { goals: Goal[]; units: AcademicUnit[] }) {
   const [tab, setTab] = useState<TabValue>("Active");
   const [reordering, setReordering] = useState(false);
 
@@ -303,7 +315,7 @@ function GoalsList({ goals, subjects }: { goals: Goal[]; subjects: Subject[] }) 
       </Box>
 
       {tab === "Active" && reordering ? (
-        <PrioritizeGoals goals={activeGoals} subjects={subjects} />
+        <PrioritizeGoals goals={activeGoals} units={units} />
       ) : filtered.length === 0 ? (
         <Box sx={{ py: 6, textAlign: "center" }}>
           <Typography variant="body2" color="text.secondary">
@@ -314,7 +326,7 @@ function GoalsList({ goals, subjects }: { goals: Goal[]; subjects: Subject[] }) 
         <Grid container spacing={3}>
           {filtered.map((g) => (
             <Grid key={g.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-              <GoalCard goal={g} subject={subjects.find((s) => s.id === g.subjectId)} />
+              <GoalCard goal={g} unit={units.find((u) => u.id === g.subjectId)} />
             </Grid>
           ))}
         </Grid>
@@ -326,7 +338,7 @@ function GoalsList({ goals, subjects }: { goals: Goal[]; subjects: Subject[] }) 
 // Drag-to-rank mode for the Active tab. Local order state gives an instant,
 // optimistic reorder; every drop persists the new order to the server so the
 // priority survives a refresh (goals come back ordered by SortOrder).
-function PrioritizeGoals({ goals, subjects }: { goals: Goal[]; subjects: Subject[] }) {
+function PrioritizeGoals({ goals, units }: { goals: Goal[]; units: AcademicUnit[] }) {
   const [ordered, setOrdered] = useState<Goal[]>(goals);
   const reorder = useReorderGoals();
   const { enqueueSnackbar } = useSnackbar();
@@ -354,14 +366,14 @@ function PrioritizeGoals({ goals, subjects }: { goals: Goal[]; subjects: Subject
         getKey={(g) => g.id}
         onReorder={handleReorder}
         renderItem={(g) => (
-          <GoalPriorityRow goal={g} subject={subjects.find((s) => s.id === g.subjectId)} />
+          <GoalPriorityRow goal={g} unit={units.find((u) => u.id === g.subjectId)} />
         )}
       />
     </Stack>
   );
 }
 
-function GoalPriorityRow({ goal, subject }: { goal: Goal; subject?: Subject }) {
+function GoalPriorityRow({ goal, unit }: { goal: Goal; unit?: AcademicUnit }) {
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 2, width: "100%", minWidth: 0 }}>
       <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -369,7 +381,7 @@ function GoalPriorityRow({ goal, subject }: { goal: Goal; subject?: Subject }) {
           {goal.title}
         </Typography>
         <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
-          {subject?.name ?? (
+          {unit?.name ?? (
             <Box component="span" sx={{ textTransform: "capitalize" }}>
               {goal.category}
             </Box>
@@ -395,7 +407,7 @@ function GoalPriorityRow({ goal, subject }: { goal: Goal; subject?: Subject }) {
   );
 }
 
-function GoalCard({ goal, subject }: { goal: Goal; subject?: Subject }) {
+function GoalCard({ goal, unit }: { goal: Goal; unit?: AcademicUnit }) {
   const { enqueueSnackbar } = useSnackbar();
   const del = useDeleteGoal();
   const { confirm, dialog: confirmDialog } = useConfirm();
@@ -450,7 +462,7 @@ function GoalCard({ goal, subject }: { goal: Goal; subject?: Subject }) {
           </IconButton>
         }
         title={goal.title}
-        subtitle={subject?.name}
+        subtitle={unit?.name}
         description={goal.description}
         progress={{ value: goal.progress, label: `Progress · ${goal.target}` }}
         status={{
