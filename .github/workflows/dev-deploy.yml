@@ -1,12 +1,20 @@
+# Deploys the API to the dev EC2 box.
+#
+# What changed from the previous version, and why it could not have worked:
+#   - it copied infrastructure/docker-compose.dev.yml; that path is now
+#     infra/, and the dev compose file is postgres + redis for local work, not
+#     the production stack. The EC2 stack is infra/compose.prod.yml.
+#   - it defaulted to deploying "postgres,redis,auth-provider,ui". auth-provider
+#     was folded into the modulith and ui moved to Vercel, so two of those four
+#     services no longer exist. Postgres is now RDS, not a container.
+#   - it wrote DB_CONNECTION_STRING as Host=postgres, pointing at a container
+#     that the prod stack does not define.
+#
+# The frontend is not deployed here: Vercel builds it from git.
 name: CD / Deploy Dev Environment
 
 on:
   workflow_dispatch:
-    inputs:
-      services:
-        description: "Services to deploy (comma-separated, or 'all')"
-        required: false
-        default: "postgres,redis,auth-provider,ui"
 
 jobs:
   deploy:
@@ -17,44 +25,26 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.8.0
+        uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Copy docker-compose and env to EC2
+      - name: Copy compose file to EC2
         run: |
           scp -o StrictHostKeyChecking=no \
-            infrastructure/docker-compose.dev.yml \
+            infra/compose.prod.yml \
             ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/opt/aptiverse/docker-compose.yml
 
-      - name: Ensure Docker Compose is installed
+      - name: Write environment file
+        # Written every run rather than only when absent. The old version
+        # skipped this whenever /opt/aptiverse/.env already existed, so a
+        # rotated secret or a changed RDS endpoint would never reach the box
+        # and the deploy would quietly keep using the stale value.
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} '
-            if ! docker compose version &>/dev/null; then
-              echo "Installing Docker Compose plugin..."
-              sudo mkdir -p /usr/local/lib/docker/cli-plugins
-              sudo curl -SL "https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-$(uname -m)" \
-                -o /usr/local/lib/docker/cli-plugins/docker-compose
-              sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
-              docker compose version
-            else
-              echo "Docker Compose already installed: $(docker compose version)"
-            fi
-          '
-
-      - name: Deploy services
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} '
-            set -e
-            cd /opt/aptiverse
-
-            # Create .env if it does not exist
-            if [ ! -f .env ]; then
-              echo "No .env file found — creating from secrets..."
-              cat > .env <<ENVEOF
-          POSTGRES_USER=${{ secrets.DB_USERNAME }}
-          POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
-          DB_CONNECTION_STRING=Host=postgres;Port=5432;Database=aptiverse;Username=${{ secrets.DB_USERNAME }};Password=${{ secrets.DB_PASSWORD }}
+          ssh -o StrictHostKeyChecking=no \
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} \
+            'mkdir -p /opt/aptiverse && cat > /opt/aptiverse/.env && chmod 600 /opt/aptiverse/.env' <<ENVEOF
+          DB_CONNECTION_STRING=${{ secrets.DB_CONNECTION_STRING }}
           JWT_KEY=${{ secrets.JWT_KEY }}
           JWT_ISSUER=aptiverse
           JWT_AUDIENCE=aptiverse
@@ -63,31 +53,44 @@ jobs:
           EMAIL_SMTP_USER=${{ secrets.EMAIL_SMTP_USER }}
           EMAIL_SMTP_PASSWORD=${{ secrets.EMAIL_SMTP_PASSWORD }}
           EMAIL_FROM_ADDRESS=${{ secrets.EMAIL_FROM_ADDRESS }}
-          NEXT_PUBLIC_API_URL=http://${{ secrets.EC2_HOST }}:5000
-          NEXTAUTH_URL=http://${{ secrets.EC2_HOST }}:3000
-          NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
           ENVEOF
-            fi
 
-            echo "Stopping existing services..."
-            docker compose down --remove-orphans 2>/dev/null || true
-            docker rm -f $(docker ps -aq) 2>/dev/null || true
+      - name: Deploy
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} '
+            set -e
+            cd /opt/aptiverse
 
-            echo "Pulling latest images..."
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
             docker compose pull
-
-            SERVICES="${{ inputs.services }}"
-            if [ "$SERVICES" = "all" ]; then
-              echo "Starting all services..."
-              docker compose up -d
-            else
-              echo "Starting selected services: $SERVICES"
-              docker compose up -d $(echo "$SERVICES" | tr "," " ")
-            fi
-
-            echo "Cleaning up old images..."
+            # No `docker rm -f $(docker ps -aq)` here. That killed every
+            # container on the host, including anything unrelated to this
+            # stack, to work around ports that `compose up -d` would have
+            # rebound anyway. Compose recreates only what changed.
+            docker compose up -d --remove-orphans
             docker image prune -f
-
-            echo "Running containers:"
             docker compose ps
+          '
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify the API is serving
+        # A deploy that leaves the container crash-looping should fail loudly
+        # here rather than be reported as a success.
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} '
+            for i in $(seq 1 30); do
+              if curl -fsS http://localhost/health >/dev/null 2>&1; then
+                echo "API healthy after ${i}s"
+                exit 0
+              fi
+              sleep 1
+            done
+            echo "API did not become healthy within 30s. Recent logs:"
+            docker compose -f /opt/aptiverse/docker-compose.yml logs --tail=50 api
+            exit 1
           '
