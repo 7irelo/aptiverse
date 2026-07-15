@@ -5,27 +5,30 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Divider from "@mui/material/Divider";
 import Link from "next/link";
+import MuiLink from "@mui/material/Link";
 import { Logo } from "@/components/common/Logo";
+
+const SUPPORT_EMAIL = "support@aptiverse.co.za";
 
 type Column = {
   title: string;
   links: { label: string; href: string }[];
-  // These duplicate the top menu, so they are hidden on mobile.
-  hideOnMobile?: boolean;
 };
 
+// Four columns, every route the marketing site actually has. Legal used to be
+// stranded in the bottom bar at 13px next to the copyright, which reads as
+// boilerplate; a student checking what happens to their data should find it
+// where they look for everything else.
 const COLUMNS: Column[] = [
   {
     title: "Product",
-    hideOnMobile: true,
     links: [
       { label: "Features", href: "/features" },
       { label: "Pricing", href: "/pricing" },
     ],
   },
   {
-    title: "For",
-    hideOnMobile: true,
+    title: "Who it's for",
     links: [
       { label: "Students", href: "/for-students" },
       { label: "Families", href: "/for-families" },
@@ -39,6 +42,13 @@ const COLUMNS: Column[] = [
       { label: "Contact", href: "/contact" },
     ],
   },
+  {
+    title: "Legal",
+    links: [
+      { label: "Privacy", href: "/privacy" },
+      { label: "Terms", href: "/terms" },
+    ],
+  },
 ];
 
 export function Footer() {
@@ -49,33 +59,62 @@ export function Footer() {
         borderTop: 1,
         borderColor: "divider",
         bgcolor: "background.paper",
-        py: { xs: 4, md: 9 },
+        py: { xs: 6, md: 9 },
       }}
     >
       <Box sx={{ maxWidth: 1240, mx: "auto", px: { xs: 2.5, sm: 4, lg: 6 } }}>
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={{ xs: 3.5, md: 8 }}
-          justifyContent="space-between"
-          alignItems="flex-start"
+        <Box
+          sx={{
+            display: "grid",
+            // The brand block gets its own wider column at desktop and the full
+            // width on mobile, so the sentence under the logo never wraps to
+            // three ragged lines beside the link grid.
+            gridTemplateColumns: { xs: "1fr", md: "minmax(240px, 1.2fr) 2fr" },
+            columnGap: { md: 8 },
+            rowGap: { xs: 5, md: 0 },
+          }}
         >
-          <Logo size={28} />
+          <Stack spacing={2} alignItems="flex-start">
+            <Logo size={28} />
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ maxWidth: 320, lineHeight: 1.6 }}
+            >
+              Aptiverse turns marks, topics and mood into one honest picture of where a student
+              stands, and what to do next.
+            </Typography>
+            <Box>
+              <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700 }}>
+                Support
+              </Typography>
+              <MuiLink
+                href={`mailto:${SUPPORT_EMAIL}`}
+                underline="none"
+                sx={{
+                  display: "block",
+                  fontSize: "0.875rem",
+                  color: "text.primary",
+                  fontWeight: 600,
+                  transition: "color 150ms",
+                  "&:hover": { color: "secondary.main" },
+                }}
+              >
+                {SUPPORT_EMAIL}
+              </MuiLink>
+            </Box>
+          </Stack>
 
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(4, auto)" },
-              columnGap: { xs: 3, sm: 6 },
-              rowGap: 3,
-              width: { xs: "100%", md: "auto" },
+              gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(4, 1fr)" },
+              columnGap: { xs: 3, sm: 4 },
+              rowGap: 4,
             }}
           >
             {COLUMNS.map((c) => (
-              <Stack
-                key={c.title}
-                spacing={1}
-                sx={c.hideOnMobile ? { display: { xs: "none", md: "flex" } } : undefined}
-              >
+              <Stack key={c.title} spacing={1.25} component="nav" aria-label={c.title}>
                 <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 700 }}>
                   {c.title}
                 </Typography>
@@ -97,29 +136,22 @@ export function Footer() {
               </Stack>
             ))}
           </Box>
-        </Stack>
+        </Box>
 
-        <Divider sx={{ my: { xs: 3, md: 5 } }} />
+        <Divider sx={{ my: { xs: 4, md: 5 } }} />
 
         <Stack
-          direction="row"
-          spacing={2}
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1.5}
           justifyContent="space-between"
-          alignItems="center"
-          flexWrap="wrap"
-          useFlexGap
+          alignItems={{ xs: "flex-start", sm: "center" }}
         >
           <Typography variant="caption" color="text.secondary">
-            © {new Date().getFullYear()} Aptiverse
+            © {new Date().getFullYear()} Aptiverse. All rights reserved.
           </Typography>
-          <Stack direction="row" spacing={3}>
-            <Box component={Link} href="/privacy" sx={{ fontSize: "0.8125rem", color: "text.secondary" }}>
-              Privacy
-            </Box>
-            <Box component={Link} href="/terms" sx={{ fontSize: "0.8125rem", color: "text.secondary" }}>
-              Terms
-            </Box>
-          </Stack>
+          <Typography variant="caption" color="text.secondary">
+            Built in South Africa for South African students.
+          </Typography>
         </Stack>
       </Box>
     </Box>
