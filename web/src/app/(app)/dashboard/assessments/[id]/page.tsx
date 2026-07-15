@@ -116,8 +116,11 @@ function AssessmentBody({
 }) {
   const dueAt = dayjs(a.dueDate);
   const daysLeft = Math.ceil((+dueAt.toDate() - Date.now()) / 86400000);
-  const isOverdue = daysLeft < 0 && a.status !== "graded";
-  const isGraded = a.status === "graded" && a.actualMark != null;
+  // A logged actual mark is what "graded" means to the student — don't also
+  // require the status field to say "graded" (they're set independently in the
+  // form, and the assessments list already treats a mark as graded).
+  const isGraded = a.actualMark != null;
+  const isOverdue = daysLeft < 0 && !isGraded;
 
   // Stat tile model — only show stats backed by real fields. No invented
   // "readiness", no AI-estimate label on a user-entered prediction.
