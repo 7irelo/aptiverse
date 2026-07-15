@@ -35,6 +35,7 @@ import {
   type TopicMastery,
 } from "@/lib/api/queries";
 import type { Assessment, MoodPoint } from "@/lib/mockData";
+import { prettifyUnitId } from "@/lib/format";
 
 export default function AnalyticsPage() {
   const academic = useAcademicUnits();
@@ -108,7 +109,7 @@ export default function AnalyticsPage() {
           graded={graded}
           mood={mood}
           moodAvg7d={wellbeing?.moodAvg7d ?? 0}
-          nameOf={(id, fallback) => academic.nameFor(id) ?? prettifySubject(fallback ?? id)}
+          nameOf={(id, fallback) => academic.nameFor(id) ?? prettifyUnitId(fallback ?? id)}
         />
       )}
     </AtmosphericBackdrop>
@@ -501,17 +502,6 @@ function MarksByCourse({ courses, mode }: { courses: CourseStory[]; mode: "light
 }
 
 // ── shared bits ───────────────────────────────────────────────────────
-
-// Turn a raw subject slug ("uct:calculus-i") into a readable label
-// ("Calculus I") when a friendly name isn't in the academic-units cache.
-function prettifySubject(raw: string): string {
-  const tail = raw.includes(":") ? raw.slice(raw.lastIndexOf(":") + 1) : raw;
-  return tail
-    .split(/[-_\s]+/)
-    .filter(Boolean)
-    .map((w) => (/^[ivx]+$/i.test(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
-    .join(" ");
-}
 
 function SectionEmpty({ text, href, cta }: { text: string; href: string; cta: string }) {
   return (
