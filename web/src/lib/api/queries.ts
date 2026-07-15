@@ -274,7 +274,22 @@ export const useCourses = () =>
 // an assessment's subjectId, a subject slug for high-school, a course
 // practiceKey for tertiary. Queries are gated by level so a high-schooler never
 // calls the courses endpoint and vice versa.
-export type AcademicUnit = { id: string; name: string; kind: "subject" | "course" };
+// `meta` and `href` exist so a page can render a unit fully without caring which
+// side it came from. The two shapes carry the same idea under different names
+// (grade + teacher vs course code + lecturer; a subject detail page vs the
+// course list, which has no per-course route yet), and resolving that here is
+// the difference between one unit-aware page and two parallel ones.
+export type AcademicUnit = {
+  id: string;
+  name: string;
+  kind: "subject" | "course";
+  // The enrolment row id. Distinct from `id`: this identifies the student's
+  // enrolment, `id` is the slug an assessment stores. Mixing them up is a
+  // standing bug in this codebase.
+  rowId: string;
+  meta: string;
+  href: string;
+};
 
 export function useAcademicUnits() {
   const profileQuery = useAcademicProfile();
@@ -292,8 +307,24 @@ export function useAcademicUnits() {
   });
 
   const units: AcademicUnit[] = isTertiary
-    ? (coursesQuery.data ?? []).map((c) => ({ id: c.practiceKey, name: c.name, kind: "course" as const }))
-    : (subjectsQuery.data ?? []).map((s) => ({ id: s.subjectId, name: s.name, kind: "subject" as const }));
+    ? (coursesQuery.data ?? []).map((c) => ({
+        id: c.practiceKey,
+        name: c.name,
+        kind: "course" as const,
+        rowId: c.id,
+        meta: [c.code, c.lecturer].filter(Boolean).join(" · "),
+        // No per-course detail route exists yet, so the list is the honest
+        // destination rather than a link that 404s.
+        href: "/dashboard/courses",
+      }))
+    : (subjectsQuery.data ?? []).map((s) => ({
+        id: s.subjectId,
+        name: s.name,
+        kind: "subject" as const,
+        rowId: s.id,
+        meta: `Grade ${s.grade}${s.teacher ? ` · ${s.teacher}` : ""}`,
+        href: `/dashboard/subjects/${s.id}`,
+      }));
 
   return {
     units,

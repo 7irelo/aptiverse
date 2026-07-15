@@ -179,7 +179,7 @@ function MasteryView({
 
   const bySubject = Object.values(
     topics.reduce<Record<string, { name: string; sum: number; n: number }>>((acc, t) => {
-      (acc[t.subjectId] ??= { name: t.subject, sum: 0, n: 0 });
+      (acc[t.subjectId] ??= { name: labelFor(t.subjectId), sum: 0, n: 0 });
       acc[t.subjectId].sum += t.mastery;
       acc[t.subjectId].n += 1;
       return acc;
@@ -363,7 +363,7 @@ function MasteryView({
                 </Typography>
                 <Stack spacing={1.25}>
                   {weakest.map((t) => (
-                    <TopicRow key={`${t.subjectId}-${t.topic}`} t={t} />
+                    <TopicRow key={`${t.subjectId}-${t.topic}`} t={t} unitLabel={labelFor(t.subjectId)} />
                   ))}
                 </Stack>
               </CardContent>
@@ -378,7 +378,7 @@ function MasteryView({
                 </Typography>
                 <GroupedList
                   items={sorted}
-                  groupBy={(t) => t.subject}
+                  groupBy={(t) => labelFor(t.subjectId)}
                   renderItem={(t) => <TopicRow t={t} showSubject={false} />}
                 />
               </CardContent>
@@ -549,7 +549,18 @@ function InsightRow({
 }
 
 // A bar-free topic row: name, trend delta, and a compact colored mastery pill.
-function TopicRow({ t, showSubject = true }: { t: TopicMastery; showSubject?: boolean }) {
+// unitLabel is passed in rather than read off TopicMastery.subject: that field
+// carries the raw practice key for a university course ("uct:calculus-i"), so
+// rendering it directly showed the student our internal id.
+function TopicRow({
+  t,
+  showSubject = true,
+  unitLabel,
+}: {
+  t: TopicMastery;
+  showSubject?: boolean;
+  unitLabel?: string;
+}) {
   const theme = useTheme();
   const hex = masteryHex(theme, t.mastery);
   return (
@@ -560,7 +571,7 @@ function TopicRow({ t, showSubject = true }: { t: TopicMastery; showSubject?: bo
         </Typography>
         {showSubject && (
           <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
-            {t.subject}
+            {unitLabel ?? t.subject}
           </Typography>
         )}
       </Box>

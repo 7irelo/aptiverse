@@ -11,21 +11,26 @@ import { DateCalendar } from "@mui/x-date-pickers/DateCalendar";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonthOutlined";
 import { PageHeader } from "@/components/common/PageHeader";
 import { QueryStates } from "@/components/common/QueryStates";
-import { useAssessments, useSubjects } from "@/lib/api/queries";
-import type { Assessment, Subject } from "@/lib/mockData";
-import { formatRelative } from "@/lib/format";
+import { useAssessments, useAcademicUnits } from "@/lib/api/queries";
+import type { Assessment } from "@/lib/mockData";
+import { formatRelative, prettifyUnitId } from "@/lib/format";
 import { RelativeTime } from "@/components/common/RelativeTime";
 import dayjs from "dayjs";
 
 export default function CalendarPage() {
   const assessmentsQuery = useAssessments();
-  const subjectsQuery = useSubjects();
+  const academic = useAcademicUnits();
+  // Covers school Subjects and university Courses alike; see UpcomingList.
+  const unitNameFor = (id: string | undefined) =>
+    id ? (academic.nameFor(id) ?? prettifyUnitId(id)) : undefined;
 
   return (
     <>
       <PageHeader
         title="Calendar"
-        description="Your high-school year at a glance. Sync with Google Calendar or Outlook."
+        // "high-school year" was hardcoded, which is simply untrue for the
+        // university students this page also serves.
+        description="Your academic year at a glance. Sync with Google Calendar or Outlook."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Calendar" }]}
         actions={
           <>
@@ -59,7 +64,7 @@ export default function CalendarPage() {
                 size: "compact",
               }}
             >
-              {(assessments) => <UpcomingList assessments={assessments} subjects={subjectsQuery.data ?? []} />}
+              {(assessments) => <UpcomingList assessments={assessments} nameFor={unitNameFor} />}
             </QueryStates>
           </CardContent>
         </Card>
@@ -68,7 +73,18 @@ export default function CalendarPage() {
   );
 }
 
-function UpcomingList({ assessments, subjects }: { assessments: Assessment[]; subjects: Subject[] }) {
+// The subject line used to look up useSubjects() by Subject.id while holding
+// Assessment.subjectId, which is the slug: different fields, never a match. It
+// rendered `{subject?.name}` with no fallback, so every row read " · in 3 days"
+// with a dangling separator and no subject. Resolving through useAcademicUnits
+// also fixes it for university students, whose courses useSubjects never had.
+function UpcomingList({
+  assessments,
+  nameFor,
+}: {
+  assessments: Assessment[];
+  nameFor: (id: string | undefined) => string | undefined;
+}) {
   const upcoming = assessments
     .filter((a) => a.status !== "graded")
     .sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate))
@@ -85,7 +101,7 @@ function UpcomingList({ assessments, subjects }: { assessments: Assessment[]; su
   return (
     <Stack spacing={1.5}>
       {upcoming.map((a) => {
-        const subject = subjects.find((s) => s.id === a.subjectId);
+        const unitName = nameFor(a.subjectId);
         const daysLeft = dayjs(a.dueDate).diff(dayjs(), "day");
         const urgent = daysLeft <= 3;
         return (
@@ -112,7 +128,8 @@ function UpcomingList({ assessments, subjects }: { assessments: Assessment[]; su
                 {a.title}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {subject?.name} · <RelativeTime iso={a.dueDate} />
+                {unitName ? `${unitName} · ` : ""}
+                <RelativeTime iso={a.dueDate} />
               </Typography>
             </Box>
             <Chip label={a.type} size="small" />
