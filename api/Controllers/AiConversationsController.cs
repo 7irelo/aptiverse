@@ -21,6 +21,12 @@ namespace Aptiverse.AI.Controllers
 
         private const int TitleMaxLength = 80;
 
+        // A student's history is a convenience, not an archive. Past twenty the
+        // list stops being scannable and the rows are just cost, so creating the
+        // twenty-first drops the least recently touched one. Students who want
+        // it gone sooner can clear the lot; nothing here is silently kept.
+        private const int MaxConversationsPerStudent = 20;
+
         private string? CurrentUserId()
             => User.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? User.FindFirst("sub")?.Value
@@ -87,9 +93,44 @@ namespace Aptiverse.AI.Controllers
             };
 
             _db.Set<TutorConversation>().Add(convo);
+            await TrimHistoryAsync(userId);
             await _db.SaveChangesAsync();
 
             return CreatedAtAction(nameof(Get), new { id = convo.Id.ToString() }, ToDto(convo));
+        }
+
+        // DELETE /api/ai/conversations — clear the whole history.
+        [HttpDelete]
+        public async Task<IActionResult> Clear()
+        {
+            var userId = CurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            await _db.Set<TutorConversation>()
+                .Where(c => c.StudentId == userId)
+                .ExecuteDeleteAsync();
+
+            return NoContent();
+        }
+
+        // Keeps the newest MaxConversationsPerStudent and drops the rest. Called
+        // as part of the create transaction so the cap can't drift: the new row
+        // is already tracked but unsaved, hence the -1 when counting what stays.
+        private async Task TrimHistoryAsync(string userId)
+        {
+            var existing = await _db.Set<TutorConversation>()
+                .Where(c => c.StudentId == userId)
+                .OrderByDescending(c => c.UpdatedAt)
+                .Select(c => new { c.Id, c.UpdatedAt })
+                .ToListAsync();
+
+            var keep = MaxConversationsPerStudent - 1;
+            if (existing.Count <= keep) return;
+
+            var doomed = existing.Skip(keep).Select(c => c.Id).ToList();
+            await _db.Set<TutorConversation>()
+                .Where(c => c.StudentId == userId && doomed.Contains(c.Id))
+                .ExecuteDeleteAsync();
         }
 
         // PUT /api/ai/conversations/{id} — replace the transcript (and,

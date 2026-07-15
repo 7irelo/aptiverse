@@ -1154,6 +1154,18 @@ export const useDeleteTutorConversation = () => {
   });
 };
 
+// Wipes every stored conversation for the signed-in student. The server keeps
+// only the 20 most recent anyway; this is the "and I want it gone now" path.
+export const useClearTutorConversations = () => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, void>({
+    mutationFn: () => apiClient.delete<void>("/api/ai/conversations"),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.tutorConversations() });
+    },
+  });
+};
+
 export const useCareers = () =>
   useQuery<Career[]>({
     queryKey: queryKeys.careers(),

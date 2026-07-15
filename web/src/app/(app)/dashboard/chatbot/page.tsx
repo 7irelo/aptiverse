@@ -19,6 +19,11 @@ import MenuItem from "@mui/material/MenuItem";
 import Divider from "@mui/material/Divider";
 import CircularProgress from "@mui/material/CircularProgress";
 import ListItemIcon from "@mui/material/ListItemIcon";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogActions from "@mui/material/DialogActions";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { alpha, useTheme } from "@mui/material/styles";
 import SendIcon from "@mui/icons-material/SendRounded";
@@ -27,10 +32,12 @@ import AddCommentIcon from "@mui/icons-material/AddCommentOutlined";
 import HistoryIcon from "@mui/icons-material/HistoryOutlined";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweepOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import BoltIcon from "@mui/icons-material/BoltOutlined";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import KeyboardDoubleArrowRightIcon from "@mui/icons-material/KeyboardDoubleArrowRight";
 import CheckIcon from "@mui/icons-material/Check";
 import { Markdown } from "@/components/common/Markdown";
 import {
@@ -45,6 +52,7 @@ import {
   useCreateTutorConversation,
   useSaveTutorConversation,
   useDeleteTutorConversation,
+  useClearTutorConversations,
   type AiChatMessage,
   type TutorConversationSummary,
   type AcademicUnit,
@@ -64,7 +72,12 @@ const QUICK_PROMPTS = [
 ];
 
 const DEEP_KEY = "aptiverse.chatbot.deep";
+const HISTORY_KEY = "aptiverse.chatbot.historyOpen";
 const MAX_SENT_MESSAGES = 24;
+
+// Mirrors MaxConversationsPerStudent on the server. Only used to tell the
+// student what the cap is; the server is the one that enforces it.
+const MAX_CONVERSATIONS = 20;
 
 function errorText(e: unknown): string {
   if (e instanceof ApiError) {
@@ -147,7 +160,10 @@ export default function ChatbotPage() {
   const [streaming, setStreaming] = useState<string | null>(null);
   const [deep, setDeep] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  // One flag, two behaviours: on desktop it collapses the rail in place, on
+  // mobile it opens the drawer. Starts closed on mobile either way.
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
 
   const tutor = useAiTutor();
   const conversations = useTutorConversations();
@@ -155,12 +171,15 @@ export default function ChatbotPage() {
   const createConvo = useCreateTutorConversation();
   const saveConvo = useSaveTutorConversation();
   const deleteConvo = useDeleteTutorConversation();
+  const clearConvos = useClearTutorConversations();
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const revealRef = useRef<number | null>(null);
   // Tracks which conversation id's server messages are already loaded into the
   // local transcript, so switching loads once and sends never re-clobber it.
   const loadedIdRef = useRef<string | null>(null);
+  // One-shot latch for the history-rail preference restore. See the effect below.
+  const restoredRef = useRef(false);
   const busy = tutor.isPending || streaming !== null;
 
   const { data: session } = useSession();
@@ -176,6 +195,32 @@ export default function ChatbotPage() {
     if (typeof window === "undefined") return;
     setDeep(window.localStorage.getItem(DEEP_KEY) === "1");
   }, []);
+
+  // Restore the rail's open state on desktop only: on mobile it's a drawer,
+  // which must always start closed.
+  //
+  // This waits for mdUp rather than running on mount, because useMediaQuery
+  // reports false on the first render (it has no window to measure during SSR)
+  // and only reports the truth after hydration. Restoring on mount therefore
+  // read mdUp === false on a 1920px screen and left the rail collapsed. The ref
+  // keeps it a one-shot: dragging a window across the breakpoint later must not
+  // re-open a rail the student deliberately closed.
+  useEffect(() => {
+    if (!mdUp || restoredRef.current) return;
+    restoredRef.current = true;
+    setHistoryOpen(window.localStorage.getItem(HISTORY_KEY) !== "0");
+  }, [mdUp]);
+
+  const toggleHistory = () => {
+    const next = !historyOpen;
+    setHistoryOpen(next);
+    if (!mdUp) return;
+    try {
+      window.localStorage.setItem(HISTORY_KEY, next ? "1" : "0");
+    } catch {
+      /* storage unavailable — preference just won't persist */
+    }
+  };
   const applyDeep = (next: boolean) => {
     setDeep(next);
     try {
@@ -313,21 +358,32 @@ export default function ChatbotPage() {
     loadedIdRef.current = null;
     setMessages([]);
     setInput("");
-    setHistoryOpen(false);
+    closeDrawer();
+  };
+
+  // Picking a chat on mobile should get the drawer out of the way; on desktop
+  // the rail is the navigation, so it stays put.
+  const closeDrawer = () => {
+    if (!mdUp) setHistoryOpen(false);
   };
 
   const selectConversation = (id: string) => {
     if (busy || id === activeId) {
-      setHistoryOpen(false);
+      closeDrawer();
       return;
     }
     setActiveId(id);
-    setHistoryOpen(false);
+    closeDrawer();
   };
 
   const removeConversation = (id: string) => {
     deleteConvo.mutate(id);
     if (id === activeId) newChat();
+  };
+
+  const clearHistory = () => {
+    setClearOpen(false);
+    clearConvos.mutate(undefined, { onSuccess: () => newChat() });
   };
 
   const renameConversation = (id: string, title: string) => {
@@ -347,50 +403,34 @@ export default function ChatbotPage() {
       onNew={newChat}
       onDelete={removeConversation}
       onRename={renameConversation}
+      onClear={() => setClearOpen(true)}
+      onCollapse={mdUp ? toggleHistory : () => setHistoryOpen(false)}
+      clearing={clearConvos.isPending}
       disabled={busy}
     />
   );
 
   return (
-    // Full-bleed: the shell drops its padding and measure for this route, so
-    // the chat fills everything under the top bar (64 mobile / 68 desktop)
-    // instead of sitting in a card. History is a rail with a single dividing
-    // line, the way a chat surface reads, not a floating panel.
+    // Full-bleed: the shell drops its padding and measure for this route and
+    // pins itself to one viewport, so the chat fills whatever is left under the
+    // top bar instead of sitting in a card. Filling (flex: 1) rather than
+    // measuring (calc(100dvh - 68px)) is deliberate: the old sum ignored the
+    // top bar's 1px border and pushed the document 1px past the viewport, which
+    // is all Chrome needs to paint a full-height page scrollbar. History is a
+    // rail with a single dividing line, the way a chat surface reads, not a
+    // floating panel.
     <Box
       sx={{
-        height: { xs: "calc(100dvh - 64px)", md: "calc(100dvh - 68px)" },
+        flex: 1,
         display: "flex",
-        minHeight: 420,
+        minHeight: 0,
         overflow: "hidden",
         bgcolor: "background.default",
       }}
     >
-      {mdUp && (
-        <Box
-          sx={{
-            width: 264,
-            flexShrink: 0,
-            borderRight: 1,
-            borderColor: "divider",
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            bgcolor: "background.paper",
-          }}
-        >
-          {sidebar}
-        </Box>
-      )}
-
-      {!mdUp && (
-        <Drawer anchor="left" open={historyOpen} onClose={() => setHistoryOpen(false)}>
-          <Box sx={{ width: 280, height: "100%", display: "flex", flexDirection: "column" }}>
-            {sidebar}
-          </Box>
-        </Drawer>
-      )}
-
-      {/* Chat column */}
+      {/* Chat column — first in source order, so the history rail sits on the
+          right for sighted users AND is reached after the conversation by
+          screen readers and keyboard tabbing. */}
       <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         <Stack
           direction="row"
@@ -405,13 +445,6 @@ export default function ChatbotPage() {
             bgcolor: "background.paper",
           }}
         >
-          {!mdUp && (
-            <Tooltip title="Chat history">
-              <IconButton onClick={() => setHistoryOpen(true)} aria-label="Open chat history">
-                <HistoryIcon />
-              </IconButton>
-            </Tooltip>
-          )}
           <Avatar sx={{ bgcolor: "primary.main", width: 36, height: 36 }}>
             <SmartToyIcon fontSize="small" sx={{ color: "primary.contrastText" }} />
           </Avatar>
@@ -440,10 +473,49 @@ export default function ChatbotPage() {
               </IconButton>
             </span>
           </Tooltip>
+          {/* The only way back to the rail once it's collapsed, so it stays in
+              the header at every width rather than living inside the rail. */}
+          {(!mdUp || !historyOpen) && (
+            <Tooltip title="Chat history">
+              <IconButton
+                onClick={() => (mdUp ? toggleHistory() : setHistoryOpen(true))}
+                aria-label="Show chat history"
+              >
+                <HistoryIcon />
+              </IconButton>
+            </Tooltip>
+          )}
         </Stack>
 
-        {/* Conversation */}
-        <Box ref={scrollRef} sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: { xs: 2, sm: 3 } }}>
+        {/* Conversation. The scrollbar is styled down to a thin muted track:
+            the default is a 15px light slab that reads as chrome and butted
+            straight into the history rail's divider. scrollbar-gutter keeps the
+            space reserved so text doesn't reflow the moment a reply gets long
+            enough to scroll. */}
+        <Box
+          ref={scrollRef}
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            overscrollBehavior: "contain",
+            scrollbarGutter: "stable",
+            px: { xs: 2, sm: 3 },
+            scrollbarWidth: "thin",
+            scrollbarColor: (t) => `${alpha(t.palette.text.primary, 0.2)} transparent`,
+            "&::-webkit-scrollbar": { width: 10 },
+            "&::-webkit-scrollbar-track": { background: "transparent" },
+            "&::-webkit-scrollbar-thumb": {
+              backgroundColor: (t) => alpha(t.palette.text.primary, 0.16),
+              borderRadius: 8,
+              border: "3px solid transparent",
+              backgroundClip: "content-box",
+            },
+            "&::-webkit-scrollbar-thumb:hover": {
+              backgroundColor: (t) => alpha(t.palette.text.primary, 0.3),
+            },
+          }}
+        >
           <Box sx={{ maxWidth: 780, mx: "auto", py: 3 }}>
             {loadingConvo ? (
               <Stack alignItems="center" justifyContent="center" sx={{ minHeight: 240 }}>
@@ -452,30 +524,19 @@ export default function ChatbotPage() {
             ) : empty ? (
               <EmptyChat firstName={firstName} unitNoun={academic.unitNoun} onPick={send} busy={busy} />
             ) : (
-              <Stack spacing={1.5}>
+              <Stack spacing={3}>
                 {messages.map((m, i) =>
                   m.role === "assistant" ? (
-                    <ChatBubble
-                      key={i}
-                      role="assistant"
-                      error={m.error}
-                      markdown={!m.error ? m.content : undefined}
-                    >
-                      {m.error ? m.content : undefined}
-                    </ChatBubble>
+                    <AssistantMessage key={i} content={m.content} error={m.error} />
                   ) : (
-                    <ChatBubble key={i} role="user">
-                      {m.content}
-                    </ChatBubble>
+                    <UserMessage key={i} content={m.content} />
                   ),
                 )}
                 {/* Streams as rendered markdown, not plain text that reflows
                     into markdown at the end — headings, bold, lists and math
                     resolve as they arrive, so the reply never visibly restyles
                     itself once it settles. */}
-                {streaming !== null && (
-                  <ChatBubble role="assistant" markdown={streaming} caret />
-                )}
+                {streaming !== null && <AssistantMessage content={streaming} caret />}
                 {tutor.isPending && <ThinkingRow deep={deep} />}
               </Stack>
             )}
@@ -563,6 +624,55 @@ export default function ChatbotPage() {
           </Box>
         </Box>
       </Box>
+
+      {/* History rail, right-hand side. Width animates to zero rather than
+          unmounting, so collapsing keeps the list's scroll position and doesn't
+          make it flash back in on reopen. */}
+      {mdUp && (
+        <Box
+          sx={{
+            width: historyOpen ? 272 : 0,
+            flexShrink: 0,
+            borderLeft: historyOpen ? 1 : 0,
+            borderColor: "divider",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            bgcolor: "background.paper",
+            transition: "width 200ms cubic-bezier(0.16, 1, 0.3, 1)",
+            "@media (prefers-reduced-motion: reduce)": { transition: "none" },
+          }}
+          aria-hidden={!historyOpen}
+        >
+          <Box sx={{ width: 272, height: "100%", display: "flex", flexDirection: "column" }}>
+            {sidebar}
+          </Box>
+        </Box>
+      )}
+
+      {!mdUp && (
+        <Drawer anchor="right" open={historyOpen} onClose={() => setHistoryOpen(false)}>
+          <Box sx={{ width: 288, height: "100%", display: "flex", flexDirection: "column" }}>
+            {sidebar}
+          </Box>
+        </Drawer>
+      )}
+
+      <Dialog open={clearOpen} onClose={() => setClearOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Clear chat history?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            This permanently deletes all {conversations.data?.length ?? 0} of your saved chats. The
+            chat on screen stays until you leave the page, but it won't be saved.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setClearOpen(false)}>Cancel</Button>
+          <Button onClick={clearHistory} color="error" variant="contained">
+            Clear history
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
@@ -575,6 +685,9 @@ function HistorySidebar({
   onNew,
   onDelete,
   onRename,
+  onClear,
+  onCollapse,
+  clearing,
   disabled,
 }: {
   items: TutorConversationSummary[];
@@ -584,6 +697,9 @@ function HistorySidebar({
   onNew: () => void;
   onDelete: (id: string) => void;
   onRename: (id: string, title: string) => void;
+  onClear: () => void;
+  onCollapse: () => void;
+  clearing: boolean;
   disabled: boolean;
 }) {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -613,7 +729,34 @@ function HistorySidebar({
 
   return (
     <>
-      <Box sx={{ p: 1.5 }}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        spacing={0.5}
+        sx={{ pl: 2, pr: 1, py: 1.5, minHeight: 64, flexShrink: 0 }}
+      >
+        <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 700 }}>
+          Chats
+        </Typography>
+        <Tooltip title="Clear history">
+          <span>
+            <IconButton
+              size="small"
+              onClick={onClear}
+              disabled={items.length === 0 || clearing}
+              aria-label="Clear chat history"
+            >
+              {clearing ? <CircularProgress size={18} /> : <DeleteSweepIcon fontSize="small" />}
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title="Hide history">
+          <IconButton size="small" onClick={onCollapse} aria-label="Hide chat history">
+            <KeyboardDoubleArrowRightIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+      <Box sx={{ px: 1.5, pb: 1.5 }}>
         <Button
           fullWidth
           variant="outlined"
@@ -627,7 +770,23 @@ function HistorySidebar({
         </Button>
       </Box>
       <Divider />
-      <Box sx={{ flex: 1, overflowY: "auto" }}>
+      <Box
+        sx={{
+          flex: 1,
+          overflowY: "auto",
+          overscrollBehavior: "contain",
+          scrollbarWidth: "thin",
+          scrollbarColor: (t) => `${alpha(t.palette.text.primary, 0.2)} transparent`,
+          "&::-webkit-scrollbar": { width: 10 },
+          "&::-webkit-scrollbar-track": { background: "transparent" },
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor: (t) => alpha(t.palette.text.primary, 0.16),
+            borderRadius: 8,
+            border: "3px solid transparent",
+            backgroundClip: "content-box",
+          },
+        }}
+      >
         {loading ? (
           <Stack alignItems="center" sx={{ py: 4 }}>
             <CircularProgress size={20} />
@@ -690,6 +849,22 @@ function HistorySidebar({
           </List>
         )}
       </Box>
+
+      {/* Surfaces the cap only once it's about to bite. Saying "20 max" to a
+          student with three chats is noise; saying it as the oldest starts
+          dropping off is the difference between a bug and a rule. */}
+      {items.length >= MAX_CONVERSATIONS && (
+        <>
+          <Divider />
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: "block", px: 2, py: 1.25, lineHeight: 1.4 }}
+          >
+            Your last {MAX_CONVERSATIONS} chats are kept. Starting a new one removes the oldest.
+          </Typography>
+        </>
+      )}
 
       <Menu anchorEl={menuAnchor} open={!!menuAnchor} onClose={closeMenu}>
         <MenuItem
@@ -816,143 +991,138 @@ function ModePicker({
   );
 }
 
-function ChatBubble({
-  role,
-  markdown,
-  error,
-  caret,
-  children,
-}: {
-  role: "user" | "assistant";
-  markdown?: string;
-  error?: boolean;
-  // Blinking caret trailing the last line while a reply streams in. Attached
-  // via ::after on the final block so it sits inline at the end of the text
-  // rather than orphaned on its own line under a rendered markdown block.
-  caret?: boolean;
-  children?: React.ReactNode;
-}) {
-  const isUser = role === "user";
+const messageIn = {
+  animation: "messageIn 260ms cubic-bezier(0.16, 1, 0.3, 1)",
+  "@keyframes messageIn": {
+    from: { opacity: 0, transform: "translateY(8px)" },
+    to: { opacity: 1, transform: "translateY(0)" },
+  },
+  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+} as const;
+
+// What the student said. This one keeps its bubble: it's the shorter half of
+// the transcript and the fill is what makes the back-and-forth scannable when
+// you're skimming for your own question.
+function UserMessage({ content }: { content: string }) {
   return (
-    <Stack
-      direction="row"
-      spacing={1.25}
-      alignItems="flex-start"
-      justifyContent={isUser ? "flex-end" : "flex-start"}
-      sx={{
-        animation: "bubbleIn 260ms cubic-bezier(0.16, 1, 0.3, 1)",
-        "@keyframes bubbleIn": {
-          from: { opacity: 0, transform: "translateY(8px)" },
-          to: { opacity: 1, transform: "translateY(0)" },
-        },
-        "@media (prefers-reduced-motion: reduce)": { animation: "none" },
-      }}
-    >
-      {!isUser && (
-        <Avatar sx={{ bgcolor: "primary.main", width: 30, height: 30, mt: 0.25 }}>
-          <SmartToyIcon sx={{ fontSize: 18, color: "primary.contrastText" }} />
-        </Avatar>
-      )}
+    <Stack direction="row" justifyContent="flex-end" sx={messageIn}>
       <Box
         sx={{
-          maxWidth: isUser ? "80%" : "88%",
-          px: 1.75,
+          maxWidth: "80%",
+          px: 2,
           py: 1.25,
-          borderRadius: isUser ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-          bgcolor: isUser
-            ? "primary.main"
-            : error
-              ? (t) => alpha(t.palette.warning.main, 0.14)
-              : "action.hover",
-          color: isUser ? "primary.contrastText" : "text.primary",
-          border: isUser ? "none" : 1,
-          borderColor: "divider",
+          borderRadius: "18px 18px 4px 18px",
+          bgcolor: "primary.main",
+          color: "primary.contrastText",
         }}
       >
-        {markdown != null ? (
-          <Box
-            sx={
-              caret
-                ? {
-                    "& > *:last-child::after": {
-                      content: '""',
-                      display: "inline-block",
-                      width: "2px",
-                      height: "1.05em",
-                      marginLeft: "2px",
-                      verticalAlign: "text-bottom",
-                      backgroundColor: "text.secondary",
-                      animation: "caret 1s steps(1) infinite",
-                    },
-                    "@keyframes caret": { "50%": { opacity: 0 } },
-                    "@media (prefers-reduced-motion: reduce)": {
-                      "& > *:last-child::after": { animation: "none" },
-                    },
-                  }
-                : undefined
-            }
-          >
-            <Markdown>{markdown}</Markdown>
-          </Box>
-        ) : (
-          <Typography
-            component="div"
-            sx={{
-              fontSize: "0.875rem",
-              lineHeight: 1.55,
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-            }}
-          >
-            {children}
-          </Typography>
-        )}
+        <Typography
+          component="div"
+          sx={{ fontSize: "0.9375rem", lineHeight: 1.55, whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+        >
+          {content}
+        </Typography>
       </Box>
     </Stack>
   );
 }
 
-function ThinkingRow({ deep }: { deep: boolean }) {
-  return (
-    <Stack direction="row" spacing={1.25} alignItems="center">
-      <Avatar sx={{ bgcolor: "primary.main", width: 30, height: 30 }}>
-        <SmartToyIcon sx={{ fontSize: 18, color: "primary.contrastText" }} />
-      </Avatar>
+// What the tutor said. No bubble, no avatar, no fill: the reply is the page's
+// main content, and boxing it fought the long-form answers this tutor actually
+// gives — worked examples, headings, lists, math. Reads as a document, the way
+// the student's own notes would. Errors are the exception: they're the system
+// speaking, not the tutor, so they get a tinted callout to say so.
+function AssistantMessage({
+  content,
+  error,
+  caret,
+}: {
+  content: string;
+  error?: boolean;
+  // Blinking caret trailing the last line while a reply streams in. Attached
+  // via ::after on the final block so it sits inline at the end of the text
+  // rather than orphaned on its own line under a rendered markdown block.
+  caret?: boolean;
+}) {
+  if (error) {
+    return (
       <Box
         sx={{
-          px: 1.75,
+          ...messageIn,
+          px: 2,
           py: 1.25,
-          borderRadius: "16px 16px 16px 4px",
-          bgcolor: "action.hover",
+          borderRadius: 2,
+          bgcolor: (t) => alpha(t.palette.warning.main, 0.14),
           border: 1,
-          borderColor: "divider",
-          display: "flex",
-          alignItems: "center",
-          gap: 0.75,
+          borderColor: (t) => alpha(t.palette.warning.main, 0.3),
         }}
       >
-        <Box sx={{ display: "flex", gap: 0.5 }}>
-          {[0, 1, 2].map((i) => (
-            <Box
-              key={i}
-              sx={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                bgcolor: "primary.main",
-                animation: "blink 1.4s ease-in-out infinite",
-                animationDelay: `${i * 0.15}s`,
-                "@keyframes blink": { "0%, 80%, 100%": { opacity: 0.25 }, "40%": { opacity: 1 } },
-              }}
-            />
-          ))}
-        </Box>
-        {deep && (
-          <Typography variant="caption" color="text.secondary">
-            Thinking deeply
-          </Typography>
-        )}
+        <Typography component="div" sx={{ fontSize: "0.9375rem", lineHeight: 1.55 }}>
+          {content}
+        </Typography>
       </Box>
+    );
+  }
+
+  return (
+    <Box
+      sx={{
+        ...messageIn,
+        // Markdown sets its own body size for the compact surfaces it also
+        // serves; here the reply is the reading material, so bring it up to
+        // match the student's own message.
+        "& > *": { fontSize: "0.9375rem" },
+        ...(caret && {
+          "& > * > *:last-child::after": {
+            content: '""',
+            display: "inline-block",
+            width: "2px",
+            height: "1.05em",
+            marginLeft: "2px",
+            verticalAlign: "text-bottom",
+            backgroundColor: "text.secondary",
+            animation: "caret 1s steps(1) infinite",
+          },
+          "@keyframes caret": { "50%": { opacity: 0 } },
+          "@media (prefers-reduced-motion: reduce)": {
+            animation: "none",
+            "& > * > *:last-child::after": { animation: "none" },
+          },
+        }),
+      }}
+    >
+      <Markdown>{content}</Markdown>
+    </Box>
+  );
+}
+
+// Sits where the reply will land, unboxed like the reply itself, so the dots
+// give way to text rather than a bubble popping in around them.
+function ThinkingRow({ deep }: { deep: boolean }) {
+  return (
+    <Stack direction="row" alignItems="center" spacing={1}>
+      <Box sx={{ display: "flex", gap: 0.5 }}>
+        {[0, 1, 2].map((i) => (
+          <Box
+            key={i}
+            sx={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              bgcolor: "text.secondary",
+              animation: "blink 1.4s ease-in-out infinite",
+              animationDelay: `${i * 0.15}s`,
+              "@keyframes blink": { "0%, 80%, 100%": { opacity: 0.25 }, "40%": { opacity: 1 } },
+              "@media (prefers-reduced-motion: reduce)": { animation: "none", opacity: 0.5 },
+            }}
+          />
+        ))}
+      </Box>
+      {deep && (
+        <Typography variant="caption" color="text.secondary">
+          Thinking deeply
+        </Typography>
+      )}
     </Stack>
   );
 }

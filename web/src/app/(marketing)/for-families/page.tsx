@@ -47,16 +47,20 @@ export default function ForFamiliesPage() {
                 Support without surveillance.
               </Typography>
               <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400, maxWidth: 520 }}>
-                See how each of your children is really doing, in class and out, and get real suggestions for how to help, not hover. One subscription for the whole family.
+                See how each of your children is really doing, in class and out, and get real suggestions for how to help, not hover. One bill, one dashboard, however many of them there are.
               </Typography>
               <Stack direction="row" spacing={1.5} sx={{ pt: 1 }} flexWrap="wrap" useFlexGap>
                 <Button component={Link} href="/register" variant="contained" color="secondary" size="large">
                   Start free
                 </Button>
                 <Button component={Link} href="/pricing" variant="outlined" size="large">
-                  See the Family plan
+                  See Parent plans
                 </Button>
               </Stack>
+              <Typography variant="body2" color="text.secondary">
+                Parent plans start at R159 a month for one child. Adding a child costs less than the
+                one before it.
+              </Typography>
             </Stack>
             <Box sx={{ flex: 1, width: "100%", maxWidth: 460, mx: "auto" }}>
               <ChildSnapshot />
@@ -90,7 +94,7 @@ export default function ForFamiliesPage() {
               Add each child and see them side by side: who is on track, who is under pressure, and what is due this week. No logging into three accounts, no nagging for updates.
             </Typography>
             <Stack spacing={1.25} sx={{ pt: 0.5 }}>
-              {["A calm status for each child at a glance", "One bill, up to four children", "Tap through for detail, or leave it as a summary"].map((t) => (
+              {["A calm status for each child at a glance", "One bill, one to four children", "Tap through for detail, or leave it as a summary"].map((t) => (
                 <Stack key={t} direction="row" spacing={1.25} alignItems="flex-start">
                   <Box sx={{ color: "primary.main", mt: 0.25, display: "flex" }}>
                     <Check size={18} />
@@ -187,14 +191,14 @@ export default function ForFamiliesPage() {
             One subscription for the whole family.
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 560 }}>
-            Add each child and manage everything from one place. Start free and upgrade to a Family plan when you are ready.
+            Add each child and manage everything from one place. Start free, then pick the Parent plan that matches how many children you have.
           </Typography>
           <Stack direction="row" spacing={1.5} sx={{ pt: 1 }} flexWrap="wrap" useFlexGap justifyContent="center">
             <Button component={Link} href="/register" variant="contained" color="secondary" size="large">
               Start free
             </Button>
             <Button component={Link} href="/pricing" variant="outlined" size="large">
-              See the Family plan
+              See Parent plans
             </Button>
           </Stack>
         </Stack>
@@ -432,7 +436,11 @@ const FEATURES = [
 const FAQ = [
   {
     q: "How many children can I add?",
-    a: "The Family plan covers up to two children and Family Plus covers up to four, each with their own private account under one subscription and one bill.",
+    a: "One to four. You pick the Parent plan that matches your number of children, and each child gets their own private account under your single subscription and one bill.",
+  },
+  {
+    q: "How does the pricing work as I add children?",
+    a: "Each child on a Parent plan gets everything in Student Pro, and you get the parent dashboard on top. One child is R159 a month, two is R269, three is R379, and four is R489, so each additional child costs less than the one before. Annual billing gives you two months free.",
   },
   {
     q: "Can I read my child's diary or messages?",
@@ -444,7 +452,7 @@ const FAQ = [
   },
   {
     q: "What does the free tier give us?",
-    a: "Each child can start free with goals, the diary, mood check-ins, and basic practice. A Family plan adds the full assistant, predictions, past papers, and your parent dashboard across all your children.",
+    a: "Each child can start free with goals, the diary, mood check-ins, and basic practice. A Parent plan adds the full assistant, predictions, and past papers for every child, plus your parent dashboard across all of them.",
   },
   {
     q: "Will my child know what I can see?",
