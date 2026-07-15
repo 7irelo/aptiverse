@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { signIn, getSession } from "next-auth/react";
+import { signIn, getSession, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -59,6 +59,28 @@ function dashboardForRole(role: string | undefined | null): string {
   }
 }
 
+// True only when the API access token is present AND still in date.
+//
+// A NextAuth session outlives the API token (30 days vs Jwt:ExpireHours), so
+// "has a session" is not the same as "can call the API". Bouncing a stale-token
+// user to the dashboard would 401 on its first query, trip signIn(), and land
+// them back here — a redirect loop. When the token is dead we keep them on the
+// form so a real sign-in can mint a fresh one.
+function tokenStillValid(token: string | undefined): boolean {
+  if (!token) return false;
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+  try {
+    const padded = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const claims = JSON.parse(
+      atob(padded.padEnd(padded.length + ((4 - (padded.length % 4)) % 4), "=")),
+    ) as { exp?: number };
+    return typeof claims.exp === "number" && claims.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+}
+
 // Friendly copy for the ?error= codes NextAuth (and our Google signIn
 // callback) redirect back with. OAuthNoAccount is our invite-only rejection.
 function oauthErrorMessage(code: string | null): string | null {
@@ -82,6 +104,19 @@ function LoginInner() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const oauthError = oauthErrorMessage(params.get("error"));
+  const { data: session, status } = useSession();
+
+  // Already signed in with a live token? Don't make them sign in again —
+  // send them where they were headed, or to their role's dashboard.
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    const token = (session as { accessToken?: string } | null)?.accessToken;
+    if (!tokenStillValid(token)) return;
+    const role = (session?.user as { role?: string } | undefined)?.role;
+    router.replace(
+      !rawCallback || rawCallback === "/dashboard" ? dashboardForRole(role) : rawCallback,
+    );
+  }, [status, session, rawCallback, router]);
 
   const {
     register,

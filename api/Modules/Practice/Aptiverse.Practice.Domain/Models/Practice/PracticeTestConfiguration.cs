@@ -23,9 +23,7 @@ namespace Aptiverse.Practice.Domain.Models.Practice
                 .HasColumnType("jsonb")
                 .HasConversion(
                     v => JsonSerializer.Serialize(v ?? new List<string>(), (JsonSerializerOptions?)null),
-                    v => string.IsNullOrWhiteSpace(v)
-                        ? new List<string>()
-                        : JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>())
+                    v => ReadStringList(v))
                 .Metadata.SetValueComparer(topicsComparer);
 
             // Essay marking criteria share the same jsonb string[] treatment.
@@ -33,9 +31,7 @@ namespace Aptiverse.Practice.Domain.Models.Practice
                 .HasColumnType("jsonb")
                 .HasConversion(
                     v => JsonSerializer.Serialize(v ?? new List<string>(), (JsonSerializerOptions?)null),
-                    v => string.IsNullOrWhiteSpace(v)
-                        ? new List<string>()
-                        : JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>())
+                    v => ReadStringList(v))
                 .Metadata.SetValueComparer(topicsComparer);
 
             var questionsComparer = new ValueComparer<List<PracticeQuestion>>(
@@ -50,10 +46,47 @@ namespace Aptiverse.Practice.Domain.Models.Practice
                 .HasColumnType("jsonb")
                 .HasConversion(
                     v => JsonSerializer.Serialize(v ?? new List<PracticeQuestion>(), (JsonSerializerOptions?)null),
-                    v => string.IsNullOrWhiteSpace(v)
-                        ? new List<PracticeQuestion>()
-                        : JsonSerializer.Deserialize<List<PracticeQuestion>>(v, (JsonSerializerOptions?)null) ?? new List<PracticeQuestion>())
+                    v => ReadQuestionList(v))
                 .Metadata.SetValueComparer(questionsComparer);
+        }
+
+        // Reads a jsonb string[] column without letting one bad row take down a
+        // whole endpoint.
+        //
+        // AddPracticeContentFormats added `criteria` as jsonb NOT NULL DEFAULT ''.
+        // EF turned that empty string into the jsonb value `""` — legal jsonb, but
+        // a string, not an array — so every pre-existing row deserialised straight
+        // into a JsonException and GET /api/practice/tests returned 500 for the
+        // entire list. A single malformed row should degrade to an empty list, not
+        // break the collection around it. The accompanying migration repairs the
+        // stored values and the default; this keeps the read path honest regardless.
+        private static List<string> ReadStringList(string? v)
+        {
+            if (string.IsNullOrWhiteSpace(v)) return new List<string>();
+            try
+            {
+                return JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null)
+                       ?? new List<string>();
+            }
+            catch (JsonException)
+            {
+                return new List<string>();
+            }
+        }
+
+        // Same contract as ReadStringList, for the questions payload.
+        private static List<PracticeQuestion> ReadQuestionList(string? v)
+        {
+            if (string.IsNullOrWhiteSpace(v)) return new List<PracticeQuestion>();
+            try
+            {
+                return JsonSerializer.Deserialize<List<PracticeQuestion>>(v, (JsonSerializerOptions?)null)
+                       ?? new List<PracticeQuestion>();
+            }
+            catch (JsonException)
+            {
+                return new List<PracticeQuestion>();
+            }
         }
 
         private static string Serialize(PracticeQuestion q) =>
