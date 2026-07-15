@@ -516,28 +516,33 @@ export default function ChatbotPage() {
           </Box>
         </Box>
 
-        {/* Composer — docked to the bottom of the surface. */}
+        {/* Composer. One pill holding everything you do to a message: type it,
+            choose how hard the tutor thinks, send it. The mode picker used to
+            sit in its own strip underneath, which made a control bar out of
+            what is really part of the input, and the whole thing sat on a
+            bordered slab that read as a second toolbar under the conversation.
+            The pill floats on the conversation's own background instead. */}
         <Box
           sx={{
             flexShrink: 0,
             px: { xs: 2, sm: 3 },
-            pt: 1.5,
+            pt: 1,
             pb: { xs: 1.5, sm: 2 },
-            borderTop: 1,
-            borderColor: "divider",
-            bgcolor: "background.paper",
+            bgcolor: "background.default",
           }}
         >
           <Box sx={{ maxWidth: 780, mx: "auto" }}>
             <Stack
               direction="row"
-              spacing={1.5}
-              alignItems="center"
+              spacing={0.75}
+              // Bottom-aligned so the picker and send button stay put as the
+              // text grows upward to six rows.
+              alignItems="flex-end"
               sx={{
-                pl: 2.25,
-                pr: 1,
+                pl: 2.5,
+                pr: 0.75,
                 py: 0.75,
-                borderRadius: 3,
+                borderRadius: "26px",
                 border: 1,
                 borderColor: "divider",
                 bgcolor: "background.paper",
@@ -563,37 +568,36 @@ export default function ChatbotPage() {
                   disableUnderline: true,
                   sx: { fontSize: "0.95rem", lineHeight: 1.5, py: 0 },
                 }}
+                sx={{ alignSelf: "center", py: 0.75 }}
               />
+              <ModePicker deep={deep} onChange={applyDeep} disabled={busy} />
               <IconButton
                 onClick={() => send(input)}
                 disabled={!input.trim() || busy}
                 aria-label="Send"
                 sx={{
                   flexShrink: 0,
-                  alignSelf: "flex-end",
-                  width: 40,
-                  height: 40,
+                  width: 36,
+                  height: 36,
+                  // Explicitly round: the theme squares off IconButton, which
+                  // left a squircle sitting inside a pill.
+                  borderRadius: "50%",
                   bgcolor: "secondary.main",
                   color: "secondary.contrastText",
                   "&:hover": { bgcolor: "secondary.dark" },
                   "&.Mui-disabled": { bgcolor: "action.disabledBackground", color: "text.disabled" },
                 }}
               >
-                <SendIcon fontSize="small" />
+                <SendIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Stack>
-            <Stack
-              direction="row"
-              alignItems="center"
-              justifyContent="space-between"
-              spacing={1}
-              sx={{ mt: 1, px: 0.5 }}
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: "block", textAlign: "center", mt: 1 }}
             >
-              <ModePicker deep={deep} onChange={applyDeep} disabled={busy} />
-              <Typography variant="caption" color="text.secondary" sx={{ textAlign: "right" }}>
-                The AI tutor can make mistakes. Check important facts.
-              </Typography>
-            </Stack>
+              The AI tutor can make mistakes. Check important facts.
+            </Typography>
           </Box>
         </Box>
       </Box>
@@ -886,11 +890,29 @@ function ModePicker({
         disabled={disabled}
         size="small"
         startIcon={
-          <CurrentIcon fontSize="small" sx={{ color: deep ? "secondary.main" : "text.secondary" }} />
+          <CurrentIcon sx={{ fontSize: 16, color: deep ? "secondary.main" : "text.secondary" }} />
         }
-        endIcon={<KeyboardArrowDownIcon fontSize="small" />}
+        endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 16 }} />}
         aria-haspopup="menu"
-        sx={{ textTransform: "none", color: "text.primary", fontWeight: 600, borderRadius: 2, px: 1 }}
+        // Sits inside the composer pill, so it stays quiet: secondary ink, a
+        // pill of its own, and it never squeezes when the text gets long.
+        sx={{
+          flexShrink: 0,
+          // Bottom-aligned with the send button. Centring it left the picker
+          // drifting up the middle of a grown pill while send stayed docked.
+          alignSelf: "flex-end",
+          textTransform: "none",
+          color: "text.secondary",
+          fontWeight: 500,
+          fontSize: "0.8125rem",
+          borderRadius: "999px",
+          px: 1,
+          minWidth: 0,
+          whiteSpace: "nowrap",
+          "& .MuiButton-startIcon": { mr: 0.5 },
+          "& .MuiButton-endIcon": { ml: 0.25 },
+          "&:hover": { bgcolor: "action.hover" },
+        }}
       >
         {current.label}
       </Button>
