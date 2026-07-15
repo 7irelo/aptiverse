@@ -40,6 +40,14 @@ namespace Aptiverse.Api.Modules
             Aptiverse.Practice.Application.ServiceCollectionExtensions.AddApplicationServices(services);
             Aptiverse.Support.Application.ServiceCollectionExtensions.AddApplicationServices(services);
             Aptiverse.Wellbeing.Application.ServiceCollectionExtensions.AddApplicationServices(services);
+
+            // Goal verification reads across Practice, AcademicPlanning and
+            // Wellbeing, so it can't live inside any one module's Application
+            // library without those libraries referencing each other. It's
+            // registered here, in the host, which is the only place allowed to
+            // see all three. Scoped: it shares the request's DbContext, so its
+            // writes commit with whatever else that request is doing.
+            services.AddScoped<Aptiverse.Api.Services.Goals.GoalEvaluator>();
             return services;
         }
     }
