@@ -78,7 +78,7 @@ export default function ReportsPage() {
   const subjectName = (id: string) => subjects.find((s) => s.id === id)?.name ?? "Unlinked";
 
   const graded = assessments
-    .filter((a) => a.status === "graded" && a.actualMark != null)
+    .filter((a) => a.actualMark != null)
     .sort((a, b) => +new Date(b.dueDate) - +new Date(a.dueDate));
 
   const currentAvg =

@@ -133,6 +133,7 @@ export default function HomePage() {
                   href="/register"
                   size="large"
                   variant="contained"
+                  color="secondary"
                   endIcon={<ArrowRight size={18} />}
                 >
                   Create free account

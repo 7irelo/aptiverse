@@ -76,6 +76,7 @@ export function Hero() {
                   href="/register"
                   size="large"
                   variant="contained"
+                  color="secondary"
                   endIcon={<ArrowRight size={18} />}
                 >
                   Start free

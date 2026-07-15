@@ -90,7 +90,7 @@ function JourneyView({ subjects, assessments }: { subjects: Subject[]; assessmen
     () =>
       subjects.map((s) => {
         const mine = assessments.filter((a) => a.subjectId === s.subjectId);
-        const graded = mine.filter((a) => a.status === "graded" && a.actualMark != null);
+        const graded = mine.filter((a) => a.actualMark != null);
         const upcoming = mine.filter((a) => a.status !== "graded");
         const submitted = mine.filter((a) => a.status === "submitted");
         const predicted = mine.filter((a) => a.predictedMark != null);
@@ -123,7 +123,7 @@ function JourneyView({ subjects, assessments }: { subjects: Subject[]; assessmen
   const totalGraded       = rows.reduce((acc, r) => acc + r.graded, 0);
   const totalUpcoming     = rows.reduce((acc, r) => acc + r.upcoming, 0);
   const overallAverage = (() => {
-    const allGraded = assessments.filter((a) => a.status === "graded" && a.actualMark != null);
+    const allGraded = assessments.filter((a) => a.actualMark != null);
     if (allGraded.length === 0) return null;
     return Math.round(
       allGraded.reduce((acc, a) => acc + (a.actualMark ?? 0), 0) / allGraded.length,

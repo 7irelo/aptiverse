@@ -8,7 +8,6 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Skeleton from "@mui/material/Skeleton";
-import LinearProgress from "@mui/material/LinearProgress";
 import { alpha, useTheme } from "@mui/material/styles";
 import Link from "next/link";
 import dayjs from "dayjs";
@@ -23,8 +22,9 @@ import { StatCard } from "@/components/common/StatCard";
 import { CardError } from "@/components/common/CardError";
 import { AtmosphericBackdrop } from "@/components/common/AtmosphericBackdrop";
 import { AptiverseLineChart } from "@/components/common/AptiverseLineChart";
-import { AptiverseBarChart } from "@/components/common/AptiverseBarChart";
+import { AptiverseDonut } from "@/components/common/AptiverseDonut";
 import {
+  useAcademicUnits,
   useTermPredictions,
   useTopicMastery,
   useAssessments,
@@ -36,6 +36,7 @@ import {
 import type { Assessment, MoodPoint } from "@/lib/mockData";
 
 export default function AnalyticsPage() {
+  const academic = useAcademicUnits();
   const predictionsQuery = useTermPredictions();
   const masteryQuery = useTopicMastery();
   const assessmentsQuery = useAssessments();
@@ -54,7 +55,7 @@ export default function AnalyticsPage() {
 
   // Graded marks in chronological order — the spine of the marks-over-time view.
   const graded = assessments
-    .filter((a) => a.status === "graded" && a.actualMark != null)
+    .filter((a) => a.actualMark != null)
     .sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate));
 
   const isEmpty =
@@ -107,6 +108,7 @@ export default function AnalyticsPage() {
           graded={graded}
           mood={mood}
           moodAvg7d={wellbeing?.moodAvg7d ?? 0}
+          labelFor={(p) => academic.nameFor(p.subjectId) ?? prettifySubject(p.subject)}
         />
       )}
     </AtmosphericBackdrop>
@@ -121,12 +123,14 @@ function AnalyticsView({
   graded,
   mood,
   moodAvg7d,
+  labelFor,
 }: {
   predictions: TermPrediction[];
   topics: TopicMastery[];
   graded: Assessment[];
   mood: MoodPoint[];
   moodAvg7d: number;
+  labelFor: (p: TermPrediction) => string;
 }) {
   const theme = useTheme();
 
@@ -249,13 +253,7 @@ function AnalyticsView({
                 Topics by mastery
               </Typography>
               {topics.length > 0 ? (
-                <AptiverseBarChart
-                  height={300}
-                  xAxis={[{ data: bands.map((b) => b.label), scaleType: "band" }]}
-                  yAxis={[{ min: 0 }]}
-                  series={[{ data: bands.map((b) => b.count), label: "Topics" }]}
-                  margin={{ top: 16, right: 8, bottom: 28, left: 28 }}
-                />
+                <MasteryDonut bands={bands} total={topics.length} />
               ) : (
                 <SectionEmpty
                   text="Take practice tests to map your topics by mastery."
@@ -320,7 +318,7 @@ function AnalyticsView({
                   {[...predictions]
                     .sort((a, b) => a.currentTerm - b.currentTerm)
                     .map((p) => (
-                      <SubjectStanding key={p.subjectId} p={p} />
+                      <SubjectStanding key={p.subjectId} p={p} name={labelFor(p)} />
                     ))}
                 </Stack>
               ) : (
@@ -338,49 +336,87 @@ function AnalyticsView({
   );
 }
 
-function SubjectStanding({ p }: { p: TermPrediction }) {
-  const up = p.predictedNextTerm >= p.currentTerm;
-  const band: "success" | "primary" | "warning" =
-    p.currentTerm >= 70 ? "success" : p.currentTerm >= 50 ? "primary" : "warning";
+// Mastery distribution as a donut: three bands, colored, with the topic total
+// in the middle. Zero-count bands are dropped so labels stay clean.
+function MasteryDonut({
+  bands,
+  total,
+}: {
+  bands: { label: string; count: number }[];
+  total: number;
+}) {
+  const theme = useTheme();
+  const colorFor: Record<string, string> = {
+    "Needs work": theme.palette.warning.main,
+    Developing: theme.palette.primary.main,
+    Strong: theme.palette.success.main,
+  };
+
   return (
-    <Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 600, minWidth: 0 }} noWrap>
-          {p.subject}
+    <AptiverseDonut
+      height={232}
+      centerValue={total}
+      centerLabel="topics"
+      data={bands.map((b) => ({ label: b.label, value: b.count, color: colorFor[b.label] }))}
+    />
+  );
+}
+
+function SubjectStanding({ p, name }: { p: TermPrediction; name: string }) {
+  const delta = p.predictedNextTerm - p.currentTerm;
+  const up = delta >= 0;
+  const tint = up ? "success.main" : "warning.main";
+  return (
+    <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, minWidth: 0 }} noWrap>
+        {name}
+      </Typography>
+      <Stack direction="row" alignItems="center" spacing={0.75} sx={{ flexShrink: 0 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ fontVariantNumeric: "tabular-nums" }}>
+          {p.currentTerm}%
         </Typography>
-        <Stack direction="row" alignItems="center" spacing={0.75} sx={{ flexShrink: 0 }}>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ fontVariantNumeric: "tabular-nums" }}
-          >
-            {p.currentTerm}%
-          </Typography>
-          <ArrowForwardIcon sx={{ fontSize: 14, color: "text.disabled" }} />
-          <Typography
-            variant="subtitle2"
+        <ArrowForwardIcon sx={{ fontSize: 14, color: "text.disabled" }} />
+        <Typography
+          variant="subtitle2"
+          sx={{ fontWeight: 700, color: tint, fontVariantNumeric: "tabular-nums" }}
+        >
+          {p.predictedNextTerm}%
+        </Typography>
+        {delta !== 0 && (
+          <Box
             sx={{
+              px: 0.75,
+              py: 0.125,
+              borderRadius: 1,
+              fontSize: "0.7rem",
               fontWeight: 700,
-              color: up ? "success.main" : "warning.main",
               fontVariantNumeric: "tabular-nums",
+              color: tint,
+              bgcolor: (t) =>
+                alpha(up ? t.palette.success.main : t.palette.warning.main, 0.14),
             }}
           >
-            {p.predictedNextTerm}%
-          </Typography>
-        </Stack>
+            {up ? "+" : ""}
+            {delta}
+          </Box>
+        )}
       </Stack>
-      <LinearProgress
-        variant="determinate"
-        value={p.currentTerm}
-        color={band}
-        sx={{ mt: 0.5 }}
-        aria-label={`${p.subject}: ${p.currentTerm}% current, ${p.predictedNextTerm}% predicted`}
-      />
-    </Box>
+    </Stack>
   );
 }
 
 // ── shared bits ───────────────────────────────────────────────────────
+
+// Turn a raw subject slug ("uct:calculus-i") into a readable label
+// ("Calculus I") when a friendly name isn't in the academic-units cache.
+function prettifySubject(raw: string): string {
+  const tail = raw.includes(":") ? raw.slice(raw.lastIndexOf(":") + 1) : raw;
+  return tail
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((w) => (/^[ivx]+$/i.test(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(" ");
+}
 
 function SectionEmpty({ text, href, cta }: { text: string; href: string; cta: string }) {
   return (

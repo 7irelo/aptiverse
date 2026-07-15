@@ -13,7 +13,8 @@ import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
 import Skeleton from "@mui/material/Skeleton";
 import Alert from "@mui/material/Alert";
-import LinearProgress from "@mui/material/LinearProgress";
+import Tooltip from "@mui/material/Tooltip";
+import { ProgressRing } from "@/components/common/ProgressRing";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -766,6 +767,33 @@ function PlanCard({
 
 // Monthly AI allowance card, reused for owners and members-with-usage.
 function UsageCard({ usage }: { usage: ReturnType<typeof useUsage> }) {
+  const meters = [
+    {
+      label: "Practice tests",
+      used: usage.data?.practiceGenerate?.used ?? 0,
+      total: usage.data?.practiceGenerate?.limit ?? 0,
+      hint: "AI-written practice tests aimed at your weak topics.",
+    },
+    {
+      label: "Quick AI replies",
+      used: usage.data?.aiQuick.used ?? 0,
+      total: usage.data?.aiQuick.limit ?? 0,
+      hint: "Short answers, recall, formulas, help-bot queries.",
+    },
+    {
+      label: "Deep AI sessions",
+      used: usage.data?.aiDeep.used ?? 0,
+      total: usage.data?.aiDeep.limit ?? 0,
+      hint: "Opus-powered deep tutor: long walk-throughs, essay marking, weekly debrief.",
+    },
+    {
+      label: "WhatsApp messages",
+      used: usage.data?.whatsapp.used ?? 0,
+      total: usage.data?.whatsapp.limit ?? 0,
+      hint: "Outbound messages from the WhatsApp tutor.",
+    },
+  ];
+
   return (
     <Card sx={{ height: "100%" }}>
       <CardContent sx={{ p: 3 }}>
@@ -775,42 +803,28 @@ function UsageCard({ usage }: { usage: ReturnType<typeof useUsage> }) {
         <Typography variant="h6" sx={{ fontWeight: 700, mb: 2.5 }}>
           Monthly AI allowance
         </Typography>
-        <Stack spacing={2}>
-          <QuotaBar
-            label="Practice tests generated"
-            used={usage.data?.practiceGenerate?.used ?? 0}
-            total={usage.data?.practiceGenerate?.limit ?? 0}
-            loading={usage.isLoading}
-            hint="AI-written practice tests aimed at your weak topics."
-          />
-          <QuotaBar
-            label="Quick AI replies"
-            used={usage.data?.aiQuick.used ?? 0}
-            total={usage.data?.aiQuick.limit ?? 0}
-            loading={usage.isLoading}
-            hint="Short answers, recall, formulas, help-bot queries."
-          />
-          <QuotaBar
-            label="Deep AI sessions"
-            used={usage.data?.aiDeep.used ?? 0}
-            total={usage.data?.aiDeep.limit ?? 0}
-            loading={usage.isLoading}
-            hint="Long walk-throughs, essay marking, weekly debrief."
-          />
-          <QuotaBar
-            label="WhatsApp messages"
-            used={usage.data?.whatsapp.used ?? 0}
-            total={usage.data?.whatsapp.limit ?? 0}
-            loading={usage.isLoading}
-            hint="Outbound messages from the WhatsApp tutor."
-          />
-        </Stack>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(4, 1fr)" },
+            gap: 2.5,
+          }}
+        >
+          {meters.map((m) => (
+            <QuotaMeter key={m.label} loading={usage.isLoading} {...m} />
+          ))}
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 2.5 }}>
+          Allowances reset at the start of each billing month. The ring fills as you use each one.
+        </Typography>
       </CardContent>
     </Card>
   );
 }
 
-function QuotaBar({
+// A single allowance as a ring meter: the ring fills with usage, the centre
+// shows what's left. Colour warms as the allowance runs down.
+function QuotaMeter({
   label,
   used,
   total,
@@ -825,40 +839,50 @@ function QuotaBar({
 }) {
   const isUnlimited = total < 0;
   const isZero = total === 0 && !loading;
-  const pct = isUnlimited || isZero ? 0 : Math.min(100, Math.round((used / total) * 100));
-  const color = pct >= 95 ? "error" : pct >= 75 ? "warning" : "primary";
+  const pct = isUnlimited || isZero || total === 0 ? 0 : Math.min(100, Math.round((used / total) * 100));
+  const remaining = isUnlimited ? "∞" : Math.max(0, total - used);
+  const color: "success" | "warning" | "error" | "primary" = isZero
+    ? "primary"
+    : pct >= 95
+      ? "error"
+      : pct >= 75
+        ? "warning"
+        : "success";
 
   return (
-    <Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="baseline" sx={{ mb: 0.5 }}>
-        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-          {label}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          {loading
-            ? "Loading…"
-            : isUnlimited
-              ? `${used.toLocaleString()} used · unlimited`
-              : isZero
-                ? "Not included on this plan"
-                : `${used.toLocaleString()} / ${total.toLocaleString()}`}
-        </Typography>
+    <Tooltip title={hint}>
+      <Stack alignItems="center" spacing={1} sx={{ opacity: isZero ? 0.5 : 1 }}>
+        <ProgressRing
+          value={loading ? 0 : isUnlimited ? 30 : pct}
+          size={94}
+          thickness={8}
+          color={color}
+          label={
+            <Box sx={{ textAlign: "center" }}>
+              <Typography sx={{ fontWeight: 800, fontSize: "1.15rem", lineHeight: 1 }}>
+                {loading ? "…" : isZero ? "—" : remaining}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                left
+              </Typography>
+            </Box>
+          }
+        />
+        <Box sx={{ textAlign: "center", minWidth: 0 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+            {label}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {loading
+              ? "loading"
+              : isUnlimited
+                ? `${used.toLocaleString()} used`
+                : isZero
+                  ? "not on this plan"
+                  : `${used.toLocaleString()} / ${total.toLocaleString()}`}
+          </Typography>
+        </Box>
       </Stack>
-      <LinearProgress
-        variant={loading ? "indeterminate" : "determinate"}
-        value={isUnlimited ? 35 : pct}
-        color={isUnlimited ? "primary" : color}
-        sx={{
-          height: 8,
-          borderRadius: 4,
-          bgcolor: "action.hover",
-          opacity: isZero ? 0.4 : 1,
-          "& .MuiLinearProgress-bar": { borderRadius: 4 },
-        }}
-      />
-      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
-        {hint}
-      </Typography>
-    </Box>
+    </Tooltip>
   );
 }

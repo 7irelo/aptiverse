@@ -6,27 +6,28 @@ import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
-import LinearProgress from "@mui/material/LinearProgress";
-import Chip from "@mui/material/Chip";
+import Divider from "@mui/material/Divider";
 import Skeleton from "@mui/material/Skeleton";
 import Button from "@mui/material/Button";
-import { alpha } from "@mui/material/styles";
+import { alpha, useTheme, type Theme } from "@mui/material/styles";
 import Link from "next/link";
-import { AptiverseBarChart as BarChart } from "@/components/common/AptiverseBarChart";
+import { RadarChart } from "@mui/x-charts/RadarChart";
+import { ScatterChart } from "@mui/x-charts/ScatterChart";
+import { LineChart } from "@mui/x-charts/LineChart";
+import { ChartsReferenceLine } from "@mui/x-charts/ChartsReferenceLine";
+import { TrendingUp, Target } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
-import { StatCard } from "@/components/common/StatCard";
+import { ProgressRing } from "@/components/common/ProgressRing";
 import { GroupedList } from "@/components/common/GroupedList";
 import { CardError } from "@/components/common/CardError";
 import { AtmosphericBackdrop } from "@/components/common/AtmosphericBackdrop";
 import {
-  useSubjects,
+  useAcademicUnits,
   useTopicMastery,
   useTermPredictions,
   type TopicMastery,
   type TermPrediction,
 } from "@/lib/api/queries";
-import { brand } from "@/theme/palette";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import ArrowDropUpIcon from "@mui/icons-material/ArrowDropUp";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import InsightsIcon from "@mui/icons-material/InsightsOutlined";
@@ -34,7 +35,7 @@ import InsightsIcon from "@mui/icons-material/InsightsOutlined";
 export default function MasteryPage() {
   const masteryQuery = useTopicMastery();
   const predictionsQuery = useTermPredictions();
-  const subjectsQuery = useSubjects();
+  const academic = useAcademicUnits();
 
   const topics = masteryQuery.data ?? [];
   const predictions = predictionsQuery.data ?? [];
@@ -71,9 +72,8 @@ export default function MasteryPage() {
         <MasteryView
           topics={topics}
           predictions={predictions}
-          codeFor={(subjectId) =>
-            subjectsQuery.data?.find((s) => s.id === subjectId)?.code ?? subjectId
-          }
+          unitNoun={academic.unitNoun}
+          labelFor={(subjectId) => academic.nameFor(subjectId) ?? subjectId}
         />
       )}
     </AtmosphericBackdrop>
@@ -123,24 +123,32 @@ function EmptyMastery() {
 
 function MasterySkeleton() {
   return (
-    <>
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        {[0, 1, 2].map((i) => (
-          <Grid key={i} size={{ xs: 12, sm: 4 }}>
-            <Skeleton variant="rounded" height={120} />
-          </Grid>
-        ))}
-      </Grid>
+    <Stack spacing={3}>
+      <Skeleton variant="rounded" height={260} />
       <Grid container spacing={3}>
-        <Grid size={{ xs: 12, lg: 8 }}>
-          <Skeleton variant="rounded" height={360} />
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <Skeleton variant="rounded" height={380} />
         </Grid>
-        <Grid size={{ xs: 12, lg: 4 }}>
-          <Skeleton variant="rounded" height={360} />
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <Skeleton variant="rounded" height={380} />
         </Grid>
       </Grid>
-    </>
+    </Stack>
   );
+}
+
+// ── helpers ───────────────────────────────────────────────────────────
+
+function band(v: number): { color: "success" | "primary" | "warning"; label: string } {
+  if (v >= 80) return { color: "success", label: "Strong" };
+  if (v >= 50) return { color: "primary", label: "Building" };
+  return { color: "warning", label: "Keep going" };
+}
+
+function masteryHex(t: Theme, m: number): string {
+  if (m >= 80) return t.palette.success.main;
+  if (m >= 50) return t.palette.primary.main;
+  return t.palette.warning.main;
 }
 
 // ── main view ─────────────────────────────────────────────────────────
@@ -148,110 +156,201 @@ function MasterySkeleton() {
 function MasteryView({
   topics,
   predictions,
-  codeFor,
+  unitNoun,
+  labelFor,
 }: {
   topics: TopicMastery[];
   predictions: TermPrediction[];
-  codeFor: (subjectId: string) => string;
+  unitNoun: string;
+  labelFor: (subjectId: string) => string;
 }) {
+  const theme = useTheme();
   const hasTopics = topics.length > 0;
 
   const overall = hasTopics
     ? Math.round(topics.reduce((s, t) => s + t.mastery, 0) / topics.length)
-    : null;
+    : 0;
   const sorted = [...topics].sort((a, b) => a.mastery - b.mastery);
   const weakest = sorted.slice(0, 6);
-  const strongest = [...sorted].reverse().slice(0, 6);
+  const strongest = [...sorted].reverse();
+  const improving = topics.filter((t) => t.trend > 0).length;
+  const ring = band(overall);
+
+  const bySubject = Object.values(
+    topics.reduce<Record<string, { name: string; sum: number; n: number }>>((acc, t) => {
+      (acc[t.subjectId] ??= { name: t.subject, sum: 0, n: 0 });
+      acc[t.subjectId].sum += t.mastery;
+      acc[t.subjectId].n += 1;
+      return acc;
+    }, {}),
+  )
+    .map((s) => ({ name: s.name, avg: Math.round(s.sum / s.n) }))
+    .sort((a, b) => a.avg - b.avg);
+  const showRadar = bySubject.length >= 3;
+  const showMomentum = topics.length >= 4;
 
   return (
-    <>
+    <Stack spacing={3}>
+      {/* Hero: overall mastery ring + strongest / focus insights */}
       {hasTopics && (
-        <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <StatCard
-              label="Overall mastery"
-              value={`${overall}%`}
-              icon={<TrendingUpIcon />}
-              color="primary"
-              hint="Across all practised topics"
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <StatCard
-              label="Strongest topic"
-              value={`${strongest[0]?.mastery ?? 0}%`}
-              hint={strongest[0]?.topic ?? "None yet"}
-              color="success"
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <StatCard
-              label="Weakest topic"
-              value={`${weakest[0]?.mastery ?? 0}%`}
-              hint={weakest[0]?.topic ?? "None yet"}
-              color="warning"
-            />
-          </Grid>
+        <Card>
+          <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              spacing={{ xs: 3, md: 4 }}
+              alignItems={{ xs: "flex-start", md: "center" }}
+            >
+              <Stack direction="row" spacing={3} alignItems="center">
+                <ProgressRing
+                  value={overall}
+                  size={132}
+                  thickness={11}
+                  color={ring.color}
+                  caption={ring.label}
+                />
+                <Stack spacing={1.25}>
+                  <MiniStat value={topics.length} label="topics practised" />
+                  <MiniStat
+                    value={bySubject.length}
+                    label={bySubject.length === 1 ? unitNoun : `${unitNoun}s`}
+                  />
+                  <MiniStat value={improving} label="improving" tint={theme.palette.success.main} />
+                </Stack>
+              </Stack>
+
+              <Stack
+                spacing={1.5}
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  width: { xs: "100%", md: "auto" },
+                  pl: { md: 4 },
+                  borderLeft: { md: `1px solid ${theme.palette.divider}` },
+                }}
+              >
+                <InsightRow
+                  icon={TrendingUp}
+                  tint={theme.palette.success.main}
+                  label="Strongest"
+                  topic={strongest[0]?.topic ?? "None yet"}
+                  percent={strongest[0]?.mastery ?? 0}
+                />
+                {weakest[0] && weakest[0].topic !== strongest[0]?.topic && (
+                  <InsightRow
+                    icon={Target}
+                    tint={theme.palette.warning.main}
+                    label="Focus on"
+                    topic={weakest[0].topic}
+                    percent={weakest[0].mastery}
+                  />
+                )}
+              </Stack>
+            </Stack>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Momentum quadrant + radar side by side */}
+      {hasTopics && (
+        <Grid container spacing={3}>
+          {showMomentum && (
+            <Grid size={{ xs: 12, lg: showRadar ? 7 : 12 }}>
+              <MomentumCard topics={topics} />
+            </Grid>
+          )}
+          {showRadar && (
+            <Grid size={{ xs: 12, lg: showMomentum ? 5 : 12 }}>
+              <Card sx={{ height: "100%" }}>
+                <CardContent sx={{ p: 3 }}>
+                  <Typography variant="overline" color="text.secondary">
+                    Coverage
+                  </Typography>
+                  <Typography variant="h6" sx={{ mb: 1 }}>
+                    Mastery by {unitNoun}
+                  </Typography>
+                  <Box sx={{ width: "100%", mx: "auto", maxWidth: 480 }}>
+                    <RadarChart
+                      height={320}
+                      hideLegend
+                      radar={{
+                        max: 100,
+                        metrics: bySubject.map((s) => s.name),
+                        labelFormatter: (name) =>
+                          name.length > 14 ? `${name.slice(0, 13)}…` : name,
+                      }}
+                      series={[
+                        {
+                          label: "Mastery",
+                          data: bySubject.map((s) => s.avg),
+                          fillArea: true,
+                          color: theme.palette.secondary.main,
+                        },
+                      ]}
+                    />
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+          {/* When there are too few topics for the scatter, still show per-unit rings. */}
+          {!showMomentum && !showRadar && (
+            <Grid size={{ xs: 12 }}>
+              <Card>
+                <CardContent sx={{ p: 3 }}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Mastery by {unitNoun}
+                  </Typography>
+                  <Stack direction="row" spacing={3} flexWrap="wrap" useFlexGap>
+                    {bySubject.map((s) => (
+                      <ProgressRing
+                        key={s.name}
+                        value={s.avg}
+                        size={104}
+                        thickness={9}
+                        color={band(s.avg).color}
+                        caption={s.name}
+                      />
+                    ))}
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
         </Grid>
       )}
 
-      <Grid container spacing={3}>
-        {/* Predicted marks — real, from graded SBAs nudged by practice. */}
-        <Grid size={{ xs: 12, lg: hasTopics ? 8 : 12 }}>
-          <Card sx={{ height: "100%" }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="overline" color="text.secondary">
-                Projection
+      {/* Projection: current -> predicted trajectory per subject */}
+      <Card>
+        <CardContent sx={{ p: 3 }}>
+          <Typography variant="overline" color="text.secondary">
+            Projection
+          </Typography>
+          <Typography variant="h6" sx={{ mb: 0.5 }}>
+            Where each {unitNoun} is heading
+          </Typography>
+          {predictions.length > 0 ? (
+            <>
+              <ProjectionSlope predictions={predictions} labelFor={labelFor} />
+              <Typography variant="caption" color="text.secondary">
+                Each line runs from your current term mark to the predicted next-term mark. Rising
+                lines mean momentum; predictions strengthen as you log marks and practise.
               </Typography>
-              <Typography variant="h6" sx={{ mb: 0.5 }}>
-                Predicted next-term marks
+            </>
+          ) : (
+            <Box sx={{ py: 5, textAlign: "center" }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Log a couple of graded marks to see a predicted next-term projection here.
               </Typography>
-              {predictions.length > 0 ? (
-                <>
-                  <BarChart
-                    height={320}
-                    xAxis={[
-                      { data: predictions.map((p) => codeFor(p.subjectId)), scaleType: "band" },
-                    ]}
-                    series={[
-                      {
-                        data: predictions.map((p) => p.currentTerm),
-                        label: "Current term",
-                        color: brand.teal[600],
-                      },
-                      {
-                        data: predictions.map((p) => p.predictedNextTerm),
-                        label: "Predicted next",
-                        color: brand.citron[600],
-                      },
-                    ]}
-                    margin={{ top: 24, right: 24, bottom: 32, left: 40 }}
-                    grid={{ horizontal: true }}
-                  />
-                  <Typography variant="caption" color="text.secondary">
-                    Predictions strengthen as you log more graded marks and take practice tests.
-                  </Typography>
-                </>
-              ) : (
-                <Box sx={{ py: 5, textAlign: "center" }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Log a couple of graded marks to see a predicted next-term projection here.
-                  </Typography>
-                  <Button
-                    component={Link}
-                    href="/dashboard/assessments"
-                    variant="outlined"
-                    size="small"
-                  >
-                    Log a mark
-                  </Button>
-                </Box>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
+              <Button component={Link} href="/dashboard/assessments" variant="outlined" size="small">
+                Log a mark
+              </Button>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
 
-        {hasTopics && (
+      {hasTopics && (
+        <Grid container spacing={3}>
           <Grid size={{ xs: 12, lg: 4 }}>
             <Card sx={{ height: "100%" }}>
               <CardContent sx={{ p: 3 }}>
@@ -261,7 +360,7 @@ function MasteryView({
                 <Typography variant="h6" sx={{ mb: 2 }}>
                   Weakest topics
                 </Typography>
-                <Stack spacing={1.75}>
+                <Stack spacing={1.25}>
                   {weakest.map((t) => (
                     <TopicRow key={`${t.subjectId}-${t.topic}`} t={t} />
                   ))}
@@ -269,17 +368,12 @@ function MasteryView({
               </CardContent>
             </Card>
           </Grid>
-        )}
 
-        {/* Full per-subject breakdown, grouped into collapsible sections.
-            `sorted` is ascending by mastery, so each subject leads with its
-            weakest topic. */}
-        {hasTopics && (
-          <Grid size={{ xs: 12 }}>
-            <Card>
+          <Grid size={{ xs: 12, lg: 8 }}>
+            <Card sx={{ height: "100%" }}>
               <CardContent sx={{ p: 3 }}>
                 <Typography variant="h6" sx={{ mb: 2 }}>
-                  By subject
+                  Every topic, by {unitNoun}
                 </Typography>
                 <GroupedList
                   items={sorted}
@@ -289,65 +383,220 @@ function MasteryView({
               </CardContent>
             </Card>
           </Grid>
-        )}
-      </Grid>
-    </>
+        </Grid>
+      )}
+    </Stack>
   );
 }
 
-function masteryColor(m: number): "success" | "primary" | "warning" {
-  if (m >= 80) return "success";
-  if (m >= 50) return "primary";
-  return "warning";
+// Mastery (x) vs recent change (y). Four quadrants: top-right is strong &
+// rising, bottom-left is weak & slipping (attention). Reference lines at 50%
+// and 0-change split the plane.
+function MomentumCard({ topics }: { topics: TopicMastery[] }) {
+  const theme = useTheme();
+  const improving = topics.filter((t) => t.trend > 0);
+  const steadyOrDown = topics.filter((t) => t.trend <= 0);
+  const trendMax = Math.max(10, ...topics.map((t) => Math.abs(t.trend)));
+
+  // MUI X rejects a series with an empty data array ("numItems 0"), so only
+  // include the buckets that actually have topics in them.
+  const series = [
+    improving.length > 0 && {
+      label: "Improving",
+      color: theme.palette.success.main,
+      markerSize: 5,
+      data: improving.map((t, i) => ({ x: t.mastery, y: t.trend, id: `up-${i}` })),
+      valueFormatter: (v: { x: number; y: number } | null) => (v ? `${v.x}% · +${v.y}` : ""),
+    },
+    steadyOrDown.length > 0 && {
+      label: "Steady / slipping",
+      color: theme.palette.warning.main,
+      markerSize: 5,
+      data: steadyOrDown.map((t, i) => ({ x: t.mastery, y: t.trend, id: `dn-${i}` })),
+      valueFormatter: (v: { x: number; y: number } | null) => (v ? `${v.x}% · ${v.y}` : ""),
+    },
+  ].filter(Boolean) as {
+    label: string;
+    color: string;
+    markerSize: number;
+    data: { x: number; y: number; id: string }[];
+    valueFormatter: (v: { x: number; y: number } | null) => string;
+  }[];
+
+  return (
+    <Card sx={{ height: "100%" }}>
+      <CardContent sx={{ p: 3 }}>
+        <Typography variant="overline" color="text.secondary">
+          Momentum
+        </Typography>
+        <Typography variant="h6" sx={{ mb: 0.5 }}>
+          What's rising, what needs attention
+        </Typography>
+        <ScatterChart
+          height={340}
+          grid={{ horizontal: true, vertical: true }}
+          xAxis={[{ min: 0, max: 100, label: "Mastery %" }]}
+          yAxis={[{ min: -trendMax, max: trendMax, label: "Recent change" }]}
+          series={series}
+        >
+          <ChartsReferenceLine
+            x={50}
+            lineStyle={{ stroke: theme.palette.divider, strokeDasharray: "4 4" }}
+          />
+          <ChartsReferenceLine
+            y={0}
+            lineStyle={{ stroke: theme.palette.divider, strokeDasharray: "4 4" }}
+          />
+        </ScatterChart>
+        <Typography variant="caption" color="text.secondary">
+          Each dot is a topic: further right is stronger, higher is improving faster. Aim to move
+          the lower-left dots up and to the right.
+        </Typography>
+      </CardContent>
+    </Card>
+  );
 }
 
-function TopicRow({ t, showSubject = true }: { t: TopicMastery; showSubject?: boolean }) {
+function ProjectionSlope({
+  predictions,
+  labelFor,
+}: {
+  predictions: TermPrediction[];
+  labelFor: (subjectId: string) => string;
+}) {
+  const theme = useTheme();
   return (
-    <Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
-        <Typography variant="body2" sx={{ fontWeight: 500, minWidth: 0 }} noWrap>
+    <LineChart
+      height={320}
+      xAxis={[{ data: ["Current", "Predicted"], scaleType: "point" }]}
+      yAxis={[{ min: 0, max: 100 }]}
+      series={predictions.map((p) => {
+        const rising = p.predictedNextTerm >= p.currentTerm;
+        return {
+          label: labelFor(p.subjectId),
+          data: [p.currentTerm, p.predictedNextTerm],
+          color: rising ? theme.palette.success.main : theme.palette.warning.main,
+          curve: "linear" as const,
+          showMark: true,
+        };
+      })}
+      margin={{ top: 20, right: 24, bottom: 28, left: 40 }}
+      grid={{ horizontal: true }}
+      hideLegend={predictions.length > 6}
+    />
+  );
+}
+
+function MiniStat({ value, label, tint }: { value: number; label: string; tint?: string }) {
+  return (
+    <Stack direction="row" spacing={1} alignItems="baseline">
+      <Typography
+        sx={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", minWidth: 22, color: tint }}
+      >
+        {value}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+    </Stack>
+  );
+}
+
+function InsightRow({
+  icon: Icon,
+  tint,
+  label,
+  topic,
+  percent,
+}: {
+  icon: typeof TrendingUp;
+  tint: string;
+  label: string;
+  topic: string;
+  percent: number;
+}) {
+  return (
+    <Stack direction="row" spacing={1.5} alignItems="center">
+      <Box
+        sx={{
+          width: 38,
+          height: 38,
+          borderRadius: 2,
+          flexShrink: 0,
+          display: "grid",
+          placeItems: "center",
+          bgcolor: alpha(tint, 0.14),
+          color: tint,
+        }}
+      >
+        <Icon size={18} />
+      </Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600 }}
+        >
+          {label}
+        </Typography>
+        <Typography component="div" sx={{ fontWeight: 600, lineHeight: 1.25 }} noWrap>
+          {topic} · {percent}%
+        </Typography>
+      </Box>
+    </Stack>
+  );
+}
+
+// A bar-free topic row: name, trend delta, and a compact colored mastery pill.
+function TopicRow({ t, showSubject = true }: { t: TopicMastery; showSubject?: boolean }) {
+  const theme = useTheme();
+  const hex = masteryHex(theme, t.mastery);
+  return (
+    <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>
           {t.topic}
         </Typography>
-        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ flexShrink: 0 }}>
-          {t.trend !== 0 && (
-            <Stack
-              direction="row"
-              alignItems="center"
-              sx={{ color: t.trend > 0 ? "success.main" : "warning.main" }}
-            >
-              {t.trend > 0 ? (
-                <ArrowDropUpIcon fontSize="small" />
-              ) : (
-                <ArrowDropDownIcon fontSize="small" />
-              )}
-              <Typography
-                variant="caption"
-                sx={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}
-              >
-                {Math.abs(t.trend)}
-              </Typography>
-            </Stack>
-          )}
-          <Typography
-            variant="body2"
-            sx={{ fontWeight: 700, fontVariantNumeric: "tabular-nums", minWidth: 34, textAlign: "right" }}
-          >
-            {t.mastery}%
+        {showSubject && (
+          <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
+            {t.subject}
           </Typography>
-        </Stack>
+        )}
+      </Box>
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ flexShrink: 0 }}>
+        {t.trend !== 0 && (
+          <Stack
+            direction="row"
+            alignItems="center"
+            sx={{ color: t.trend > 0 ? "success.main" : "warning.main" }}
+          >
+            {t.trend > 0 ? (
+              <ArrowDropUpIcon fontSize="small" />
+            ) : (
+              <ArrowDropDownIcon fontSize="small" />
+            )}
+            <Typography variant="caption" sx={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+              {Math.abs(t.trend)}
+            </Typography>
+          </Stack>
+        )}
+        <Box
+          sx={{
+            px: 1,
+            py: 0.25,
+            minWidth: 46,
+            textAlign: "center",
+            borderRadius: 1,
+            fontWeight: 700,
+            fontSize: "0.8125rem",
+            fontVariantNumeric: "tabular-nums",
+            color: hex,
+            bgcolor: alpha(hex, 0.14),
+          }}
+        >
+          {t.mastery}%
+        </Box>
       </Stack>
-      {showSubject && (
-        <Typography variant="caption" color="text.secondary">
-          {t.subject}
-        </Typography>
-      )}
-      <LinearProgress
-        variant="determinate"
-        value={t.mastery}
-        color={masteryColor(t.mastery)}
-        sx={{ mt: 0.5 }}
-        aria-label={`${t.topic}: ${t.mastery}% mastery`}
-      />
-    </Box>
+    </Stack>
   );
 }

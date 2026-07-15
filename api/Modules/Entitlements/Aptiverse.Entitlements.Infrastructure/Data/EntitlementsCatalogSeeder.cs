@@ -204,8 +204,9 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
         // Quotas (metered features — AI Quick/Deep + WhatsApp messages)
         // -----------------------------------------------------------------
         // -1 = unlimited (subject to fair-use enforced at the HTTP layer).
-        // Margin holds at 50% utilisation across every paid tier; commission
-        // covers the AI cost for Tutor Free.
+        // ai.quick runs on Haiku (cheap); ai.deep runs on Opus 4.8 (~R2/reply),
+        // so deep allowances are sized to stay margin-positive even at full
+        // utilisation of every tier. Revisit these if the deep model or FX moves.
         private static async Task UpsertQuotasAsync(ApplicationDbContext db, CancellationToken ct)
         {
             var desired = new (string PlanCode, string QuotaKey, int PerMonth)[]
@@ -215,34 +216,34 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 ("free",         "whatsapp",    0),
 
                 ("student.pro",  "ai.quick",  300),
-                ("student.pro",  "ai.deep",    30),
+                ("student.pro",  "ai.deep",    20),
                 ("student.pro",  "whatsapp",   50),
                 ("student.max",  "ai.quick", 1200),
-                ("student.max",  "ai.deep",   100),
+                ("student.max",  "ai.deep",    40),
                 ("student.max",  "whatsapp",  200),
 
                 // Parent tiers pool one Student-Pro allowance per child.
                 ("parent",       "ai.quick",  300),
-                ("parent",       "ai.deep",    30),
+                ("parent",       "ai.deep",    20),
                 ("parent",       "whatsapp",   50),
                 ("parent.2",     "ai.quick",  600),
-                ("parent.2",     "ai.deep",    60),
+                ("parent.2",     "ai.deep",    40),
                 ("parent.2",     "whatsapp",  100),
                 ("parent.3",     "ai.quick",  900),
-                ("parent.3",     "ai.deep",    90),
+                ("parent.3",     "ai.deep",    60),
                 ("parent.3",     "whatsapp",  150),
                 ("parent.4",     "ai.quick", 1200),
-                ("parent.4",     "ai.deep",   120),
+                ("parent.4",     "ai.deep",    80),
                 ("parent.4",     "whatsapp",  200),
 
                 ("tutor.free",   "ai.quick",   15),
                 ("tutor.free",   "ai.deep",     0),
                 ("tutor.free",   "whatsapp",   10),
                 ("tutor.pro",    "ai.quick",  300),
-                ("tutor.pro",    "ai.deep",    20),
+                ("tutor.pro",    "ai.deep",    15),
                 ("tutor.pro",    "whatsapp",  100),
                 ("tutor.premium","ai.quick", 1500),
-                ("tutor.premium","ai.deep",    80),
+                ("tutor.premium","ai.deep",    50),
                 ("tutor.premium","whatsapp",  500),
 
                 ("school",       "ai.quick",   -1),

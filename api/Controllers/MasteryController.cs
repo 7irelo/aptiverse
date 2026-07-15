@@ -80,9 +80,13 @@ namespace Aptiverse.Mastery.Controllers
             var userId = CurrentUserId();
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
+            // A logged actual mark is what counts as graded here — the status
+            // field is a separate workflow flag the student may not have flipped
+            // to "graded" when they entered their mark. Keying off ActualMark
+            // keeps predictions in step with the assessments list and detail.
             var graded = await _db.Set<Assessment>()
                 .AsNoTracking()
-                .Where(x => x.StudentId == userId && x.Status == "graded" && x.ActualMark != null)
+                .Where(x => x.StudentId == userId && x.ActualMark != null)
                 .Select(x => new { x.SubjectId, x.ActualMark, x.Weight, x.DueDate })
                 .ToListAsync(ct);
 

@@ -8,117 +8,108 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Button from "@mui/material/Button";
+import { alpha, useTheme } from "@mui/material/styles";
 import WorkOutlineIcon from "@mui/icons-material/WorkOutlineOutlined";
-import RocketLaunchOutlinedIcon from "@mui/icons-material/RocketLaunchOutlined";
+import { TrendingUp, ArrowRight, TrendingDown, Target } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { QueryStates } from "@/components/common/QueryStates";
-import { useCareers } from "@/lib/api/queries";
+import { ProgressRing } from "@/components/common/ProgressRing";
+import { useCareers, useAcademicUnits } from "@/lib/api/queries";
 import type { Career } from "@/lib/mockData";
 import Link from "next/link";
 
+const GROWTH: Record<
+  Career["growth"],
+  { label: string; color: "success" | "primary" | "warning"; Icon: typeof TrendingUp }
+> = {
+  high: { label: "High growth", color: "success", Icon: TrendingUp },
+  medium: { label: "Steady growth", color: "primary", Icon: ArrowRight },
+  low: { label: "Limited growth", color: "warning", Icon: TrendingDown },
+};
+
+function matchColor(score: number): "success" | "primary" | "warning" {
+  if (score >= 80) return "success";
+  if (score >= 60) return "primary";
+  return "warning";
+}
+
 export default function CareerPage() {
   const query = useCareers();
+  const academic = useAcademicUnits();
 
   return (
     <>
       <PageHeader
         title="Career navigator"
-        description="From dream course to first internship — we help you plan it backwards from where you want to be."
+        description="Match your strengths to real careers, then plan backwards to the marks and skills that get you there."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Career" }]}
-        actions={<Button variant="contained" color="secondary">Set dream course</Button>}
+        actions={
+          <Button
+            component={Link}
+            href="/dashboard/goals"
+            variant="contained"
+            color="secondary"
+            startIcon={<Target size={16} />}
+          >
+            Set a career goal
+          </Button>
+        }
       />
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 8 }}>
-          <Card sx={{ mb: 3 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Stack direction="row" spacing={2} alignItems="flex-start">
-                <Box
-                  sx={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 1.5,
-                    bgcolor: "brandSurface.main",
-                    color: "brandSurface.contrastText",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <RocketLaunchOutlinedIcon />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="overline" color="primary.main">
-                    Your dream course
-                  </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-                    Not set yet
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                    Pick a target course and we'll track your progress and recommend the subjects most worth pushing.
-                  </Typography>
-                  <Stack direction="row" spacing={1}>
-                    <Button variant="contained" size="small">
-                      Set dream course
-                    </Button>
-                    <Button component={Link} href="/dashboard/goals" variant="outlined" size="small">
-                      Set a goal
-                    </Button>
-                  </Stack>
-                </Box>
-              </Stack>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Career matches based on your profile
-              </Typography>
-              <QueryStates
-                query={query}
-                empty={{
-                  icon: <WorkOutlineIcon />,
-                  title: "No career matches yet",
-                  description:
-                    "Add your subjects and a few interests, and we'll surface careers that fit your strengths.",
-                  size: "compact",
-                  action: (
-                    <Button variant="contained" component={Link} href="/dashboard/subjects">
-                      Add subjects
-                    </Button>
-                  ),
-                }}
-              >
-                {(careers) => <CareerList careers={careers} />}
-              </QueryStates>
-            </CardContent>
-          </Card>
+          <QueryStates
+            query={query}
+            empty={{
+              icon: <WorkOutlineIcon />,
+              title: "No career matches yet",
+              description: `Add your ${academic.unitNounPlural} and a few interests, and we'll surface careers that fit your strengths.`,
+              size: "compact",
+              action: (
+                <Button variant="contained" component={Link} href={academic.addHref}>
+                  Add {academic.unitNounPlural}
+                </Button>
+              ),
+            }}
+          >
+            {(careers) => <CareerMatches careers={careers} />}
+          </QueryStates>
         </Grid>
 
         <Grid size={{ xs: 12, md: 4 }}>
           <Stack spacing={3}>
             <Card>
               <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ mb: 1.5 }}>
-                  Financial literacy
+                <Typography variant="overline" color="primary.main">
+                  Plan backwards
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Short reads to help you make smart money decisions before you leave home. Coming soon.
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  Turn a match into a plan
                 </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.75 }}>
+                  Pick a career you're drawn to and set it as a goal. We'll track the {academic.unitNoun}s
+                  and marks that matter most for it.
+                </Typography>
+                <Button
+                  component={Link}
+                  href="/dashboard/goals"
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                >
+                  Set a career goal
+                </Button>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ mb: 1.5 }}>
-                  Day in the life
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Real stories from SA professionals across fields. Coming soon.
-                </Typography>
-              </CardContent>
-            </Card>
+
+            <InfoCard
+              title="Financial literacy"
+              body="Short reads on making smart money decisions as you start out. Coming soon."
+            />
+            <InfoCard
+              title="Day in the life"
+              body="Real stories from SA professionals across fields. Coming soon."
+            />
           </Stack>
         </Grid>
       </Grid>
@@ -126,36 +117,160 @@ export default function CareerPage() {
   );
 }
 
-function CareerList({ careers }: { careers: Career[] }) {
+function CareerMatches({ careers }: { careers: Career[] }) {
+  const sorted = [...careers].sort((a, b) => b.matchScore - a.matchScore);
+  const [top, ...rest] = sorted;
+
   return (
-    <Stack spacing={2}>
-      {careers.map((c) => (
-        <Box key={c.id} sx={{ p: 2, border: 1, borderColor: "divider", borderRadius: 2 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 1 }}>
-            <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                {c.title}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {c.field} · {c.averageSalary}
-              </Typography>
-            </Box>
-            <Stack alignItems="flex-end">
-              <Typography variant="h6" sx={{ color: "primary.main", fontWeight: 700 }}>
-                {c.matchScore}%
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                match
-              </Typography>
+    <Stack spacing={3}>
+      {top && <TopMatchCard c={top} />}
+      {rest.length > 0 && (
+        <Card>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              More matches
+            </Typography>
+            <Stack spacing={1.5}>
+              {rest.map((c) => (
+                <CareerRow key={c.id} c={c} />
+              ))}
             </Stack>
-          </Stack>
-          <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-            {c.requirements.map((r) => (
-              <Chip key={r} label={r} size="small" variant="outlined" />
-            ))}
-          </Stack>
-        </Box>
-      ))}
+          </CardContent>
+        </Card>
+      )}
     </Stack>
+  );
+}
+
+function TopMatchCard({ c }: { c: Career }) {
+  const theme = useTheme();
+  const tint = theme.palette[matchColor(c.matchScore)].main;
+
+  return (
+    <Card sx={{ border: 1, borderColor: alpha(tint, 0.4), bgcolor: alpha(tint, 0.04) }}>
+      <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+        <Typography variant="overline" sx={{ color: tint, fontWeight: 700 }}>
+          Your top match
+        </Typography>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={{ xs: 2.5, sm: 4 }}
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          sx={{ mt: 1 }}
+        >
+          <ProgressRing
+            value={c.matchScore}
+            size={128}
+            thickness={11}
+            color={matchColor(c.matchScore)}
+            label={
+              <Box sx={{ textAlign: "center" }}>
+                <Typography sx={{ fontWeight: 800, fontSize: "1.6rem", lineHeight: 1 }}>
+                  {c.matchScore}%
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  match
+                </Typography>
+              </Box>
+            }
+          />
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              {c.title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.25 }}>
+              {c.field} · {c.averageSalary}
+            </Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
+              <GrowthChip career={c} />
+              {c.requirements.map((r) => (
+                <Chip key={r} label={r} size="small" variant="outlined" />
+              ))}
+            </Stack>
+            <Button
+              component={Link}
+              href="/dashboard/goals"
+              variant="contained"
+              size="small"
+              startIcon={<Target size={16} />}
+            >
+              Work toward this
+            </Button>
+          </Box>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CareerRow({ c }: { c: Career }) {
+  const theme = useTheme();
+  const tint = theme.palette[matchColor(c.matchScore)].main;
+
+  return (
+    <Stack
+      direction="row"
+      spacing={2}
+      alignItems="center"
+      sx={{ p: 1.5, border: 1, borderColor: "divider", borderRadius: 2 }}
+    >
+      <Box
+        sx={{
+          width: 52,
+          height: 52,
+          flexShrink: 0,
+          borderRadius: "50%",
+          display: "grid",
+          placeItems: "center",
+          color: tint,
+          bgcolor: alpha(tint, 0.14),
+          fontWeight: 800,
+          fontSize: "0.95rem",
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        {c.matchScore}%
+      </Box>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700 }} noWrap>
+          {c.title}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          {c.field} · {c.averageSalary}
+        </Typography>
+        <Box sx={{ mt: 0.75 }}>
+          <GrowthChip career={c} />
+        </Box>
+      </Box>
+    </Stack>
+  );
+}
+
+function GrowthChip({ career }: { career: Career }) {
+  const g = GROWTH[career.growth];
+  return (
+    <Chip
+      icon={<g.Icon size={14} />}
+      label={g.label}
+      size="small"
+      color={g.color}
+      variant="outlined"
+      sx={{ fontWeight: 600, "& .MuiChip-icon": { ml: 0.75 } }}
+    />
+  );
+}
+
+function InfoCard({ title, body }: { title: string; body: string }) {
+  return (
+    <Card>
+      <CardContent sx={{ p: 3 }}>
+        <Typography variant="h6" sx={{ mb: 1 }}>
+          {title}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {body}
+        </Typography>
+      </CardContent>
+    </Card>
   );
 }
