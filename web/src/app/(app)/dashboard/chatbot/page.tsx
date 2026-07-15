@@ -5,7 +5,6 @@ import { useSession } from "next-auth/react";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import Avatar from "@mui/material/Avatar";
 import TextField from "@mui/material/TextField";
 import IconButton from "@mui/material/IconButton";
 import Button from "@mui/material/Button";
@@ -24,10 +23,12 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogActions from "@mui/material/DialogActions";
-import useMediaQuery from "@mui/material/useMediaQuery";
-import { alpha, useTheme } from "@mui/material/styles";
+import { alpha } from "@mui/material/styles";
 import SendIcon from "@mui/icons-material/SendRounded";
-import SmartToyIcon from "@mui/icons-material/SmartToyOutlined";
+import LightbulbIcon from "@mui/icons-material/LightbulbOutlined";
+import EditIcon from "@mui/icons-material/EditOutlined";
+import ArticleIcon from "@mui/icons-material/ArticleOutlined";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import AddCommentIcon from "@mui/icons-material/AddCommentOutlined";
 import HistoryIcon from "@mui/icons-material/HistoryOutlined";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
@@ -37,9 +38,9 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import BoltIcon from "@mui/icons-material/BoltOutlined";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import KeyboardDoubleArrowRightIcon from "@mui/icons-material/KeyboardDoubleArrowRight";
+import CloseIcon from "@mui/icons-material/Close";
 import CheckIcon from "@mui/icons-material/Check";
-import { Markdown } from "@/components/common/Markdown";
+import { UserMessage, AssistantMessage, ThinkingDots } from "@/components/common/ChatMessage";
 import {
   useAiTutor,
   useAcademicProfile,
@@ -64,15 +65,25 @@ import { ApiError } from "@/lib/api/fetcher";
 
 type ChatMessage = { role: "user" | "assistant"; content: string; error?: boolean };
 
+// Short labels the student scans; the prompt actually sent is the longer,
+// more specific one, because the model answers a specific ask far better than
+// it answers "explain a concept".
 const QUICK_PROMPTS = [
-  "Explain a concept I'm stuck on, simply",
-  "Generate 5 practice problems with solutions",
-  "Help me outline an essay",
-  "Quiz me on a topic",
+  {
+    label: "Explain a concept",
+    prompt: "Explain a concept I'm stuck on, simply",
+    Icon: LightbulbIcon,
+  },
+  {
+    label: "Practise a topic",
+    prompt: "Generate 5 practice problems with solutions",
+    Icon: EditIcon,
+  },
+  { label: "Outline an essay", prompt: "Help me outline an essay", Icon: ArticleIcon },
+  { label: "Quiz me", prompt: "Quiz me on a topic", Icon: HelpOutlineIcon },
 ];
 
 const DEEP_KEY = "aptiverse.chatbot.deep";
-const HISTORY_KEY = "aptiverse.chatbot.historyOpen";
 const MAX_SENT_MESSAGES = 24;
 
 // Mirrors MaxConversationsPerStudent on the server. Only used to tell the
@@ -152,16 +163,14 @@ function buildStudentContext(args: {
 }
 
 export default function ChatbotPage() {
-  const theme = useTheme();
-  const mdUp = useMediaQuery(theme.breakpoints.up("md"));
-
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState<string | null>(null);
   const [deep, setDeep] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
-  // One flag, two behaviours: on desktop it collapses the rail in place, on
-  // mobile it opens the drawer. Starts closed on mobile either way.
+  // History is an overlay at every width, so it always starts closed and never
+  // persists: a panel that reopens itself on every visit and dims the page
+  // behind it is a nuisance, not a preference.
   const [historyOpen, setHistoryOpen] = useState(false);
   const [clearOpen, setClearOpen] = useState(false);
 
@@ -178,8 +187,6 @@ export default function ChatbotPage() {
   // Tracks which conversation id's server messages are already loaded into the
   // local transcript, so switching loads once and sends never re-clobber it.
   const loadedIdRef = useRef<string | null>(null);
-  // One-shot latch for the history-rail preference restore. See the effect below.
-  const restoredRef = useRef(false);
   const busy = tutor.isPending || streaming !== null;
 
   const { data: session } = useSession();
@@ -195,32 +202,6 @@ export default function ChatbotPage() {
     if (typeof window === "undefined") return;
     setDeep(window.localStorage.getItem(DEEP_KEY) === "1");
   }, []);
-
-  // Restore the rail's open state on desktop only: on mobile it's a drawer,
-  // which must always start closed.
-  //
-  // This waits for mdUp rather than running on mount, because useMediaQuery
-  // reports false on the first render (it has no window to measure during SSR)
-  // and only reports the truth after hydration. Restoring on mount therefore
-  // read mdUp === false on a 1920px screen and left the rail collapsed. The ref
-  // keeps it a one-shot: dragging a window across the breakpoint later must not
-  // re-open a rail the student deliberately closed.
-  useEffect(() => {
-    if (!mdUp || restoredRef.current) return;
-    restoredRef.current = true;
-    setHistoryOpen(window.localStorage.getItem(HISTORY_KEY) !== "0");
-  }, [mdUp]);
-
-  const toggleHistory = () => {
-    const next = !historyOpen;
-    setHistoryOpen(next);
-    if (!mdUp) return;
-    try {
-      window.localStorage.setItem(HISTORY_KEY, next ? "1" : "0");
-    } catch {
-      /* storage unavailable — preference just won't persist */
-    }
-  };
   const applyDeep = (next: boolean) => {
     setDeep(next);
     try {
@@ -361,11 +342,10 @@ export default function ChatbotPage() {
     closeDrawer();
   };
 
-  // Picking a chat on mobile should get the drawer out of the way; on desktop
-  // the rail is the navigation, so it stays put.
-  const closeDrawer = () => {
-    if (!mdUp) setHistoryOpen(false);
-  };
+  // Picking a chat, or starting a new one, means the student is done with the
+  // list. It's an overlay over the thing they came back to read, so it gets out
+  // of the way rather than sitting there dimming it.
+  const closeDrawer = () => setHistoryOpen(false);
 
   const selectConversation = (id: string) => {
     if (busy || id === activeId) {
@@ -404,7 +384,7 @@ export default function ChatbotPage() {
       onDelete={removeConversation}
       onRename={renameConversation}
       onClear={() => setClearOpen(true)}
-      onCollapse={mdUp ? toggleHistory : () => setHistoryOpen(false)}
+      onClose={() => setHistoryOpen(false)}
       clearing={clearConvos.isPending}
       disabled={busy}
     />
@@ -445,9 +425,9 @@ export default function ChatbotPage() {
             bgcolor: "background.paper",
           }}
         >
-          <Avatar sx={{ bgcolor: "primary.main", width: 36, height: 36 }}>
-            <SmartToyIcon fontSize="small" sx={{ color: "primary.contrastText" }} />
-          </Avatar>
+          {/* No avatar. The tutor doesn't need a face, and a robot in a circle
+              is a mascot for a product that hasn't decided what it is. The
+              title and the status line carry everything this header owes. */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }} noWrap>
               {activeConvo.data && activeId ? activeConvo.data.title : "AI Tutor"}
@@ -473,18 +453,11 @@ export default function ChatbotPage() {
               </IconButton>
             </span>
           </Tooltip>
-          {/* The only way back to the rail once it's collapsed, so it stays in
-              the header at every width rather than living inside the rail. */}
-          {(!mdUp || !historyOpen) && (
-            <Tooltip title="Chat history">
-              <IconButton
-                onClick={() => (mdUp ? toggleHistory() : setHistoryOpen(true))}
-                aria-label="Show chat history"
-              >
-                <HistoryIcon />
-              </IconButton>
-            </Tooltip>
-          )}
+          <Tooltip title="Chat history">
+            <IconButton onClick={() => setHistoryOpen(true)} aria-label="Show chat history">
+              <HistoryIcon />
+            </IconButton>
+          </Tooltip>
         </Stack>
 
         {/* Conversation. The scrollbar is styled down to a thin muted track:
@@ -522,7 +495,7 @@ export default function ChatbotPage() {
                 <CircularProgress size={26} />
               </Stack>
             ) : empty ? (
-              <EmptyChat firstName={firstName} unitNoun={academic.unitNoun} onPick={send} busy={busy} />
+              <EmptyChat firstName={firstName} onPick={send} busy={busy} />
             ) : (
               <Stack spacing={3}>
                 {messages.map((m, i) =>
@@ -537,7 +510,7 @@ export default function ChatbotPage() {
                     resolve as they arrive, so the reply never visibly restyles
                     itself once it settles. */}
                 {streaming !== null && <AssistantMessage content={streaming} caret />}
-                {tutor.isPending && <ThinkingRow deep={deep} />}
+                {tutor.isPending && <ThinkingDots label={deep ? "Thinking deeply" : undefined} />}
               </Stack>
             )}
           </Box>
@@ -625,38 +598,18 @@ export default function ChatbotPage() {
         </Box>
       </Box>
 
-      {/* History rail, right-hand side. Width animates to zero rather than
-          unmounting, so collapsing keeps the list's scroll position and doesn't
-          make it flash back in on reopen. */}
-      {mdUp && (
-        <Box
-          sx={{
-            width: historyOpen ? 272 : 0,
-            flexShrink: 0,
-            borderLeft: historyOpen ? 1 : 0,
-            borderColor: "divider",
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            bgcolor: "background.paper",
-            transition: "width 200ms cubic-bezier(0.16, 1, 0.3, 1)",
-            "@media (prefers-reduced-motion: reduce)": { transition: "none" },
-          }}
-          aria-hidden={!historyOpen}
-        >
-          <Box sx={{ width: 272, height: "100%", display: "flex", flexDirection: "column" }}>
-            {sidebar}
-          </Box>
-        </Box>
-      )}
-
-      {!mdUp && (
-        <Drawer anchor="right" open={historyOpen} onClose={() => setHistoryOpen(false)}>
-          <Box sx={{ width: 288, height: "100%", display: "flex", flexDirection: "column" }}>
-            {sidebar}
-          </Box>
-        </Drawer>
-      )}
+      {/* History slides in over the conversation at every width, and dims it,
+          rather than taking a column and pushing the chat sideways. Picking an
+          old chat is a brief detour, not a mode: the reply you were reading
+          should still be exactly where you left it when the panel closes. */}
+      <Drawer
+        anchor="right"
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        slotProps={{ paper: { sx: { width: { xs: 300, sm: 320 }, border: 0 } } }}
+      >
+        <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>{sidebar}</Box>
+      </Drawer>
 
       <Dialog open={clearOpen} onClose={() => setClearOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>Clear chat history?</DialogTitle>
@@ -686,7 +639,7 @@ function HistorySidebar({
   onDelete,
   onRename,
   onClear,
-  onCollapse,
+  onClose,
   clearing,
   disabled,
 }: {
@@ -698,7 +651,7 @@ function HistorySidebar({
   onDelete: (id: string) => void;
   onRename: (id: string, title: string) => void;
   onClear: () => void;
-  onCollapse: () => void;
+  onClose: () => void;
   clearing: boolean;
   disabled: boolean;
 }) {
@@ -750,9 +703,9 @@ function HistorySidebar({
             </IconButton>
           </span>
         </Tooltip>
-        <Tooltip title="Hide history">
-          <IconButton size="small" onClick={onCollapse} aria-label="Hide chat history">
-            <KeyboardDoubleArrowRightIcon fontSize="small" />
+        <Tooltip title="Close">
+          <IconButton size="small" onClick={onClose} aria-label="Close chat history">
+            <CloseIcon fontSize="small" />
           </IconButton>
         </Tooltip>
       </Stack>
@@ -991,179 +944,55 @@ function ModePicker({
   );
 }
 
-const messageIn = {
-  animation: "messageIn 260ms cubic-bezier(0.16, 1, 0.3, 1)",
-  "@keyframes messageIn": {
-    from: { opacity: 0, transform: "translateY(8px)" },
-    to: { opacity: 1, transform: "translateY(0)" },
-  },
-  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
-} as const;
-
-// What the student said. This one keeps its bubble: it's the shorter half of
-// the transcript and the fill is what makes the back-and-forth scannable when
-// you're skimming for your own question.
-function UserMessage({ content }: { content: string }) {
-  return (
-    <Stack direction="row" justifyContent="flex-end" sx={messageIn}>
-      <Box
-        sx={{
-          maxWidth: "80%",
-          px: 2,
-          py: 1.25,
-          borderRadius: "18px 18px 4px 18px",
-          bgcolor: "primary.main",
-          color: "primary.contrastText",
-        }}
-      >
-        <Typography
-          component="div"
-          sx={{ fontSize: "0.9375rem", lineHeight: 1.55, whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-        >
-          {content}
-        </Typography>
-      </Box>
-    </Stack>
-  );
-}
-
-// What the tutor said. No bubble, no avatar, no fill: the reply is the page's
-// main content, and boxing it fought the long-form answers this tutor actually
-// gives — worked examples, headings, lists, math. Reads as a document, the way
-// the student's own notes would. Errors are the exception: they're the system
-// speaking, not the tutor, so they get a tinted callout to say so.
-function AssistantMessage({
-  content,
-  error,
-  caret,
-}: {
-  content: string;
-  error?: boolean;
-  // Blinking caret trailing the last line while a reply streams in. Attached
-  // via ::after on the final block so it sits inline at the end of the text
-  // rather than orphaned on its own line under a rendered markdown block.
-  caret?: boolean;
-}) {
-  if (error) {
-    return (
-      <Box
-        sx={{
-          ...messageIn,
-          px: 2,
-          py: 1.25,
-          borderRadius: 2,
-          bgcolor: (t) => alpha(t.palette.warning.main, 0.14),
-          border: 1,
-          borderColor: (t) => alpha(t.palette.warning.main, 0.3),
-        }}
-      >
-        <Typography component="div" sx={{ fontSize: "0.9375rem", lineHeight: 1.55 }}>
-          {content}
-        </Typography>
-      </Box>
-    );
-  }
-
-  return (
-    <Box
-      sx={{
-        ...messageIn,
-        // Markdown sets its own body size for the compact surfaces it also
-        // serves; here the reply is the reading material, so bring it up to
-        // match the student's own message.
-        "& > *": { fontSize: "0.9375rem" },
-        ...(caret && {
-          "& > * > *:last-child::after": {
-            content: '""',
-            display: "inline-block",
-            width: "2px",
-            height: "1.05em",
-            marginLeft: "2px",
-            verticalAlign: "text-bottom",
-            backgroundColor: "text.secondary",
-            animation: "caret 1s steps(1) infinite",
-          },
-          "@keyframes caret": { "50%": { opacity: 0 } },
-          "@media (prefers-reduced-motion: reduce)": {
-            animation: "none",
-            "& > * > *:last-child::after": { animation: "none" },
-          },
-        }),
-      }}
-    >
-      <Markdown>{content}</Markdown>
-    </Box>
-  );
-}
-
-// Sits where the reply will land, unboxed like the reply itself, so the dots
-// give way to text rather than a bubble popping in around them.
-function ThinkingRow({ deep }: { deep: boolean }) {
-  return (
-    <Stack direction="row" alignItems="center" spacing={1}>
-      <Box sx={{ display: "flex", gap: 0.5 }}>
-        {[0, 1, 2].map((i) => (
-          <Box
-            key={i}
-            sx={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              bgcolor: "text.secondary",
-              animation: "blink 1.4s ease-in-out infinite",
-              animationDelay: `${i * 0.15}s`,
-              "@keyframes blink": { "0%, 80%, 100%": { opacity: 0.25 }, "40%": { opacity: 1 } },
-              "@media (prefers-reduced-motion: reduce)": { animation: "none", opacity: 0.5 },
-            }}
-          />
-        ))}
-      </Box>
-      {deep && (
-        <Typography variant="caption" color="text.secondary">
-          Thinking deeply
-        </Typography>
-      )}
-    </Stack>
-  );
-}
-
+// The opening screen: one question and a few quiet ways in. No mascot, no
+// pitch about what the tutor knows. The starters are plain rows rather than a
+// wall of outlined pills, so they read as options and not as four buttons
+// demanding a decision before the student has typed anything.
 function EmptyChat({
   firstName,
-  unitNoun,
   onPick,
   busy,
 }: {
   firstName: string;
-  unitNoun: string;
   onPick: (t: string) => void;
   busy: boolean;
 }) {
   return (
-    <Stack alignItems="center" justifyContent="center" spacing={2} sx={{ minHeight: 320, textAlign: "center", px: 2 }}>
-      <Avatar sx={{ bgcolor: "primary.main", width: 56, height: 56 }}>
-        <SmartToyIcon />
-      </Avatar>
-      <Box sx={{ maxWidth: 460 }}>
-        <Typography variant="h6" sx={{ mb: 0.5 }}>
-          {firstName ? `Hi ${firstName}, ask me anything` : "Ask me anything"}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          I know your level and your {unitNoun}s, so I can explain a tricky concept, generate
-          practice questions with solutions, or plan an essay. Pick a starting point or just type.
-        </Typography>
-      </Box>
-      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap justifyContent="center">
-        {QUICK_PROMPTS.map((p) => (
-          <Button
-            key={p}
-            variant="outlined"
-            size="small"
-            onClick={() => onPick(p)}
+    <Stack alignItems="center" justifyContent="center" sx={{ minHeight: 340, px: 2 }}>
+      <Typography variant="h5" sx={{ fontWeight: 600, textAlign: "center", mb: 3 }}>
+        {firstName ? `How can I help, ${firstName}?` : "How can I help?"}
+      </Typography>
+      <Stack spacing={0.5} sx={{ width: "100%", maxWidth: 380 }}>
+        {QUICK_PROMPTS.map(({ label, prompt, Icon }) => (
+          <Stack
+            key={label}
+            component="button"
+            type="button"
+            direction="row"
+            alignItems="center"
+            spacing={1.75}
+            onClick={() => onPick(prompt)}
             disabled={busy}
-            sx={{ textTransform: "none", borderRadius: 2 }}
+            sx={{
+              px: 1.5,
+              py: 1.25,
+              borderRadius: 2,
+              border: 0,
+              bgcolor: "transparent",
+              textAlign: "left",
+              cursor: "pointer",
+              color: "text.secondary",
+              font: "inherit",
+              transition: "background-color 120ms, color 120ms",
+              "&:hover": { bgcolor: "action.hover", color: "text.primary" },
+              "&:disabled": { cursor: "default", opacity: 0.5 },
+            }}
           >
-            {p}
-          </Button>
+            <Icon fontSize="small" sx={{ flexShrink: 0 }} />
+            <Typography variant="body2" sx={{ color: "inherit" }}>
+              {label}
+            </Typography>
+          </Stack>
         ))}
       </Stack>
     </Stack>

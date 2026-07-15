@@ -16,6 +16,23 @@ export const initials = (name: string) =>
     .map((p) => p[0]?.toUpperCase() ?? "")
     .join("");
 
+// Turn a raw study-unit slug ("uct:calculus-i") into something readable
+// ("Calculus I"). This is the LAST resort, for when useAcademicUnits().nameFor
+// can't resolve an id: a student should never be shown our internal slug.
+//
+// It lives here because three pages grew their own copy and they disagreed.
+// One rendered "Calculus I" and another "Calculus I" for the same course, and
+// a third just printed the raw slug. The roman-numeral case is the whole point
+// on a tertiary catalogue full of I/II/III courses, so that behaviour wins.
+export const prettifyUnitId = (raw: string): string => {
+  const tail = raw.includes(":") ? raw.slice(raw.lastIndexOf(":") + 1) : raw;
+  return tail
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((w) => (/^[ivx]+$/i.test(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(" ");
+};
+
 export const minutesToHours = (m: number) => {
   const h = Math.floor(m / 60);
   const r = m % 60;

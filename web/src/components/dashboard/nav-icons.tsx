@@ -4,7 +4,7 @@
 // back to a neutral dot so a new backend key never renders blank.
 import HomeIcon from "@mui/icons-material/HomeOutlined";
 import WorkspacesIcon from "@mui/icons-material/WorkspacesOutlined";
-import SmartToyIcon from "@mui/icons-material/SmartToyOutlined";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import MenuBookIcon from "@mui/icons-material/MenuBookOutlined";
 import AssignmentIcon from "@mui/icons-material/AssignmentOutlined";
 import QuizIcon from "@mui/icons-material/QuizOutlined";
@@ -45,7 +45,7 @@ export type NavIcon = React.ComponentType<{ fontSize?: "small" | "medium" | "lar
 const REGISTRY: Record<string, NavIcon> = {
   home: HomeIcon,
   workspace: WorkspacesIcon,
-  ai: SmartToyIcon,
+  ai: AutoAwesomeIcon,
   book: MenuBookIcon,
   assignment: AssignmentIcon,
   quiz: QuizIcon,

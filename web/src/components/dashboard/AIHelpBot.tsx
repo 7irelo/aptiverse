@@ -9,16 +9,13 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
-import Avatar from "@mui/material/Avatar";
 import Chip from "@mui/material/Chip";
 import LinearProgress from "@mui/material/LinearProgress";
 import Button from "@mui/material/Button";
 import Tooltip from "@mui/material/Tooltip";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutlineOutlined";
-import SmartToyIcon from "@mui/icons-material/SmartToyOutlined";
 import SendIcon from "@mui/icons-material/SendOutlined";
 import CloseIcon from "@mui/icons-material/Close";
-import PersonIcon from "@mui/icons-material/PersonOutline";
 import Link from "next/link";
 import {
   useAiHelp,
@@ -43,7 +40,7 @@ export function AIHelpBot() {
     {
       role: "assistant",
       content:
-        "Hey 👋 I'm Aptiverse's help bot. Ask me how to do something — like \"how do I add a subject?\" or \"where do I log an SBA?\"",
+        "I'm Aptiverse's help bot. Ask me how to do something, like \"how do I add a subject?\" or \"where do I log an SBA?\"",
     },
   ]);
   const [quotaSnapshot, setQuotaSnapshot] = useState<{ used: number; limit: number } | null>(null);
@@ -161,9 +158,6 @@ export function AIHelpBot() {
             bgcolor: "background.paper",
           }}
         >
-          <Avatar sx={{ bgcolor: "primary.main", width: 36, height: 36 }}>
-            <SmartToyIcon sx={{ color: "primary.contrastText" }} fontSize="small" />
-          </Avatar>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
               Help bot
@@ -240,9 +234,6 @@ export function AIHelpBot() {
           ))}
           {ask.isPending && (
             <Stack direction="row" spacing={1.25} alignItems="center">
-              <Avatar sx={{ bgcolor: "primary.main", width: 28, height: 28 }}>
-                <SmartToyIcon sx={{ color: "primary.contrastText", fontSize: 16 }} />
-              </Avatar>
               <Box
                 sx={{
                   px: 1.5,
@@ -383,11 +374,6 @@ function ChatBubble({ role, children }: { role: "user" | "assistant"; children: 
       alignItems="flex-start"
       sx={{ justifyContent: isUser ? "flex-end" : "flex-start" }}
     >
-      {!isUser && (
-        <Avatar sx={{ bgcolor: "primary.main", width: 28, height: 28, flexShrink: 0 }}>
-          <SmartToyIcon sx={{ color: "primary.contrastText", fontSize: 16 }} />
-        </Avatar>
-      )}
       <Box
         sx={{
           maxWidth: "80%",
@@ -402,11 +388,6 @@ function ChatBubble({ role, children }: { role: "user" | "assistant"; children: 
           {children}
         </Typography>
       </Box>
-      {isUser && (
-        <Avatar sx={{ bgcolor: "secondary.main", width: 28, height: 28, flexShrink: 0 }}>
-          <PersonIcon sx={{ color: "secondary.contrastText", fontSize: 16 }} />
-        </Avatar>
-      )}
     </Stack>
   );
 }

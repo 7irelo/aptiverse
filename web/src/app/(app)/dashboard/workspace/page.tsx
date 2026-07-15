@@ -16,7 +16,6 @@ import LinearProgress from "@mui/material/LinearProgress";
 import MenuItem from "@mui/material/MenuItem";
 import Divider from "@mui/material/Divider";
 import Tooltip from "@mui/material/Tooltip";
-import Avatar from "@mui/material/Avatar";
 import Skeleton from "@mui/material/Skeleton";
 import Drawer from "@mui/material/Drawer";
 import Snackbar from "@mui/material/Snackbar";
@@ -30,7 +29,7 @@ import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import PlayArrowIcon from "@mui/icons-material/PlayArrowOutlined";
 import PauseIcon from "@mui/icons-material/PauseOutlined";
 import RestartAltIcon from "@mui/icons-material/RestartAltOutlined";
-import SmartToyIcon from "@mui/icons-material/SmartToyOutlined";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import SendIcon from "@mui/icons-material/SendOutlined";
 import CloseIcon from "@mui/icons-material/CloseOutlined";
 import ChecklistIcon from "@mui/icons-material/ChecklistOutlined";
@@ -42,18 +41,19 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { TasksEditor } from "@/components/workspace/TasksEditor";
 import { PracticeRunner } from "@/components/practice/PracticeRunner";
-import { Markdown } from "@/components/common/Markdown";
+import { UserMessage, AssistantMessage, ThinkingDots } from "@/components/common/ChatMessage";
 import { ChevronLeft } from "lucide-react";
 import {
   useAssessments,
-  useSubjects,
+  useAcademicUnits,
   useUpdateAssessment,
   usePracticeTests,
   useAiTutor,
   type AiChatMessage,
 } from "@/lib/api/queries";
-import type { Assessment, AssessmentType, Subject, PracticeTest } from "@/lib/mockData";
+import type { Assessment, AssessmentType, PracticeTest } from "@/lib/mockData";
 import { ASSESSMENT_TYPE_LABELS } from "@/lib/mockData";
+import { prettifyUnitId } from "@/lib/format";
 import { useWorkspaceDraft, type AutosaveState } from "@/lib/hooks/useWorkspaceDraft";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -110,7 +110,7 @@ export default function WorkspacePage() {
   const directTestId = searchParams.get("test");
 
   const assessmentsQuery = useAssessments();
-  const subjectsQuery = useSubjects();
+  const academic = useAcademicUnits();
 
   const activeAssessments = useMemo<Assessment[]>(
     () =>
@@ -127,13 +127,19 @@ export default function WorkspacePage() {
   }, [activeAssessments, activeId]);
 
   const activeAssessment = activeAssessments.find((a) => a.id === activeId);
-  // Match on the canonical subject slug — Subject.id is the enrolment
-  // row id, Subject.subjectId is the slug that Assessment.subjectId
-  // also stores. The old lookup compared the wrong fields and always
-  // came back undefined.
-  const subject: Subject | undefined = (subjectsQuery.data ?? []).find(
-    (s) => s.subjectId === activeAssessment?.subjectId,
-  );
+
+  // The study unit's display name, resolved through useAcademicUnits so it
+  // covers both paths: a high-schooler's Subject and a university student's
+  // Course both key on the same slug that Assessment.subjectId stores.
+  //
+  // This used to look up useSubjects(), which only ever returns high-school
+  // subjects. For a tertiary student it was always empty, so every lookup came
+  // back undefined and the page fell through to printing the raw slug at them:
+  // "uct:calculus-i · Test". The prettifier is the last line of defence for an
+  // id that resolves to nothing; a student should never see our internal keys.
+  const unitName = activeAssessment
+    ? (academic.nameFor(activeAssessment.subjectId) ?? prettifyUnitId(activeAssessment.subjectId))
+    : undefined;
 
   // Tabs for the active assessment's type. The user's tab choice is
   // persisted to localStorage keyed by assessment id, so:
@@ -180,12 +186,12 @@ export default function WorkspacePage() {
   const safeTab: TabKey = tabs.includes(tab) ? tab : tabs[0];
 
   const [viewMode, setViewMode] = useState<ViewMode>("tabbed");
+  // The tutor is an overlay at every width, not a column. It used to hold a
+  // 360px track on desktop, so summoning it re-flowed the editor the student
+  // was mid-sentence in and dismissing it moved everything back. Asking a
+  // question should not rearrange your work. It now slides over the workspace
+  // and dims it, which also matches what focus mode and mobile already did.
   const [aiOpen, setAiOpen] = useState(false);
-  // Desktop AI-tutor panel is open by default: the tutor is a first-class
-  // part of the workspace, always present as a full-height right panel. The
-  // toolbar toggle hides it when the student wants the room. Mobile and focus
-  // mode reach the same panel via the drawer (`aiOpen`).
-  const [aiRailOpen, setAiRailOpen] = useState(true);
   const [contextOpen, setContextOpen] = useState(false);
   // True while the student is inside a practice attempt. The tutor is turned
   // off and the rails clear so the only thing on screen is the timed test.
@@ -223,7 +229,7 @@ export default function WorkspacePage() {
     );
   }
 
-  if (assessmentsQuery.isLoading || subjectsQuery.isLoading) {
+  if (assessmentsQuery.isLoading || academic.isLoading) {
     return (
       <>
         <PageHeader title="Workspace" breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Workspace" }]} />
@@ -262,7 +268,7 @@ export default function WorkspacePage() {
     <>
       {safeTab === "notes"    && <NotesPanel    assessmentId={activeId} />}
       {safeTab === "draft"    && <DraftPanel    assessmentId={activeId} draftTitle={activeAssessment.title} type={activeAssessment.type} />}
-      {safeTab === "practice" && <PracticePanel assessment={activeAssessment} subject={subject} onRunningChange={setTestInProgress} />}
+      {safeTab === "practice" && <PracticePanel assessment={activeAssessment} unitName={unitName} onRunningChange={setTestInProgress} />}
     </>
   );
 
@@ -280,7 +286,7 @@ export default function WorkspacePage() {
           tabKey={tabs[0]}
           activeId={activeId}
           assessment={activeAssessment}
-          subject={subject}
+          unitName={unitName}
         />
       </Box>
       <Box sx={{ p: { xs: 2, sm: 3 } }}>
@@ -289,7 +295,7 @@ export default function WorkspacePage() {
           tabKey={tabs[1]}
           activeId={activeId}
           assessment={activeAssessment}
-          subject={subject}
+          unitName={unitName}
         />
       </Box>
     </Box>
@@ -363,7 +369,7 @@ export default function WorkspacePage() {
                 color="text.secondary"
                 sx={{ mt: 1 }}
               >
-                {subject?.name ?? activeAssessment.subjectId} · {ASSESSMENT_TYPE_LABELS[activeAssessment.type]}
+                {unitName} · {ASSESSMENT_TYPE_LABELS[activeAssessment.type]}
               </Typography>
               {heroDueChip && (
                 <Stack
@@ -419,7 +425,7 @@ export default function WorkspacePage() {
             {activeAssessments.map((a) => {
               // Match on the canonical slug — Assessment.subjectId stores the
               // slug, which lives on Subject.subjectId, not Subject.id.
-              const subj = (subjectsQuery.data ?? []).find((s) => s.subjectId === a.subjectId);
+              const subjName = academic.nameFor(a.subjectId) ?? prettifyUnitId(a.subjectId);
               const days = dayjs(a.dueDate).diff(dayjs(), "day");
               return (
                 <MenuItem key={a.id} value={a.id} sx={{ py: 1 }}>
@@ -428,7 +434,7 @@ export default function WorkspacePage() {
                       {a.title}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" noWrap>
-                      {subj?.name ?? a.subjectId} · {ASSESSMENT_TYPE_LABELS[a.type]}
+                      {subjName} · {ASSESSMENT_TYPE_LABELS[a.type]}
                       {days < 0 ? " · overdue" : days === 0 ? " · due today" : ` · due in ${days}d`}
                     </Typography>
                   </Stack>
@@ -455,7 +461,7 @@ export default function WorkspacePage() {
             variant="outlined"
             size="small"
             onClick={() => setAiOpen(true)}
-            startIcon={<SmartToyIcon fontSize="small" />}
+            startIcon={<AutoAwesomeIcon fontSize="small" />}
           >
             AI tutor
           </Button>
@@ -471,13 +477,7 @@ export default function WorkspacePage() {
             // nothing distracts from it — this must win over focus mode, else
             // the lone centre column lands in focus mode's narrow 220px track.
             // Focus mode otherwise narrows the left and drops the right rail.
-            md: testInProgress
-              ? "1fr"
-              : focusMode
-                ? "220px 1fr"
-                : aiRailOpen
-                  ? "300px 1fr 360px"
-                  : "300px 1fr",
+            md: testInProgress ? "1fr" : focusMode ? "220px 1fr" : "300px 1fr",
           },
           gap: { xs: 2, md: 3 },
           alignItems: "start",
@@ -553,20 +553,20 @@ export default function WorkspacePage() {
                         onClick={() => setAiOpen(true)}
                         aria-label="Open AI tutor"
                       >
-                        <SmartToyIcon fontSize="small" />
+                        <AutoAwesomeIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                   </>
                 )}
                 {isDesktop && !focusMode && !testInProgress && (
-                  <Tooltip title={aiRailOpen ? "Hide AI tutor" : "Show AI tutor"}>
+                  <Tooltip title="Ask the AI tutor">
                     <IconButton
                       size="small"
-                      onClick={() => setAiRailOpen((v) => !v)}
-                      aria-label={aiRailOpen ? "Hide AI tutor" : "Show AI tutor"}
-                      color={aiRailOpen ? "primary" : "default"}
+                      onClick={() => setAiOpen(true)}
+                      aria-label="Ask the AI tutor"
+                      color={aiOpen ? "primary" : "default"}
                     >
-                      <SmartToyIcon fontSize="small" />
+                      <AutoAwesomeIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
                 )}
@@ -581,11 +581,6 @@ export default function WorkspacePage() {
           </CardContent>
         </Card>
 
-        {!focusMode && aiRailOpen && !testInProgress && (
-          <Box sx={{ display: { xs: "none", md: "block" } }}>
-            <RightRail assessment={activeAssessment} subject={subject} />
-          </Box>
-        )}
       </Box>
 
       <Drawer
@@ -599,18 +594,20 @@ export default function WorkspacePage() {
           <LeftRail assessment={activeAssessment} />
         </Box>
       </Drawer>
+      {/* One tutor surface for every case: mobile, desktop, and focus mode. It
+          overlays and dims the workspace instead of claiming a column, so the
+          page behind it never moves. Still barred during a timed test. */}
       <Drawer
         anchor="right"
-        // Drawer works for two cases now: mobile (rails always
-        // drawer-only) and desktop-in-focus-mode (right rail hidden
-        // but student still needs AI tutor access).
-        open={(focusMode || !isDesktop) && aiOpen && !testInProgress}
+        open={aiOpen && !testInProgress}
         onClose={() => setAiOpen(false)}
-        PaperProps={{ sx: { width: { xs: "100vw", sm: 380 } } }}
+        slotProps={{
+          paper: { sx: { width: { xs: "100vw", sm: 400 }, display: "flex", flexDirection: "column" } },
+        }}
       >
         <DrawerHeader title="AI tutor" onClose={() => setAiOpen(false)} />
-        <Box sx={{ p: 2 }}>
-          <RightRail assessment={activeAssessment} subject={subject} />
+        <Box sx={{ flex: 1, minHeight: 0, display: "flex" }}>
+          <RightRail assessment={activeAssessment} unitName={unitName} />
         </Box>
       </Drawer>
     </AtmosphericBackdrop>
@@ -621,17 +618,17 @@ function PanelByKey({
   tabKey,
   activeId,
   assessment,
-  subject,
+  unitName,
 }: {
   tabKey: TabKey;
   activeId: string | null;
   assessment: Assessment;
-  subject?: Subject;
+  unitName?: string;
 }) {
   switch (tabKey) {
     case "notes":    return <NotesPanel    assessmentId={activeId} />;
     case "draft":    return <DraftPanel    assessmentId={activeId} draftTitle={assessment.title} type={assessment.type} />;
-    case "practice": return <PracticePanel assessment={assessment} subject={subject} />;
+    case "practice": return <PracticePanel assessment={assessment} unitName={unitName} />;
   }
 }
 
@@ -1006,11 +1003,11 @@ function DraftPanel({
 // page. Results and review render in place; "Back to tests" returns here.
 function PracticePanel({
   assessment,
-  subject,
+  unitName,
   onRunningChange,
 }: {
   assessment: Assessment;
-  subject?: Subject;
+  unitName?: string;
   // Fired when a test starts / stops running, so the page can shut off the
   // AI tutor and clear the rails for the duration of an attempt.
   onRunningChange?: (running: boolean) => void;
@@ -1085,10 +1082,10 @@ function PracticePanel({
           <ChecklistIcon fontSize="small" />
         </Box>
         <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
-          No practice yet for {subject?.name ?? "this subject"}
+          No practice yet for {unitName ?? "this subject"}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 380, mx: "auto", mb: 2 }}>
-          Generate a test for {subject?.name ?? "your subject"} from the Practice page, then start it right here.
+          Generate a test for {unitName ?? "your subject"} from the Practice page, then start it right here.
         </Typography>
         <Button component={Link} href="/dashboard/practice" variant="outlined" endIcon={<ArrowForwardIcon />}>
           Go to Practice
@@ -1100,7 +1097,7 @@ function PracticePanel({
   return (
     <Stack spacing={1.5}>
       <Typography variant="body2" color="text.secondary">
-        Practice for {subject?.name ?? "this subject"} — pick one to start a timed run here.
+        Practice for {unitName ?? "this subject"} — pick one to start a timed run here.
       </Typography>
       {forSubject.map((p) => (
         <PracticeRow key={p.id} test={p} onStart={() => setRunningTestId(p.id)} />
@@ -1170,11 +1167,14 @@ function PracticeRow({ test, onStart }: { test: PracticeTest; onStart: () => voi
 // RIGHT RAIL — AI tutor only
 // ============================================================
 
-function RightRail({ assessment, subject }: { assessment: Assessment; subject: Subject | undefined }) {
+function RightRail({ assessment, unitName }: { assessment: Assessment; unitName: string | undefined }) {
+  // Fills the drawer. This used to be a sticky column card in the page grid,
+  // which is why it carried its own sticky offset and a viewport-height sum;
+  // as the drawer's only content it just takes the height it's given.
   return (
-    <Stack spacing={2.5} sx={{ position: { md: "sticky" }, top: { md: 88 } }}>
-      <AiTutorChat assessment={assessment} subject={subject} />
-    </Stack>
+    <Box sx={{ height: "100%", minHeight: 0, display: "flex" }}>
+      <AiTutorChat assessment={assessment} unitName={unitName} />
+    </Box>
   );
 }
 
@@ -1184,14 +1184,14 @@ function RightRail({ assessment, subject }: { assessment: Assessment; subject: S
 const MAX_STORED_MESSAGES = 50;
 const MAX_SENT_MESSAGES = 24;
 
-function AiTutorChat({ assessment, subject }: { assessment: Assessment; subject: Subject | undefined }) {
+function AiTutorChat({ assessment, unitName }: { assessment: Assessment; unitName: string | undefined }) {
   const storageKey = `aptiverse.workspace.chat.${assessment.id}`;
   const greeting = useMemo<AiChatMessage>(
     () => ({
       role: "assistant",
-      content: `Ask me anything about ${assessment.title}${subject ? ` (${subject.name})` : ""}. I can explain the concepts, work through problems step by step, and check your reasoning.`,
+      content: `Ask me anything about ${assessment.title}${unitName ? ` (${unitName})` : ""}. I can explain the concepts, work through problems step by step, and check your reasoning.`,
     }),
-    [assessment.title, subject?.name],
+    [assessment.title, unitName],
   );
   const [messages, setMessages] = useState<AiChatMessage[]>([greeting]);
   const [input, setInput] = useState("");
@@ -1302,7 +1302,7 @@ function AiTutorChat({ assessment, subject }: { assessment: Assessment; subject:
     const next = [...messages, userMessage];
     setMessages(next);
     setInput("");
-    const contextLine = `[Context: working on "${assessment.title}"${subject ? ` for ${subject.name}` : ""}, due ${dayjs(assessment.dueDate).format("DD MMM")}.]`;
+    const contextLine = `[Context: working on "${assessment.title}"${unitName ? ` for ${unitName}` : ""}, due ${dayjs(assessment.dueDate).format("DD MMM")}.]`;
     const withContext = isFirstUserTurn
       ? next.map((m, i) =>
           i === next.length - 1 ? { ...m, content: `${contextLine}\n\n${m.content}` } : m,
@@ -1331,57 +1331,45 @@ function AiTutorChat({ assessment, subject }: { assessment: Assessment; subject:
   };
 
   return (
-    <Card sx={{ height: { xs: "calc(100dvh - 150px)", md: "calc(100dvh - 132px)" }, minHeight: 420, maxHeight: { md: 820 }, display: "flex", flexDirection: "column" }}>
-      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ p: 2, borderBottom: 1, borderColor: "divider" }}>
-        <Avatar sx={{ bgcolor: "primary.main", width: 32, height: 32 }}>
-          <SmartToyIcon fontSize="small" sx={{ color: "primary.contrastText" }} />
-        </Avatar>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>AI tutor</Typography>
-          <Typography
-            variant="caption"
-            color={ask.isPending ? "warning.main" : streaming !== null ? "secondary.main" : "success.main"}
-          >
-            {ask.isPending ? "Thinking…" : streaming !== null ? "Typing…" : "Online"}
-          </Typography>
-        </Box>
+    // No card chrome: inside the drawer this IS the panel, and a bordered,
+    // rounded card floating inside a bordered panel is a box in a box.
+    <Card
+      elevation={0}
+      sx={{
+        flex: 1,
+        minWidth: 0,
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        border: 0,
+        borderRadius: 0,
+        bgcolor: "transparent",
+      }}
+    >
+      {/* The drawer header already says "AI tutor" and owns the close button,
+          so this strip carries only what changes: the status. No avatar. */}
+      <Stack direction="row" alignItems="center" sx={{ px: 2, py: 1, borderBottom: 1, borderColor: "divider" }}>
+        <Typography
+          variant="caption"
+          color={ask.isPending ? "warning.main" : streaming !== null ? "secondary.main" : "success.main"}
+        >
+          {ask.isPending ? "Thinking…" : streaming !== null ? "Typing…" : "Online"}
+        </Typography>
       </Stack>
-      <Box ref={scrollRef} sx={{ flex: 1, overflowY: "auto", p: 2 }}>
-        <Stack spacing={1.25}>
+      {/* Same renderer as the full-page tutor, one density down. Streaming goes
+          through AssistantMessage too, so a reply arrives as markdown instead
+          of as plain text that restyles itself the moment it settles. */}
+      <Box ref={scrollRef} sx={{ flex: 1, minHeight: 0, overflowY: "auto", p: 2 }}>
+        <Stack spacing={2.25}>
           {messages.map((m, i) =>
             m.role === "assistant" ? (
-              <ChatBubble key={i} role="assistant" markdown={m.content} />
+              <AssistantMessage key={i} content={m.content} compact />
             ) : (
-              <ChatBubble key={i} role="user">
-                {m.content}
-              </ChatBubble>
+              <UserMessage key={i} content={m.content} compact />
             ),
           )}
-          {streaming !== null && (
-            <ChatBubble role="assistant">
-              {streaming}
-              <Box
-                component="span"
-                sx={{
-                  display: "inline-block",
-                  width: "2px",
-                  height: "1.05em",
-                  ml: "1px",
-                  verticalAlign: "text-bottom",
-                  bgcolor: "text.secondary",
-                  animation: "caret 1s steps(1) infinite",
-                  "@keyframes caret": { "50%": { opacity: 0 } },
-                }}
-              />
-            </ChatBubble>
-          )}
-          {ask.isPending && (
-            <Box sx={{ alignSelf: "flex-start", px: 1.75, py: 1.25, borderRadius: "14px 14px 14px 4px", bgcolor: "action.hover", border: 1, borderColor: "divider", display: "flex", gap: 0.5 }}>
-              {[0, 1, 2].map((i) => (
-                <Box key={i} sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "primary.main", animation: "blink 1.4s ease-in-out infinite", animationDelay: `${i * 0.15}s`, "@keyframes blink": { "0%, 80%, 100%": { opacity: 0.25 }, "40%": { opacity: 1 } } }} />
-              ))}
-            </Box>
-          )}
+          {streaming !== null && <AssistantMessage content={streaming} caret compact />}
+          {ask.isPending && <ThinkingDots />}
         </Stack>
       </Box>
       <Divider />
@@ -1411,42 +1399,3 @@ function AiTutorChat({ assessment, subject }: { assessment: Assessment; subject:
   );
 }
 
-// A single chat bubble. Assistant bubbles are a bordered surface tail-left,
-// the student's are the primary fill tail-right, so the two speakers read at
-// a glance in the narrow rail. `markdown` renders a finished reply as rich
-// text (headings, lists, code, math); plain children (the student's message,
-// or a reply mid-reveal) stay pre-wrap so nothing reflows while it types.
-function ChatBubble({
-  role,
-  markdown,
-  children,
-}: {
-  role: "user" | "assistant";
-  markdown?: string;
-  children?: React.ReactNode;
-}) {
-  const isUser = role === "user";
-  return (
-    <Box
-      sx={{
-        alignSelf: isUser ? "flex-end" : "flex-start",
-        maxWidth: "88%",
-        px: 1.75,
-        py: 1.25,
-        borderRadius: isUser ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-        bgcolor: isUser ? "primary.main" : "action.hover",
-        color: isUser ? "primary.contrastText" : "text.primary",
-        border: isUser ? "none" : 1,
-        borderColor: "divider",
-      }}
-    >
-      {markdown != null ? (
-        <Markdown>{markdown}</Markdown>
-      ) : (
-        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.55 }}>
-          {children}
-        </Typography>
-      )}
-    </Box>
-  );
-}

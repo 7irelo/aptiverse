@@ -28,6 +28,7 @@ import {
   type TopicMastery,
   type TermPrediction,
 } from "@/lib/api/queries";
+import { prettifyUnitId } from "@/lib/format";
 import ArrowDropUpIcon from "@mui/icons-material/ArrowDropUp";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import InsightsIcon from "@mui/icons-material/InsightsOutlined";
@@ -73,7 +74,7 @@ export default function MasteryPage() {
           topics={topics}
           predictions={predictions}
           unitNoun={academic.unitNoun}
-          labelFor={(subjectId) => academic.nameFor(subjectId) ?? subjectId}
+          labelFor={(subjectId) => academic.nameFor(subjectId) ?? prettifyUnitId(subjectId)}
         />
       )}
     </AtmosphericBackdrop>

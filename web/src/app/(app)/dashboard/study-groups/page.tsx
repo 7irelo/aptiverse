@@ -44,24 +44,17 @@ import {
   type StudyGroupSession,
 } from "@/lib/api/queries";
 import type { StudyGroup } from "@/lib/mockData";
+import { prettifyUnitId } from "@/lib/format";
 
 // A group's subject is stored as an academic unit id (subject slug or course
 // practiceKey). We resolve the friendly name from the viewer's own units;
 // groups in a subject the viewer doesn't take fall back to a humanised slug.
-function humanizeUnitId(id: string): string {
-  const tail = id.includes(":") ? id.slice(id.indexOf(":") + 1) : id;
-  return tail
-    .replace(/[-_]+/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .trim();
-}
-
 export default function StudyGroupsPage() {
   const groupsQuery = useStudyGroups();
   const academic = useAcademicUnits();
   const [createOpen, setCreateOpen] = useState(false);
 
-  const nameForUnit = (id: string) => academic.nameFor(id) ?? humanizeUnitId(id);
+  const nameForUnit = (id: string) => academic.nameFor(id) ?? prettifyUnitId(id);
 
   return (
     <>

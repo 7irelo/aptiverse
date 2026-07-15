@@ -4,7 +4,7 @@ import AssignmentIcon from "@mui/icons-material/AssignmentOutlined";
 import FlagIcon from "@mui/icons-material/FlagOutlined";
 import QuizIcon from "@mui/icons-material/QuizOutlined";
 import InsightsIcon from "@mui/icons-material/Insights";
-import SmartToyIcon from "@mui/icons-material/SmartToyOutlined";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import GroupsIcon from "@mui/icons-material/GroupsOutlined";
 import EventNoteIcon from "@mui/icons-material/EventNoteOutlined";
 import FavoriteIcon from "@mui/icons-material/FavoriteBorder";
@@ -51,7 +51,7 @@ export const STUDENT_NAV: NavSection[] = [
     items: [
       { label: "Dashboard", href: "/dashboard", icon: HomeIcon },
       { label: "Workspace", href: "/dashboard/workspace", icon: WorkspacesIcon },
-      { label: "AI Tutor", href: "/dashboard/chatbot", icon: SmartToyIcon },
+      { label: "AI Tutor", href: "/dashboard/chatbot", icon: AutoAwesomeIcon },
     ],
   },
   {
