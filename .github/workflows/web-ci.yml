@@ -1,0 +1,61 @@
+# Replaces ui-ci.yml, which built a frontend Docker image and pushed it to
+# Docker Hub. Nothing consumed that image: the frontend is hosted on Vercel
+# (infra/README.md), which builds and deploys from git on its own, and
+# compose.prod.yml has no web service at all.
+#
+# So this workflow's job is to catch a broken frontend BEFORE Vercel does,
+# not to produce an artifact.
+name: CI / Check Web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".github/workflows/web-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".github/workflows/web-ci.yml"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Node 22: Next 16 requires >= 20.9.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      # Typecheck before building: tsc reports a file and a line, where the
+      # same error inside `next build` arrives as a wall of bundler output.
+      #
+      # ESLint is deliberately absent. It currently fails repo-wide with
+      # "Converting circular structure to JSON" regardless of the change under
+      # test, so a lint gate would just be a permanently red check that people
+      # learn to ignore. Worth fixing, but not by blocking every push on it.
+      - name: Typecheck
+        working-directory: web
+        run: npx tsc --noEmit
+
+      # A production build is the only thing that catches prerender failures,
+      # which is the class of bug that has actually broken this app before
+      # (function sx props crossing the server/client boundary in Next 16).
+      - name: Build
+        working-directory: web
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_TELEMETRY_DISABLED: 1

@@ -1,0 +1,67 @@
+# The API is one .NET host (auth + 14 domain modules), so it is one image.
+# This replaces the 15 per-service workflows that built api/{x}-service/
+# directories, which stopped existing when the services were folded into the
+# modulith.
+name: CI / Build API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "api/**"
+      - ".github/workflows/api-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "api/**"
+      - ".github/workflows/api-ci.yml"
+
+env:
+  # infra/compose.prod.yml pulls the API from GHCR, so that is where this
+  # pushes. The old workflows pushed to Docker Hub, which nothing on the EC2
+  # box has ever pulled from.
+  IMAGE: ghcr.io/${{ github.repository_owner }}/aptiverse-api
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # GITHUB_TOKEN is issued to the job automatically, so pushing to GHCR
+      # needs no configured secret. The Docker Hub path needed DOCKERHUB_TOKEN
+      # to be present and unexpired, which is one more thing to silently rot.
+      - name: Log in to GHCR
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The Dockerfile runs `dotnet publish`, so a green build here is a real
+      # compile of every module, not just an image bake.
+      #
+      # amd64 only: the old workflows also cross-built arm64 under QEMU, which
+      # is by far the slowest step in the pipeline. The deploy target is an x86
+      # EC2 instance, so nothing ever pulled the arm64 half.
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: api
+          platforms: linux/amd64
+          push: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
