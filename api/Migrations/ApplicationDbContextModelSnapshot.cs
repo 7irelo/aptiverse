@@ -2478,6 +2478,10 @@ namespace Aptiverse.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<DateTime?>("AchievedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("achieved_at");
+
                     b.Property<string>("Category")
                         .IsRequired()
                         .HasColumnType("text")
@@ -2487,6 +2491,10 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<int>("CurrentValue")
+                        .HasColumnType("integer")
+                        .HasColumnName("current_value");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text")
@@ -2495,6 +2503,11 @@ namespace Aptiverse.Api.Migrations
                     b.Property<DateTime>("DueDate")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("due_date");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("kind");
 
                     b.Property<int>("Progress")
                         .HasColumnType("integer")
@@ -2507,6 +2520,10 @@ namespace Aptiverse.Api.Migrations
                     b.Property<long?>("RewardId")
                         .HasColumnType("bigint")
                         .HasColumnName("reward_id");
+
+                    b.Property<int>("RewardPoints")
+                        .HasColumnType("integer")
+                        .HasColumnName("reward_points");
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer")
@@ -2530,10 +2547,18 @@ namespace Aptiverse.Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("target");
 
+                    b.Property<int?>("TargetValue")
+                        .HasColumnType("integer")
+                        .HasColumnName("target_value");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("title");
+
+                    b.Property<string>("TopicFilter")
+                        .HasColumnType("text")
+                        .HasColumnName("topic_filter");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -2551,6 +2576,9 @@ namespace Aptiverse.Api.Migrations
                     b.HasIndex("Category")
                         .HasDatabaseName("ix_goals_category");
 
+                    b.HasIndex("Kind")
+                        .HasDatabaseName("ix_goals_kind");
+
                     b.HasIndex("RewardId")
                         .HasDatabaseName("ix_goals_reward_id");
 
@@ -2567,6 +2595,90 @@ namespace Aptiverse.Api.Migrations
                         .HasDatabaseName("ix_goals_student_id_status");
 
                     b.ToTable("goals", "goals");
+                });
+
+            modelBuilder.Entity("Aptiverse.Goals.Domain.Models.Goals.GoalAllowance", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal>("AmountZar")
+                        .HasColumnType("numeric")
+                        .HasColumnName("amount_zar");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("EarnedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("earned_at");
+
+                    b.Property<long>("GoalId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("goal_id");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("text")
+                        .HasColumnName("note");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("paid_at");
+
+                    b.Property<string>("SponsorName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("sponsor_name");
+
+                    b.Property<string>("SponsorUserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("sponsor_user_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("student_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_goal_allowances");
+
+                    b.HasIndex("GoalId")
+                        .HasDatabaseName("ix_goal_allowances_goal_id");
+
+                    b.HasIndex("SponsorUserId")
+                        .HasDatabaseName("ix_goal_allowances_sponsor_user_id");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_goal_allowances_status");
+
+                    b.HasIndex("StudentId")
+                        .HasDatabaseName("ix_goal_allowances_student_id");
+
+                    b.HasIndex("StudentId", "Status")
+                        .HasDatabaseName("ix_goal_allowances_student_id_status");
+
+                    b.ToTable("goal_allowances", "goals");
                 });
 
             modelBuilder.Entity("Aptiverse.Goals.Domain.Models.Goals.GoalMilestone", b =>
@@ -6478,6 +6590,18 @@ namespace Aptiverse.Api.Migrations
                         .WithMany("ApplicableGoals")
                         .HasForeignKey("RewardId")
                         .HasConstraintName("fk_goals_reward_reward_id");
+                });
+
+            modelBuilder.Entity("Aptiverse.Goals.Domain.Models.Goals.GoalAllowance", b =>
+                {
+                    b.HasOne("Aptiverse.Goals.Domain.Models.Goals.Goal", "Goal")
+                        .WithMany()
+                        .HasForeignKey("GoalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_goal_allowances_goals_goal_id");
+
+                    b.Navigation("Goal");
                 });
 
             modelBuilder.Entity("Aptiverse.Goals.Domain.Models.Goals.GoalMilestone", b =>
