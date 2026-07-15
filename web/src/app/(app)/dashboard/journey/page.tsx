@@ -17,8 +17,8 @@ import { CardError } from "@/components/common/CardError";
 import { PageHeader } from "@/components/common/PageHeader";
 import { QueryStates } from "@/components/common/QueryStates";
 import { AtmosphericBackdrop } from "@/components/common/AtmosphericBackdrop";
-import { useSubjects, useAssessments } from "@/lib/api/queries";
-import type { Subject, Assessment } from "@/lib/mockData";
+import { useAcademicUnits, useAssessments, type AcademicUnit } from "@/lib/api/queries";
+import type { Assessment } from "@/lib/mockData";
 import { enter, enterStagger } from "@/lib/motion";
 import RouteIcon from "@mui/icons-material/RouteOutlined";
 import CheckCircleIcon from "@mui/icons-material/CheckCircleOutlined";
@@ -28,11 +28,15 @@ import ArrowForwardIcon from "@mui/icons-material/ArrowForwardOutlined";
 const PASS_MARK = 50;
 
 export default function JourneyPage() {
-  const subjectsQuery = useSubjects();
+  // Reads academic units, not subjects. On useSubjects this whole page was a
+  // dead end for a university student: that hook only returns high-school
+  // subjects, so their courses came back empty and they were shown "Your
+  // journey starts with a subject" pointing at a page they cannot use.
+  const academic = useAcademicUnits();
   const assessmentsQuery = useAssessments();
 
-  const isLoading = subjectsQuery.isLoading || assessmentsQuery.isLoading;
-  const isError = subjectsQuery.isError || assessmentsQuery.isError;
+  const isLoading = academic.isLoading || assessmentsQuery.isLoading;
+  const isError = assessmentsQuery.isError;
 
   // QueryStates only takes one query; this page genuinely needs two, so
   // we combine the states manually here rather than fight the helper.
@@ -51,17 +55,17 @@ export default function JourneyPage() {
           <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
             <CardError
               what="your journey"
-              onRetry={() => {
-                subjectsQuery.refetch();
-                assessmentsQuery.refetch();
-              }}
+              onRetry={() => assessmentsQuery.refetch()}
             />
           </CardContent>
         </Card>
       ) : (
         <JourneyView
-          subjects={subjectsQuery.data ?? []}
+          units={academic.units}
           assessments={assessmentsQuery.data ?? []}
+          unitNoun={academic.unitNoun}
+          unitNounPlural={academic.unitNounPlural}
+          addHref={academic.addHref}
         />
       )}
     </AtmosphericBackdrop>
@@ -71,7 +75,7 @@ export default function JourneyPage() {
 // ─── Main view ───────────────────────────────────────────────────────
 
 type SubjectRow = {
-  subject: Subject;
+  unit: AcademicUnit;
   total: number;
   graded: number;
   submitted: number;
@@ -81,22 +85,34 @@ type SubjectRow = {
   recentAssessments: Assessment[];
 };
 
-function JourneyView({ subjects, assessments }: { subjects: Subject[]; assessments: Assessment[] }) {
-  if (subjects.length === 0) {
-    return <NoSubjectsYet />;
+function JourneyView({
+  units,
+  assessments,
+  unitNoun,
+  unitNounPlural,
+  addHref,
+}: {
+  units: AcademicUnit[];
+  assessments: Assessment[];
+  unitNoun: string;
+  unitNounPlural: string;
+  addHref: string;
+}) {
+  if (units.length === 0) {
+    return <NoUnitsYet unitNoun={unitNoun} unitNounPlural={unitNounPlural} addHref={addHref} />;
   }
 
   const rows = useMemo<SubjectRow[]>(
     () =>
-      subjects.map((s) => {
-        const mine = assessments.filter((a) => a.subjectId === s.subjectId);
+      units.map((s) => {
+        const mine = assessments.filter((a) => a.subjectId === s.id);
         const graded = mine.filter((a) => a.actualMark != null);
         const upcoming = mine.filter((a) => a.status !== "graded");
         const submitted = mine.filter((a) => a.status === "submitted");
         const predicted = mine.filter((a) => a.predictedMark != null);
 
         return {
-          subject: s,
+          unit: s,
           total: mine.length,
           graded: graded.length,
           submitted: submitted.length,
@@ -116,7 +132,7 @@ function JourneyView({ subjects, assessments }: { subjects: Subject[]; assessmen
             .slice(0, 3),
         };
       }),
-    [subjects, assessments],
+    [units, assessments],
   );
 
   const totalAssessments  = rows.reduce((acc, r) => acc + r.total, 0);
@@ -134,25 +150,26 @@ function JourneyView({ subjects, assessments }: { subjects: Subject[]; assessmen
   const nextUp = [...assessments]
     .filter((a) => a.status !== "graded")
     .sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate))[0];
-  const nextUpSubject = nextUp ? subjects.find((s) => s.subjectId === nextUp.subjectId) : undefined;
+  const nextUpUnit = nextUp ? units.find((u) => u.id === nextUp.subjectId) : undefined;
 
   if (totalAssessments === 0) {
-    return <NoAssessmentsYet subjectCount={subjects.length} />;
+    return <NoAssessmentsYet unitCount={units.length} unitNoun={unitNoun} />;
   }
 
   return (
     <Stack spacing={3}>
       <Hero
-        subjectCount={subjects.length}
+        unitCount={units.length}
+        unitNounPlural={unitNounPlural}
         totalAssessments={totalAssessments}
         totalGraded={totalGraded}
         totalUpcoming={totalUpcoming}
         overallAverage={overallAverage}
         nextUp={nextUp}
-        nextUpSubjectName={nextUpSubject?.name}
+        nextUpSubjectName={nextUpUnit?.name}
       />
 
-      <SubjectTrack rows={rows} />
+      <SubjectTrack rows={rows} unitNoun={unitNoun} />
     </Stack>
   );
 }
@@ -160,7 +177,8 @@ function JourneyView({ subjects, assessments }: { subjects: Subject[]; assessmen
 // ─── Hero — overall picture + what's next ────────────────────────────
 
 function Hero({
-  subjectCount,
+  unitCount,
+  unitNounPlural,
   totalAssessments,
   totalGraded,
   totalUpcoming,
@@ -168,7 +186,8 @@ function Hero({
   nextUp,
   nextUpSubjectName,
 }: {
-  subjectCount: number;
+  unitCount: number;
+  unitNounPlural: string;
   totalAssessments: number;
   totalGraded: number;
   totalUpcoming: number;
@@ -205,7 +224,11 @@ function Hero({
 
               <Grid container spacing={2.5}>
                 <Grid size={4}>
-                  <SmallStat label="Subjects" value={`${subjectCount}`} sub={subjectCount === 1 ? "enrolled" : "enrolled"} />
+                  <SmallStat
+                    label={unitNounPlural.charAt(0).toUpperCase() + unitNounPlural.slice(1)}
+                    value={`${unitCount}`}
+                    sub="enrolled"
+                  />
                 </Grid>
                 <Grid size={4}>
                   <SmallStat label="Graded" value={`${totalGraded}`} sub={`of ${totalAssessments}`} />
@@ -299,7 +322,7 @@ function SmallStat({ label, value, sub }: { label: string; value: string; sub: s
 
 // ─── Per-subject track ───────────────────────────────────────────────
 
-function SubjectTrack({ rows }: { rows: SubjectRow[] }) {
+function SubjectTrack({ rows, unitNoun }: { rows: SubjectRow[]; unitNoun: string }) {
   const sorted = [...rows].sort((a, b) => b.total - a.total);
 
   return (
@@ -309,7 +332,7 @@ function SubjectTrack({ rows }: { rows: SubjectRow[] }) {
           <Stack direction="row" justifyContent="space-between" alignItems="flex-end" sx={{ mb: 2.5 }}>
             <Box>
               <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: "0.08em" }}>
-                Subject by subject
+                {unitNoun.charAt(0).toUpperCase() + unitNoun.slice(1)} by {unitNoun}
               </Typography>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 Where you stand
@@ -327,7 +350,7 @@ function SubjectTrack({ rows }: { rows: SubjectRow[] }) {
 
           <Stack spacing={2}>
             {sorted.map((row, i) => (
-              <motion.div key={row.subject.id} {...enterStagger(i)}>
+              <motion.div key={row.unit.id} {...enterStagger(i)}>
                 <SubjectRowCard row={row} />
               </motion.div>
             ))}
@@ -339,7 +362,7 @@ function SubjectTrack({ rows }: { rows: SubjectRow[] }) {
 }
 
 function SubjectRowCard({ row }: { row: SubjectRow }) {
-  const { subject: s, total, graded, upcoming, averageMark, predictedMark } = row;
+  const { unit: s, total, graded, upcoming, averageMark, predictedMark } = row;
   const hasMarks = averageMark != null;
   const aboveBar = hasMarks && averageMark! >= PASS_MARK;
   const headlineValue = hasMarks ? `${averageMark}%` : predictedMark != null ? `${predictedMark}%` : "–";
@@ -352,7 +375,7 @@ function SubjectRowCard({ row }: { row: SubjectRow }) {
   return (
     <Box
       component={Link}
-      href={`/dashboard/subjects/${s.id}`}
+      href={s.href}
       sx={{
         display: "block",
         p: 2.5,
@@ -371,7 +394,7 @@ function SubjectRowCard({ row }: { row: SubjectRow }) {
             {s.name}
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-            Grade {s.grade}{s.teacher ? ` · ${s.teacher}` : ""}
+            {s.meta}
           </Typography>
         </Box>
         <Box sx={{ textAlign: "right" }}>
@@ -448,20 +471,29 @@ function MiniChip({
 
 // ─── Empty states ─────────────────────────────────────────────────────
 
-function NoSubjectsYet() {
+function NoUnitsYet({
+  unitNoun,
+  unitNounPlural,
+  addHref,
+}: {
+  unitNoun: string;
+  unitNounPlural: string;
+  addHref: string;
+}) {
   return (
     <motion.div {...enter}>
       <Card>
         <CardContent sx={{ p: 6, textAlign: "center" }}>
           <CenterIcon><RouteIcon /></CenterIcon>
           <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-            Your journey starts with a subject
+            Your journey starts with a {unitNoun}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 420, mx: "auto", mb: 3 }}>
-            Add your subjects so we can track each assessment as a landmark on your way through the year.
+            Add your {unitNounPlural} so we can track each assessment as a landmark on your way
+            through the year.
           </Typography>
-          <Button component={Link} href="/dashboard/subjects" variant="contained" endIcon={<ArrowForwardIcon />}>
-            Add subjects
+          <Button component={Link} href={addHref} variant="contained" endIcon={<ArrowForwardIcon />}>
+            Add {unitNounPlural}
           </Button>
         </CardContent>
       </Card>
@@ -469,7 +501,7 @@ function NoSubjectsYet() {
   );
 }
 
-function NoAssessmentsYet({ subjectCount }: { subjectCount: number }) {
+function NoAssessmentsYet({ unitCount, unitNoun }: { unitCount: number; unitNoun: string }) {
   return (
     <motion.div {...enter}>
       <Card>
@@ -479,7 +511,7 @@ function NoAssessmentsYet({ subjectCount }: { subjectCount: number }) {
             Log your first assessment
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 460, mx: "auto", mb: 3 }}>
-            You're enrolled in {subjectCount} subject{subjectCount === 1 ? "" : "s"}. Each SBA you log becomes a landmark here: predicted, then graded, then the next one.
+            You're enrolled in {unitCount} {unitNoun}{unitCount === 1 ? "" : "s"}. Each assessment you log becomes a landmark here: predicted, then graded, then the next one.
           </Typography>
           <Stack direction="row" spacing={1.5} justifyContent="center">
             <Button component={Link} href="/dashboard/assessments/new" variant="contained" endIcon={<ArrowForwardIcon />}>

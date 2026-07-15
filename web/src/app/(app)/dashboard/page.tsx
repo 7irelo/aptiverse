@@ -24,7 +24,7 @@ import { CardError } from "@/components/common/CardError";
 import { LastSynced } from "@/components/common/LastSynced";
 import { SectionHeader } from "@/components/common/SectionHeader";
 import {
-  useSubjects,
+  useAcademicUnits,
   useAssessments,
   useGoals,
   useTermPredictions,
@@ -39,7 +39,8 @@ import {
   type TopicMastery,
   type LiveActivity,
 } from "@/lib/api/queries";
-import { type Goal, type Subject, type MoodPoint } from "@/lib/mockData";
+import { type Goal, type MoodPoint } from "@/lib/mockData";
+import { prettifyUnitId } from "@/lib/format";
 import { enter } from "@/lib/motion";
 import {
   ArrowRight,
@@ -70,15 +71,30 @@ function devtoolsHello() {
 export default function StudentDashboardPage() {
   useEffect(devtoolsHello, []);
 
-  const subjectsQuery = useSubjects();
+  const academic = useAcademicUnits();
   const assessmentsQuery = useAssessments();
   const goalsQuery = useGoals();
   const predictionsQuery = useTermPredictions();
   const masteryQuery = useTopicMastery();
 
-  const subjects = subjectsQuery.data ?? [];
   const assessments = assessmentsQuery.data ?? [];
   const goals = goalsQuery.data ?? [];
+
+  // Resolves an assessment's study unit to a name for both audiences: a
+  // high-schooler's Subject and a university student's Course share the slug
+  // that Assessment.subjectId stores.
+  //
+  // What was here compared Subject.id (the enrolment row id, "42") against
+  // Assessment.subjectId (the slug, "math"), so it never matched and every
+  // assessment on the home page read "Unlinked" for everyone. Tertiary
+  // students had it worse: useSubjects() only returns high-school subjects, so
+  // there was nothing to match against in the first place.
+  //
+  // "Unlinked" is still right for an assessment with no subjectId at all, which
+  // is a real state. It was only ever wrong as the answer to "we have an id and
+  // couldn't resolve it".
+  const unitNameFor = (id: string | undefined) =>
+    id ? (academic.nameFor(id) ?? prettifyUnitId(id)) : "Unlinked";
 
   const upcoming = assessments
     .filter((a) => a.status !== "graded")
@@ -96,7 +112,7 @@ export default function StudentDashboardPage() {
 
       <UpcomingAssessmentsCard
         upcoming={upcoming}
-        subjects={subjects}
+        nameFor={unitNameFor}
         loading={assessmentsQuery.isLoading}
         isError={assessmentsQuery.isError}
         onRetry={() => assessmentsQuery.refetch()}
@@ -108,6 +124,7 @@ export default function StudentDashboardPage() {
         <Grid size={{ xs: 12, md: 7 }}>
           <AcademicStandingCard
             predictions={predictionsQuery.data ?? []}
+            nameFor={unitNameFor}
             weakTopics={masteryQuery.data ?? []}
             loading={predictionsQuery.isLoading || masteryQuery.isLoading}
             isError={predictionsQuery.isError}
@@ -243,7 +260,7 @@ type UpcomingItem = {
 
 function UpcomingAssessmentsCard({
   upcoming,
-  subjects,
+  nameFor,
   loading,
   isError,
   onRetry,
@@ -251,7 +268,7 @@ function UpcomingAssessmentsCard({
   dataUpdatedAt,
 }: {
   upcoming: UpcomingItem[];
-  subjects: Subject[];
+  nameFor: (id: string | undefined) => string;
   loading: boolean;
   isError: boolean;
   onRetry: () => void;
@@ -300,10 +317,7 @@ function UpcomingAssessmentsCard({
           <>
             {hero && (
               <motion.div {...enter}>
-                <HeroUpcomingRow
-                  a={hero}
-                  subject={subjects.find((s) => s.id === hero.subjectId)}
-                />
+                <HeroUpcomingRow a={hero} unitName={nameFor(hero.subjectId)} />
               </motion.div>
             )}
 
@@ -312,11 +326,7 @@ function UpcomingAssessmentsCard({
                 <Divider sx={{ mt: 3, mb: 1.5 }} />
                 <Stack spacing={0.5}>
                   {rest.map((a) => (
-                    <CompactUpcomingRow
-                      key={a.id}
-                      a={a}
-                      subject={subjects.find((s) => s.id === a.subjectId)}
-                    />
+                    <CompactUpcomingRow key={a.id} a={a} unitName={nameFor(a.subjectId)} />
                   ))}
                 </Stack>
               </>
@@ -330,7 +340,7 @@ function UpcomingAssessmentsCard({
   );
 }
 
-function HeroUpcomingRow({ a, subject }: { a: UpcomingItem; subject?: Subject }) {
+function HeroUpcomingRow({ a, unitName }: { a: UpcomingItem; unitName: string }) {
   const daysLeft = dayjs(a.dueDate).diff(dayjs(), "day");
   const urgent = daysLeft >= 0 && daysLeft <= 3;
   const daysLabel =
@@ -362,7 +372,7 @@ function HeroUpcomingRow({ a, subject }: { a: UpcomingItem; subject?: Subject })
             textOverflow: "ellipsis",
           }}
         >
-          {subject?.name ?? "Unlinked"}
+          {unitName}
         </Typography>
         <Typography
           variant="h4"
@@ -444,7 +454,7 @@ function HeroUpcomingRow({ a, subject }: { a: UpcomingItem; subject?: Subject })
   );
 }
 
-function CompactUpcomingRow({ a, subject }: { a: UpcomingItem; subject?: Subject }) {
+function CompactUpcomingRow({ a, unitName }: { a: UpcomingItem; unitName: string }) {
   const daysLeft = dayjs(a.dueDate).diff(dayjs(), "day");
   const urgent = daysLeft >= 0 && daysLeft <= 3;
   const dayLabel =
@@ -472,7 +482,7 @@ function CompactUpcomingRow({ a, subject }: { a: UpcomingItem; subject?: Subject
           {a.title}
         </Typography>
         <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
-          {subject?.name ?? "Unlinked"} · {a.type} · {a.weight}%
+          {unitName} · {a.type} · {a.weight}%
         </Typography>
       </Box>
       <Chip
@@ -494,6 +504,7 @@ function CompactUpcomingRow({ a, subject }: { a: UpcomingItem; subject?: Subject
 
 function AcademicStandingCard({
   predictions,
+  nameFor,
   weakTopics,
   loading,
   isError,
@@ -501,6 +512,7 @@ function AcademicStandingCard({
   dataUpdatedAt,
 }: {
   predictions: TermPrediction[];
+  nameFor: (id: string | undefined) => string;
   weakTopics: TopicMastery[];
   loading: boolean;
   isError: boolean;
@@ -618,7 +630,7 @@ function AcademicStandingCard({
             {predictions.length > 0 && (
               <Stack spacing={1.25} sx={{ mb: focus.length > 0 ? 2.5 : 0 }}>
                 {predictions.slice(0, 4).map((p) => (
-                  <SubjectPredictionRow key={p.subjectId} p={p} />
+                  <SubjectPredictionRow key={p.subjectId} p={p} name={nameFor(p.subjectId)} />
                 ))}
               </Stack>
             )}
@@ -653,13 +665,16 @@ function AcademicStandingCard({
   );
 }
 
-function SubjectPredictionRow({ p }: { p: TermPrediction }) {
+// TermPrediction.subject is whatever the API stored as the label, which for a
+// university course is the bare practice key ("uct:calculus-i"). Resolve it
+// against the student's own units instead of trusting that field.
+function SubjectPredictionRow({ p, name }: { p: TermPrediction; name: string }) {
   const up = p.predictedNextTerm >= p.currentTerm;
   return (
     <Box>
       <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
         <Typography variant="subtitle2" sx={{ fontWeight: 600, minWidth: 0 }} noWrap>
-          {p.subject}
+          {name}
         </Typography>
         <Stack direction="row" alignItems="center" spacing={0.75} sx={{ flexShrink: 0 }}>
           <Typography
@@ -687,7 +702,7 @@ function SubjectPredictionRow({ p }: { p: TermPrediction }) {
         variant="determinate"
         value={Math.round(p.confidence * 100)}
         sx={{ mt: 0.5, height: 3, borderRadius: 999, opacity: 0.5 }}
-        aria-label={`${p.subject}: ${Math.round(p.confidence * 100)}% confidence`}
+        aria-label={`${name}: ${Math.round(p.confidence * 100)}% confidence`}
       />
     </Box>
   );

@@ -24,11 +24,12 @@ import DescriptionIcon from "@mui/icons-material/DescriptionOutlined";
 import { PageHeader } from "@/components/common/PageHeader";
 import { CardError } from "@/components/common/CardError";
 import { Logo } from "@/components/common/Logo";
+import { prettifyUnitId } from "@/lib/format";
 import {
   useTermPredictions,
   useTopicMastery,
   useAssessments,
-  useSubjects,
+  useAcademicUnits,
   useWellbeingSummary,
   useAcademicProfile,
 } from "@/lib/api/queries";
@@ -56,7 +57,7 @@ export default function ReportsPage() {
   const predictionsQuery = useTermPredictions();
   const masteryQuery = useTopicMastery();
   const assessmentsQuery = useAssessments();
-  const subjectsQuery = useSubjects();
+  const academic = useAcademicUnits();
   const wellbeingQuery = useWellbeingSummary();
   const profileQuery = useAcademicProfile();
   const { data: session } = useSession();
@@ -64,7 +65,6 @@ export default function ReportsPage() {
   const predictions = predictionsQuery.data ?? [];
   const topics = masteryQuery.data ?? [];
   const assessments = assessmentsQuery.data ?? [];
-  const subjects = subjectsQuery.data ?? [];
   const wellbeing = wellbeingQuery.data;
   const profile = profileQuery.data;
 
@@ -72,10 +72,14 @@ export default function ReportsPage() {
     predictionsQuery.isLoading ||
     masteryQuery.isLoading ||
     assessmentsQuery.isLoading ||
-    subjectsQuery.isLoading;
+    academic.isLoading;
   const isError = predictionsQuery.isError || masteryQuery.isError || assessmentsQuery.isError;
 
-  const subjectName = (id: string) => subjects.find((s) => s.id === id)?.name ?? "Unlinked";
+  // Matched Subject.id (an enrolment row id) against the slug the caller
+  // actually holds, so it never resolved and every row in the printed report
+  // read "Unlinked". useAcademicUnits keys on that slug and covers university
+  // courses too, which useSubjects never returned at all.
+  const subjectName = (id: string) => academic.nameFor(id) ?? prettifyUnitId(id);
 
   const graded = assessments
     .filter((a) => a.actualMark != null)
@@ -226,7 +230,7 @@ export default function ReportsPage() {
                     <TableBody>
                       {predictions.map((p) => (
                         <TableRow key={p.subjectId}>
-                          <TableCell>{p.subject}</TableCell>
+                          <TableCell>{subjectName(p.subjectId)}</TableCell>
                           <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>
                             {p.currentTerm}%
                           </TableCell>

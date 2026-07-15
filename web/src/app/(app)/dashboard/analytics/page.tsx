@@ -274,9 +274,12 @@ function AnalyticsView({
           <Typography variant="h6" sx={{ mb: 2 }}>
             Where each course actually stands
           </Typography>
+          {/* Three-up suits the usual five-to-eight courses, but hard-coding it
+              stranded a student carrying two: their cards took a third of the
+              row each and left the rest of the width empty. */}
           <Grid container spacing={{ xs: 2, md: 3 }}>
             {courses.map((c, i) => (
-              <Grid key={c.id} size={{ xs: 12, md: 6, lg: 4 }}>
+              <Grid key={c.id} size={{ xs: 12, md: 6, lg: courses.length >= 3 ? 4 : 6 }}>
                 <CourseCard course={c} accent={courseColor(i, mode)} mode={mode} />
               </Grid>
             ))}
@@ -377,8 +380,11 @@ function CourseCard({
   const weakest = [...course.topics].sort((a, b) => a.mastery - b.mastery)[0];
 
   return (
+    // Column layout so the middle block (donut, or the nothing-yet prompt) can
+    // take the slack. A course with no practised topics sat in a card stretched
+    // to its neighbour's donut height and left a hole under two lines of text.
     <Card sx={{ height: "100%" }}>
-      <CardContent sx={{ p: 3 }}>
+      <CardContent sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
           <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: accent, flexShrink: 0 }} />
           <Typography variant="subtitle1" sx={{ fontWeight: 700, minWidth: 0 }} noWrap>
@@ -439,17 +445,21 @@ function CourseCard({
             }))}
           />
         ) : (
-          <Box sx={{ py: 3, textAlign: "center" }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-              No practised topics yet.
+          <Stack
+            alignItems="center"
+            justifyContent="center"
+            sx={{ flex: 1, minHeight: 150, py: 2, textAlign: "center" }}
+          >
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, maxWidth: 220 }}>
+              No practised topics yet, so there is no mastery to show.
             </Typography>
             <Button component={Link} href="/dashboard/practice" variant="outlined" size="small">
               Map this course
             </Button>
-          </Box>
+          </Stack>
         )}
 
-        <Stack spacing={0.25} sx={{ mt: 1.5 }}>
+        <Stack spacing={0.25} sx={{ mt: "auto", pt: 1.5 }}>
           <Typography variant="caption" color="text.secondary">
             {course.marks.length} mark{course.marks.length === 1 ? "" : "s"} logged
             {course.confidence > 0 && ` · ${Math.round(course.confidence * 100)}% confidence`}
