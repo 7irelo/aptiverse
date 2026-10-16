@@ -1,0 +1,133 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+
+jobs:
+  build-test:
+    name: Format, build, test, contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: NuGet cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj', 'global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: |
+          dotnet tool restore
+          dotnet restore Aptiverse.slnx
+
+      - name: Format
+        run: dotnet format Aptiverse.slnx --verify-no-changes --no-restore
+
+      - name: Build (warnings as errors, regenerates openapi/v1.json)
+        run: dotnet build Aptiverse.slnx -c Release --no-restore
+
+      - name: OpenAPI contract matches the committed file
+        run: |
+          if ! git diff --exit-code -- openapi/v1.json; then
+            echo "::error::openapi/v1.json is out of date. Run 'dotnet build src/Aptiverse.Host' and commit the result."
+            exit 1
+          fi
+
+      - name: Test (unit, architecture, integration with Testcontainers)
+        run: dotnet test --solution Aptiverse.slnx -c Release --no-build
+
+      - name: No pending EF model changes
+        run: |
+          for module in Support; do
+            project="src/Modules/${module}/Aptiverse.${module}"
+            dotnet ef migrations has-pending-model-changes \
+              --project "$project" --startup-project "$project" --context "${module}DbContext" --no-build --configuration Release
+          done
+
+      - name: Migration bundles (linux-arm64)
+        run: bash scripts/migrations-bundle.sh linux-arm64
+
+      - name: Upload OpenAPI spec
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-${{ github.sha }}
+          path: openapi/v1.json
+
+      - name: Upload migration bundles
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-bundles-${{ github.sha }}
+          path: bundles/
+          retention-days: 14
+
+  image:
+    name: Container image
+    needs: build-test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      # Push only from main, and only once the AWS OIDC role and ECR registry are configured as repo variables.
+      PUSH: ${{ github.event_name == 'push' && vars.AWS_ROLE_ARN != '' && vars.ECR_REGISTRY != '' }}
+      IMAGE: ${{ vars.ECR_REGISTRY != '' && format('{0}/aptiverse-api', vars.ECR_REGISTRY) || 'aptiverse-api' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials (OIDC)
+        if: env.PUSH == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'af-south-1' }}
+
+      - name: Log in to ECR
+        if: env.PUSH == 'true'
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build linux/arm64 image (tagged with the git sha, never latest)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          load: true
+          tags: ${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Push image
+        if: env.PUSH == 'true'
+        run: docker push "${IMAGE}:${GITHUB_SHA}"

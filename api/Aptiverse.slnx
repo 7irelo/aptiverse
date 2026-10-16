@@ -1,0 +1,24 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Aptiverse.Host/Aptiverse.Host.csproj" />
+    <Project Path="src/Aptiverse.SharedKernel/Aptiverse.SharedKernel.csproj" />
+    <Project Path="src/Aptiverse.Worker/Aptiverse.Worker.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Support/">
+    <Project Path="src/Modules/Support/Aptiverse.Support.Contracts/Aptiverse.Support.Contracts.csproj" />
+    <Project Path="src/Modules/Support/Aptiverse.Support/Aptiverse.Support.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Aptiverse.ArchitectureTests/Aptiverse.ArchitectureTests.csproj" />
+    <Project Path="tests/Aptiverse.IntegrationTests/Aptiverse.IntegrationTests.csproj" />
+    <Project Path="tests/Aptiverse.Support.UnitTests/Aptiverse.Support.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/solution items/">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="nuget.config" />
+  </Folder>
+</Solution>

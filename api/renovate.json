@@ -1,0 +1,40 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommitTypeAll(chore)",
+    ":semanticCommitScope(deps)",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "timezone": "Africa/Johannesburg",
+  "schedule": ["before 6am on monday"],
+  "prConcurrentLimit": 5,
+  "packageRules": [
+    {
+      "description": ".NET platform packages move together with the SDK and runtime",
+      "matchManagers": ["nuget"],
+      "matchPackageNames": ["/^Microsoft\\.(AspNetCore|EntityFrameworkCore|Extensions)\\./", "/^Npgsql/", "EFCore.NamingConventions"],
+      "groupName": "dotnet platform"
+    },
+    {
+      "matchManagers": ["nuget"],
+      "matchPackageNames": ["/^WolverineFx/"],
+      "groupName": "wolverine"
+    },
+    {
+      "matchManagers": ["nuget"],
+      "matchPackageNames": ["/^OpenTelemetry/"],
+      "groupName": "opentelemetry"
+    },
+    {
+      "matchManagers": ["nuget"],
+      "matchPackageNames": ["/^xunit/", "Testcontainers.PostgreSql", "NetArchTest.Rules", "NSubstitute", "Microsoft.AspNetCore.Mvc.Testing"],
+      "groupName": "test tooling"
+    },
+    {
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["mcr.microsoft.com/dotnet/sdk", "mcr.microsoft.com/dotnet/aspnet"],
+      "groupName": "dotnet images"
+    }
+  ]
+}
