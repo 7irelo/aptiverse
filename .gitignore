@@ -45,3 +45,6 @@ crash.log
 .DS_Store
 Thumbs.db
 *.log
+
+# Local agent workspace
+.claude/
