@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>Aptiverse.Worker</RootNamespace>
+    <UserSecretsId>aptiverse-worker</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Aptiverse.SharedKernel\Aptiverse.SharedKernel.csproj" />
+    <ProjectReference Include="..\Modules\Support\Aptiverse.Support\Aptiverse.Support.csproj" />
+  </ItemGroup>
+
+</Project>
