@@ -104,11 +104,16 @@ export function Hero() {
                 useFlexGap
                 sx={{ pt: 1 }}
               >
+                {/* "Works offline" was here and was simply untrue: there is no
+                    service worker, no local store, nothing. The other three
+                    hold up. Curriculum-aware and wellbeing-first are real
+                    surfaces, and MasteryController genuinely projects a term
+                    mark from graded work, trend and mastery gap. */}
                 {[
                   "Curriculum-aware",
                   "Wellbeing-first",
                   "Predicts your results",
-                  "Works offline",
+                  "Free to start",
                 ].map((t) => (
                   <Stack
                     key={t}

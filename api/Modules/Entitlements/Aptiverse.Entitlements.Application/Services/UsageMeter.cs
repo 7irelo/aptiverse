@@ -38,9 +38,33 @@ namespace Aptiverse.Entitlements.Application.Services
                 .Select(q => q.PerMonth)
                 .ToListAsync(ct);
 
-            if (quotas.Count == 0) return 0;             // no row → no allowance
             if (quotas.Any(q => q == -1)) return -1;     // unlimited wins
-            return quotas.Max();
+
+            // Temporary top-ups earned by verifying goals. Summed, not maxed:
+            // two separate rewards are two separate things the student earned,
+            // and taking the max would quietly void one of them.
+            //
+            // This runs even when the plan has no row for the key. Without it,
+            // a reward on a quota the free plan does not list would resolve to
+            // "no allowance" and the student would redeem points for nothing.
+            var bonus = await GetActiveBonusAsync(userId, quotaKey, ct);
+
+            if (quotas.Count == 0) return bonus;         // no plan row → only what was earned
+            return quotas.Max() + bonus;
+        }
+
+        // Sum of every live grant for this key. Expired rows stay in the table
+        // as the student's history, so the filter is on time, not deletion.
+        private async Task<int> GetActiveBonusAsync(
+            string userId, string quotaKey, CancellationToken ct)
+        {
+            var now = DateTime.UtcNow;
+            return await _db.Set<QuotaGrant>()
+                .AsNoTracking()
+                .Where(g => g.StudentId == userId
+                         && g.QuotaKey == quotaKey
+                         && g.ExpiresAt > now)
+                .SumAsync(g => (int?)g.Bonus, ct) ?? 0;
         }
 
         public async Task<int> GetUsedAsync(string userId, string quotaKey, CancellationToken ct = default)

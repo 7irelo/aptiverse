@@ -21,7 +21,8 @@ import NotificationsIcon from "@mui/icons-material/NotificationsNoneOutlined";
 import LogoutIcon from "@mui/icons-material/LogoutOutlined";
 import SettingsIcon from "@mui/icons-material/SettingsOutlined";
 import HelpIcon from "@mui/icons-material/HelpOutline";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import { signOutAptiverse } from "@/lib/auth-client";
 import { Logo } from "@/components/common/Logo";
 import { initials } from "@/lib/format";
 import {
@@ -272,7 +273,7 @@ export function AppTopBar({ onMobileMenuClick }: Props) {
             <MenuItem
               onClick={() => {
                 setProfileEl(null);
-                signOut({ callbackUrl: "/login" });
+                void signOutAptiverse("/login");
               }}
             >
               <ListItemIcon>

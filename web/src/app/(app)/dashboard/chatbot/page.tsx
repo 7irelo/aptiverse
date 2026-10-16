@@ -152,7 +152,7 @@ function buildStudentContext(args: {
     .filter((a) => a.status !== "graded" && new Date(a.dueDate).getTime() >= Date.now() - 86_400_000)
     .sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate))
     .slice(0, 5)
-    .map((a) => `- ${fmtDate(a.dueDate)}: ${nameFor(a.subjectId) ?? "a subject"} — ${a.title} (${a.type})`);
+    .map((a) => `- ${fmtDate(a.dueDate)}: ${nameFor(a.subjectId) ?? "a subject"}, ${a.title} (${a.type})`);
 
   const sections: string[] = [];
   if (head.length) sections.push(head.join("\n"));
@@ -408,7 +408,7 @@ export default function ChatbotPage() {
         bgcolor: "background.default",
       }}
     >
-      {/* Chat column — first in source order, so the history rail sits on the
+      {/* Chat column: first in source order, so the history rail sits on the
           right for sighted users AND is reached after the conversation by
           screen readers and keyboard tabbing. */}
       <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
@@ -506,7 +506,7 @@ export default function ChatbotPage() {
                   ),
                 )}
                 {/* Streams as rendered markdown, not plain text that reflows
-                    into markdown at the end — headings, bold, lists and math
+                    into markdown at the end. Headings, bold, lists and math
                     resolve as they arrive, so the reply never visibly restyles
                     itself once it settles. */}
                 {streaming !== null && <AssistantMessage content={streaming} caret />}
@@ -527,7 +527,14 @@ export default function ChatbotPage() {
             flexShrink: 0,
             px: { xs: 2, sm: 3 },
             pt: 1,
-            pb: { xs: 1.5, sm: 2 },
+            // The composer is pinned to the bottom edge of a full-bleed
+            // 100dvh route, which on a gesture-bar phone is exactly where the
+            // home indicator sits. Pay back the inset or the send button is
+            // half under system chrome.
+            pb: {
+              xs: "calc(env(safe-area-inset-bottom) + 12px)",
+              sm: "calc(env(safe-area-inset-bottom) + 16px)",
+            },
             bgcolor: "background.default",
           }}
         >
@@ -948,7 +955,9 @@ function ModePicker({
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     {m.label}
                   </Typography>
-                  {selected && <CheckIcon fontSize="small" sx={{ color: "secondary.main" }} />}
+                  {/* Citron is surface-only: as an icon colour it scored
+                      1.4:1 on light paper and the tick vanished. */}
+                  {selected && <CheckIcon fontSize="small" sx={{ color: "secondary.dark" }} />}
                 </Stack>
                 <Typography
                   variant="caption"

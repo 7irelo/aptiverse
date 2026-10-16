@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -9,12 +11,14 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
+import Skeleton from "@mui/material/Skeleton";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import DescriptionIcon from "@mui/icons-material/DescriptionOutlined";
 import SchoolIcon from "@mui/icons-material/SchoolOutlined";
 import TipsAndUpdatesOutlinedIcon from "@mui/icons-material/TipsAndUpdatesOutlined";
 import { PageHeader } from "@/components/common/PageHeader";
 import { AtmosphericBackdrop } from "@/components/common/AtmosphericBackdrop";
+import { useAcademicProfile } from "@/lib/api/queries";
 
 // Aptiverse intentionally does not host past papers — the Department of
 // Basic Education maintains the authoritative archive, and re-hosting risks
@@ -33,7 +37,7 @@ const SUBJECTS: { name: string; subtitle: string; tip: string }[] = [
   {
     name: "Mathematical Literacy",
     subtitle: "P1 (Skills) · P2 (Applications)",
-    tip: "Focus on units and rounding — the memo strips marks for those silently.",
+    tip: "Focus on units and rounding: the memo strips marks for those silently.",
   },
   {
     name: "Physical Sciences",
@@ -48,12 +52,12 @@ const SUBJECTS: { name: string; subtitle: string; tip: string }[] = [
   {
     name: "English HL",
     subtitle: "P1 (Comprehension) · P2 (Literature) · P3 (Writing)",
-    tip: "Mark your own P3 with the rubric, not just a percentage — that's where the marks hide.",
+    tip: "Mark your own P3 with the rubric, not just a percentage. That's where the marks hide.",
   },
   {
     name: "Afrikaans FAL",
     subtitle: "P1 (Taal) · P2 (Letterkunde) · P3 (Skryf)",
-    tip: "Work P3 essays out loud first — flow matters as much as grammar in the rubric.",
+    tip: "Work P3 essays out loud first: flow matters as much as grammar in the rubric.",
   },
   {
     name: "Geography",
@@ -63,7 +67,7 @@ const SUBJECTS: { name: string; subtitle: string; tip: string }[] = [
   {
     name: "Life Orientation",
     subtitle: "CAT (Common Assessment Task)",
-    tip: "LO is examined as a CAT — past CAT papers are released by your province, not the national archive.",
+    tip: "LO is examined as a CAT. Past CAT papers are released by your province, not the national archive.",
   },
   {
     name: "Accounting",
@@ -73,11 +77,51 @@ const SUBJECTS: { name: string; subtitle: string; tip: string }[] = [
 ];
 
 export default function PastPapersPage() {
+  const profileQuery = useAcademicProfile();
+  const router = useRouter();
+  const isTertiary = profileQuery.data?.educationLevel === "tertiary";
+
+  // These are NSC papers, i.e. the high-school matric exam. A university
+  // student has no use for them, so send them to practice instead. Wait for
+  // the profile to resolve first: educationLevel is undefined on the first
+  // render, and acting on that would bounce high-school students too.
+  useEffect(() => {
+    if (profileQuery.isSuccess && isTertiary) {
+      router.replace("/dashboard/practice");
+    }
+  }, [profileQuery.isSuccess, isTertiary, router]);
+
+  // Skeleton until the profile resolves, and while a tertiary student is
+  // being redirected, so the NSC page never flashes for them.
+  if (profileQuery.isLoading || isTertiary) {
+    return (
+      <AtmosphericBackdrop>
+        <PageHeader
+          title="Past papers"
+          breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Past papers" }]}
+        />
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12, md: 8 }}>
+            <Skeleton variant="rounded" height={140} sx={{ mb: 3 }} />
+            <Stack spacing={1.5}>
+              {[0, 1, 2, 3].map((i) => (
+                <Skeleton key={i} variant="rounded" height={110} />
+              ))}
+            </Stack>
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Skeleton variant="rounded" height={380} />
+          </Grid>
+        </Grid>
+      </AtmosphericBackdrop>
+    );
+  }
+
   return (
     <AtmosphericBackdrop>
       <PageHeader
         title="Past papers"
-        description="Real NSC past papers, hosted by the Department of Basic Education. We point you to the official archive — your study plan + AI practice live here at Aptiverse."
+        description="Real NSC past papers, hosted by the Department of Basic Education. We point you to the official archive; your study plan + AI practice live here at Aptiverse."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Past papers" }]}
         actions={
           <Button
@@ -196,10 +240,10 @@ export default function PastPapersPage() {
                 A paper a week beats five papers in a panic the night before. Treat each one as a real exam.
               </Typography>
               <Stack spacing={1.5}>
-                <Tip n={1} text="Print or split-screen — don't read on phone." />
+                <Tip n={1} text="Print or split-screen. Don't read on phone." />
                 <Tip n={2} text="Set a timer for the full duration. No pauses." />
                 <Tip n={3} text="Mark with the official memo, then count rubric marks for essays." />
-                <Tip n={4} text="Log every mistake category in your diary — patterns reveal weak topics." />
+                <Tip n={4} text="Log every mistake category in your diary: patterns reveal weak topics." />
                 <Tip n={5} text="Re-attempt the questions you got wrong a week later. Spaced." />
               </Stack>
               <Divider sx={{ my: 2.5 }} />
@@ -223,7 +267,7 @@ export default function PastPapersPage() {
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
           <Chip label="Source: education.gov.za" size="small" variant="outlined" />
           <Typography variant="caption" color="text.secondary">
-            Aptiverse links directly to the Department of Basic Education's official archive — we don't re-host papers.
+            Aptiverse links directly to the Department of Basic Education's official archive. We don't re-host papers.
           </Typography>
         </Stack>
       </Box>

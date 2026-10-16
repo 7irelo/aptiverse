@@ -70,6 +70,25 @@ namespace Aptiverse.Api.Services.Goals
                     // "verified" rather than "completed": nobody asserted this,
                     // we checked it.
                     goal.Status = GoalStatuses.Verified;
+
+                    // Settle the payout now, against what actually happened.
+                    // RewardPoints held a projection until this moment; the
+                    // student may have blown past their target, and the reward
+                    // is for the distance travelled, not for clearing a bar.
+                    if (GoalKinds.IsRewarded(goal.Kind))
+                    {
+                        goal.AchievedDifficulty = HardestDifficultyFor(goal, evidence);
+                        goal.RewardPoints = PointsFor(
+                            goal.Kind,
+                            current,
+                            goal.BaselineValue ?? 0,
+                            goal.AchievedDifficulty);
+                    }
+                    else
+                    {
+                        goal.RewardPoints = 0;
+                    }
+
                     achieved.Add(goal);
                 }
                 else if (!wasAchieved)
@@ -111,6 +130,7 @@ namespace Aptiverse.Api.Services.Goals
             List<PracticeAttempt> Attempts,
             List<AttemptScoreSummary> Summaries,
             Dictionary<long, string> TestSubjectByTestId,
+            Dictionary<long, string> TestDifficultyByTestId,
             List<Assessment> GradedAssessments,
             HashSet<DateTime> CheckinDays);
 
@@ -127,6 +147,7 @@ namespace Aptiverse.Api.Services.Goals
             var attempts = new List<PracticeAttempt>();
             var summaries = new List<AttemptScoreSummary>();
             var testSubjects = new Dictionary<long, string>();
+            var testDifficulty = new Dictionary<long, string>();
 
             if (needsAttempts)
             {
@@ -135,10 +156,12 @@ namespace Aptiverse.Api.Services.Goals
                     .ToListAsync(ct);
 
                 var testIds = attempts.Select(a => a.TestId).Distinct().ToList();
-                testSubjects = await _db.Set<PracticeTest>()
+                var tests = await _db.Set<PracticeTest>()
                     .Where(t => testIds.Contains(t.Id))
-                    .Select(t => new { t.Id, t.SubjectId })
-                    .ToDictionaryAsync(t => t.Id, t => t.SubjectId, ct);
+                    .Select(t => new { t.Id, t.SubjectId, t.Difficulty })
+                    .ToListAsync(ct);
+                testSubjects = tests.ToDictionary(t => t.Id, t => t.SubjectId);
+                testDifficulty = tests.ToDictionary(t => t.Id, t => t.Difficulty);
 
                 // Only mastery needs the per-topic breakdown, and it's the
                 // heaviest read here (jsonb per attempt).
@@ -168,7 +191,7 @@ namespace Aptiverse.Api.Services.Goals
                 checkinDays = tracked.Select(t => t.Date).ToHashSet();
             }
 
-            return new Evidence(attempts, summaries, testSubjects, gradedAssessments, checkinDays);
+            return new Evidence(attempts, summaries, testSubjects, testDifficulty, gradedAssessments, checkinDays);
         }
 
         // ── measurement ───────────────────────────────────────────────────
@@ -299,25 +322,14 @@ namespace Aptiverse.Api.Services.Goals
                 });
             }
 
-            var allowances = await _db.Set<GoalAllowance>()
-                .Where(a => a.GoalId == goal.Id && a.Status == AllowanceStatuses.Pledged)
-                .ToListAsync(ct);
-
-            foreach (var allowance in allowances)
-            {
-                allowance.Status = AllowanceStatuses.Earned;
-                allowance.EarnedAt = DateTime.UtcNow;
-
-                // The parent is told by the same system that did the checking,
-                // so the child never has to make the case themselves.
-                await _notifications.EnqueueAsync(
-                    allowance.SponsorUserId,
-                    "celebration",
-                    "An allowance has been earned",
-                    $"{goal.Title} was verified from real work. R{allowance.AmountZar:0.##} is now due.",
-                    "/parent/allowances",
-                    ct);
-            }
+            // Points are the whole reward. They buy time-boxed top-ups on
+            // metered features from RewardCatalog, which the student chooses
+            // themselves on /dashboard/rewards.
+            //
+            // Nothing is auto-granted here on purpose. A reward the student
+            // picks is a reward they wanted; one the system picks is a
+            // notification. It also keeps this method free of any opinion about
+            // what a given goal is "worth" beyond its points.
         }
 
         // ── pricing + levels ──────────────────────────────────────────────
@@ -327,24 +339,138 @@ namespace Aptiverse.Api.Services.Goals
         // it, and nothing here rewards gaming (you cannot farm points by
         // setting a 1-test goal twenty times, because twenty goals is twenty
         // pieces of real work).
-        public static int PriceOf(string kind, int? targetValue)
+        // Where the student stands right now, in the goal's own unit.
+        //
+        // Called once, at creation, and frozen onto the row. Practice score
+        // baselines off their recent best rather than their all-time best: a
+        // student who peaked at 90% eight months ago and now sits at 60% is a
+        // 60% student today, and making them beat their own history from a
+        // different year would just make the feature useless to them.
+        public async Task<int> BaselineForAsync(
+            string studentId, string kind, string? subjectId, string? topicFilter, CancellationToken ct)
         {
-            var target = targetValue ?? 0;
-            return kind switch
+            if (kind == GoalKinds.PracticeScore)
             {
-                GoalKinds.PracticeTests => Math.Clamp(target * 15, 15, 300),
-                // Percentage goals price on ambition: 60% is a start, 90% is hard.
-                GoalKinds.PracticeScore => Math.Clamp(target, 20, 100),
-                GoalKinds.TopicMastery => Math.Clamp((int)(target * 1.2), 20, 120),
-                GoalKinds.AssessmentMark => Math.Clamp((int)(target * 1.5), 30, 150),
-                // Consistency is the hardest thing to fake and the easiest to
-                // break, so it pays best per unit.
-                GoalKinds.CheckinStreak => Math.Clamp(target * 8, 16, 240),
-                GoalKinds.PracticeStreak => Math.Clamp(target * 12, 24, 360),
-                // A goal only the student can vouch for pays a token amount.
-                // It is worth something; it just isn't worth the same.
-                _ => 10,
+                var since = DateTime.UtcNow.AddDays(-60);
+                var q = _db.Set<PracticeAttempt>()
+                    .AsNoTracking()
+                    .Where(a => a.StudentId == studentId
+                             && a.Status == AttemptStatus.Submitted
+                             && a.Score != null
+                             && a.SubmittedAt >= since);
+
+                if (!string.IsNullOrWhiteSpace(subjectId))
+                {
+                    var testIds = _db.Set<PracticeTest>()
+                        .AsNoTracking()
+                        .Where(t => t.SubjectId == subjectId)
+                        .Select(t => t.Id);
+                    q = q.Where(a => testIds.Contains(a.TestId));
+                }
+
+                // Best of the last 60 days. Best, not average: the baseline is
+                // "what you have shown you can do", and beating your own best is
+                // the bar that cannot be cleared by having had a bad week.
+                return await q.MaxAsync(a => (int?)a.Score, ct) ?? 0;
+            }
+
+            if (kind == GoalKinds.TopicMastery)
+            {
+                var goals = new List<Goal>
+                {
+                    new() { Kind = GoalKinds.TopicMastery, SubjectId = subjectId, TopicFilter = topicFilter },
+                };
+                var evidence = await LoadEvidenceAsync(studentId, goals, ct);
+                return MeasureMastery(goals[0], evidence);
+            }
+
+            return 0;
+        }
+
+        // The hardest paper the student actually cleared while working on this
+        // goal, which sets the difficulty multiplier.
+        //
+        // Hardest, not most recent: a student who clears a challenge paper has
+        // shown that level, and a later foundation attempt does not un-show it.
+        private static string HardestDifficultyFor(Goal goal, Evidence ev)
+        {
+            var rank = new Dictionary<string, int>
+            {
+                ["foundation"] = 0,
+                ["core"] = 1,
+                ["challenge"] = 2,
             };
+
+            var relevant = ev.Attempts
+                .Where(a => a.Score is not null && a.SubmittedAt >= goal.CreatedAt)
+                .Where(a => string.IsNullOrEmpty(goal.SubjectId)
+                            || (ev.TestSubjectByTestId.TryGetValue(a.TestId, out var s) && s == goal.SubjectId))
+                .Select(a => ev.TestDifficultyByTestId.GetValueOrDefault(a.TestId, "core"))
+                .ToList();
+
+            if (relevant.Count == 0) return "core";
+
+            return relevant
+                .OrderByDescending(d => rank.GetValueOrDefault(d, 1))
+                .First();
+        }
+
+        // What a goal is projected to pay, shown at creation.
+        //
+        // This is the floor: the payout for landing exactly on the target and
+        // no further. The real figure is settled at verification by PointsFor,
+        // because the reward is a function of how far past their own baseline
+        // the student actually got, and nobody knows that in advance.
+        //
+        // Unrewarded kinds return 0, and the UI says so rather than implying a
+        // payout that never arrives.
+        public static int ProjectedPoints(string kind, int? targetValue, int? baselineValue)
+        {
+            if (!GoalKinds.IsRewarded(kind)) return 0;
+            var target = targetValue ?? 0;
+            var baseline = baselineValue ?? 0;
+            return PointsFor(kind, target, baseline, null);
+        }
+
+        // The payout, settled against what the student actually did.
+        //
+        // Paying on the gain rather than the score is the whole design. A
+        // student sitting at 80% who clears a 60% target has demonstrated
+        // nothing, and paying them for it would teach exactly the wrong lesson:
+        // that the way to earn is to aim at where you already are. A student who
+        // drags themselves from 45% to 62% has done the harder thing, and the
+        // points say so, even though 62 is the smaller number.
+        //
+        // The gain is squashed rather than linear. Early progress off a low base
+        // is where the real work is, and the last few points before 100 are
+        // partly luck, so a straight multiplier would overpay a student who was
+        // already close to the ceiling.
+        public static int PointsFor(string kind, int achieved, int baseline, string? difficulty)
+        {
+            if (!GoalKinds.IsRewarded(kind)) return 0;
+
+            var gain = achieved - baseline;
+            if (gain <= 0) return 0;   // you did not outdo yourself.
+
+            // 12 points per percentage point gained, tapering above 20 points of
+            // gain: a 40-point jump is remarkable but not twice as remarkable as
+            // a 20-point one, and paying it linearly would make one lucky test
+            // worth more than a term of work.
+            var flat = Math.Min(gain, 20) * 12;
+            var taper = Math.Max(0, gain - 20) * 5;
+            var raw = flat + taper;
+
+            // Difficulty multiplier. The tests scale to the student, so clearing
+            // a challenge paper is a harder thing than clearing a foundation one
+            // and should not pay the same.
+            var multiplier = difficulty switch
+            {
+                "challenge" => 1.5,
+                "foundation" => 0.6,
+                _ => 1.0,           // "core", and the projection case.
+            };
+
+            return Math.Clamp((int)Math.Round(raw * multiplier), 0, 900);
         }
 
         // 500 points a level, flattening as it climbs so a level always means

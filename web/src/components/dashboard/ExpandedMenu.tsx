@@ -77,8 +77,12 @@ export function ExpandedMenu({ node, left, open, onClose }: Props) {
         transition: { orientation: "horizontal", timeout: 220 } as any,
         paper: {
           sx: {
-            height: "100vh",
-            maxHeight: "100vh",
+            // 100dvh, matching the shell and the marketing layout. On mobile
+            // 100vh measures the viewport as if the browser chrome were hidden,
+            // so a full-height menu overrun the visible area by roughly the
+            // height of the address bar and stranded its last items under it.
+            height: "100dvh",
+            maxHeight: "100dvh",
             borderRadius: 0,
             m: 0,
             // A step off the rail so the two menus are clearly distinct.

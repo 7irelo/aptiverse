@@ -68,11 +68,17 @@ namespace Aptiverse.Mastery.Controllers
             return Ok(dtos);
         }
 
-        // ── Term predictions ─────────────────────────────────────────────
-        // Weighted current-term average from graded SBAs, nudged toward the
-        // practice-mastery signal and the recent mark trend, capped so a
-        // single good/bad practice run can't swing the projection wildly.
-        // Confidence grows with the amount of evidence.
+        // ── Period predictions ───────────────────────────────────────────
+        // Weighted average of the current reporting period's graded work,
+        // nudged toward the practice-mastery signal and the recent mark trend,
+        // capped so a single good/bad practice run can't swing the projection
+        // wildly. Confidence grows with the amount of evidence.
+        //
+        // The period is a school term for a high-school student and a semester
+        // for a tertiary one. The wire field names say "Term" because that is
+        // what shipped first, not because the figure is school-only; see the
+        // note on FrontendTermPredictionDto. Nothing here is CAPS-specific:
+        // it is weighted graded work, whatever the work is called.
         [HttpGet("predictions")]
         public async Task<ActionResult<IEnumerable<FrontendTermPredictionDto>>> GetPredictions(
             CancellationToken ct = default)
@@ -195,8 +201,44 @@ namespace Aptiverse.Mastery.Controllers
                 .ToList();
         }
 
+        // Display names for whatever study units this student's work is keyed
+        // on. Mastery keys on a single string id per unit: a CAPS subject slug
+        // for a high-school student, a Course.PracticeKey ("wits:appm1006a")
+        // for a tertiary one. This resolved only the first kind, so every
+        // prediction and mastery row a university student got back carried
+        // `subject: "wits:appm1006a"` — the raw id, dressed up as a name. The
+        // dashboard hid it by resolving names from its own course query, but
+        // anything reading the field as documented printed the slug at a
+        // student.
+        //
+        // Courses are looked up through the student's enrolments rather than
+        // the whole shared catalog: the map only has to cover ids this student
+        // can actually have work against, and every institution's course list
+        // would grow without bound. PracticeKey is a computed property, so the
+        // join is materialised first and keyed in memory.
         private async Task<Dictionary<string, string>> SubjectNamesAsync(CancellationToken ct)
-            => await _db.Set<Subject>().AsNoTracking().ToDictionaryAsync(x => x.Id, x => x.Name, ct);
+        {
+            var names = await _db.Set<Subject>()
+                .AsNoTracking()
+                .ToDictionaryAsync(x => x.Id, x => x.Name, ct);
+
+            var userId = CurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return names;
+
+            var courses = await (
+                from sc in _db.Set<StudentCourse>().AsNoTracking()
+                join c in _db.Set<Course>().AsNoTracking() on sc.CourseId equals c.Id
+                where sc.StudentId == userId
+                select new { c.InstitutionId, c.Slug, c.Name }
+            ).ToListAsync(ct);
+
+            foreach (var c in courses)
+            {
+                names[$"{c.InstitutionId}:{c.Slug}"] = c.Name;
+            }
+
+            return names;
+        }
 
         private sealed class TopicMasteryRow
         {

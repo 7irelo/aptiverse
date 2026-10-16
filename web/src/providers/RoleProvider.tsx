@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type Role = "student" | "parent" | "teacher" | "school_admin" | "tutor" | "admin" | "super_admin";
+export type Role = "student" | "parent" | "teacher" | "school_admin" | "tutor" | "affiliate" | "admin" | "super_admin";
 
 export const ROLES: { value: Role; label: string; description: string }[] = [
   { value: "student", label: "Student", description: "Grades 10–12 learner" },
@@ -11,6 +11,7 @@ export const ROLES: { value: Role; label: string; description: string }[] = [
   { value: "teacher", label: "Teacher", description: "Class educator" },
   { value: "school_admin", label: "School Admin", description: "School leadership" },
   { value: "tutor", label: "Tutor", description: "Independent educator" },
+  { value: "affiliate", label: "Affiliate", description: "Earning by referral" },
   { value: "admin", label: "Admin", description: "Platform operator" },
   { value: "super_admin", label: "Super Admin", description: "Platform owner" },
 ];

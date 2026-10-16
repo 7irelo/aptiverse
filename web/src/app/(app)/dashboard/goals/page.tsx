@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
@@ -17,13 +16,17 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
+import ListSubheader from "@mui/material/ListSubheader";
+import InputAdornment from "@mui/material/InputAdornment";
 import LinearProgress from "@mui/material/LinearProgress";
+import Tooltip from "@mui/material/Tooltip";
+import Skeleton from "@mui/material/Skeleton";
 import { alpha } from "@mui/material/styles";
 import AddIcon from "@mui/icons-material/Add";
-import RedeemIcon from "@mui/icons-material/RedeemOutlined";
 import FlagIcon from "@mui/icons-material/FlagOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import SwapVertIcon from "@mui/icons-material/SwapVert";
+import { ShieldCheck, Sparkles, TrendingUp, Eye } from "lucide-react";
 import { useSnackbar } from "notistack";
 import { PageHeader } from "@/components/common/PageHeader";
 import { CardRow } from "@/components/common/CardRow";
@@ -36,10 +39,11 @@ import {
   useCreateGoal,
   useDeleteGoal,
   useReorderGoals,
+  useGoalBaseline,
   type CreateGoalInput,
   type AcademicUnit,
 } from "@/lib/api/queries";
-import type { Goal } from "@/lib/mockData";
+import type { Goal, GoalKind } from "@/lib/mockData";
 import { RelativeTime } from "@/components/common/RelativeTime";
 import { AtmosphericBackdrop } from "@/components/common/AtmosphericBackdrop";
 
@@ -53,9 +57,136 @@ const CATEGORIES: { value: NonNullable<CreateGoalInput["category"]>; label: stri
   { value: "career", label: "Career" },
 ];
 
+/**
+ * The kinds a student can pick, and what the server checks each one against.
+ *
+ * `rewarded` mirrors GoalKinds.Rewarded on the server, which is the only
+ * authority on what pays. It is duplicated here for one reason: the picker has
+ * to group the options before a kind is chosen, and there is nothing to ask
+ * about yet. Once a kind is selected the dialog reads `rewarded` off the
+ * baseline response instead, so what the student is told is what the server
+ * will actually do.
+ *
+ * `whyNoPoints` is not an apology. Paying for a count buys twenty abandoned
+ * tests, and paying for a streak buys an app opened at 23:58, so saying why
+ * out loud is what stops the list looking arbitrary.
+ */
+const KINDS: {
+  value: NonNullable<CreateGoalInput["kind"]>;
+  label: string;
+  helper: string;
+  unit: string;
+  max?: number;
+  defaultTarget: number;
+  category?: NonNullable<CreateGoalInput["category"]>;
+  rewarded: boolean;
+  whyNoPoints?: string;
+}[] = [
+  {
+    value: "practice_score",
+    label: "Beat your practice score",
+    helper: "Your best score on any submitted practice test. Points are paid on how far you beat where you are today.",
+    unit: "%",
+    max: 100,
+    defaultTarget: 75,
+    category: "academic",
+    rewarded: true,
+  },
+  {
+    value: "topic_mastery",
+    label: "Raise topic mastery",
+    helper: "Mastery is how much of a topic you get right across every attempt. Points are paid on the improvement.",
+    unit: "%",
+    max: 100,
+    defaultTarget: 75,
+    category: "academic",
+    rewarded: true,
+  },
+  {
+    value: "practice_tests",
+    label: "Submit practice tests",
+    helper: "Counts every practice test you submit.",
+    unit: "tests",
+    defaultTarget: 5,
+    category: "academic",
+    rewarded: false,
+    whyNoPoints: "A count measures how often you show up, not what you learned, so this one is tracked but pays nothing.",
+  },
+  {
+    value: "assessment_mark",
+    label: "Get a mark",
+    helper: "Your best mark on a graded assessment you have logged.",
+    unit: "%",
+    max: 100,
+    defaultTarget: 70,
+    category: "academic",
+    rewarded: false,
+    whyNoPoints: "You type this mark in yourself, so it is tracked but pays nothing. Practice scores are the ones worth points.",
+  },
+  {
+    value: "practice_streak",
+    label: "Practise every day",
+    helper: "Consecutive days with at least one submitted practice test.",
+    unit: "days",
+    defaultTarget: 7,
+    category: "habit",
+    rewarded: false,
+    whyNoPoints: "Streaks are here because they motivate, not because they pay. Points would just reward opening the app at midnight.",
+  },
+  {
+    value: "checkin_streak",
+    label: "Check in every day",
+    helper: "Consecutive days you log how you're doing.",
+    unit: "days",
+    defaultTarget: 7,
+    category: "wellbeing",
+    rewarded: false,
+    whyNoPoints: "Streaks are here because they motivate, not because they pay.",
+  },
+  {
+    value: "custom",
+    label: "Something else",
+    helper: "Nothing to check this against, so you track it yourself.",
+    unit: "",
+    defaultTarget: 0,
+    rewarded: false,
+    whyNoPoints: "Nobody can check this one, so it pays nothing and you mark it done yourself.",
+  },
+];
+
+const kindMeta = (kind: string) => KINDS.find((k) => k.value === kind);
+
+const REWARDED_KINDS = KINDS.filter((k) => k.rewarded);
+const TRACKED_KINDS = KINDS.filter((k) => !k.rewarded);
+
+/** Debounce a value so typing a target doesn't fire a request per keystroke. */
+function useDebounced<T>(value: T, ms = 400): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), ms);
+    return () => clearTimeout(t);
+  }, [value, ms]);
+  return debounced;
+}
+
+/**
+ * "3 of 5 tests" beats "60%": the raw count is the thing a student can act on,
+ * and it says what the next step is without any arithmetic. Custom goals have
+ * no count to show, so they fall back to whatever the student wrote.
+ */
+function progressLabel(goal: Goal): string {
+  if (!goal.autoVerified || !goal.targetValue) {
+    return goal.target ? `Progress · ${goal.target}` : "Progress";
+  }
+  const meta = kindMeta(goal.kind);
+  const unit = meta?.unit === "%" ? "%" : meta?.unit ? ` ${meta.unit}` : "";
+  if (unit === "%") return `${goal.currentValue}% of ${goal.targetValue}%`;
+  return `${goal.currentValue} of ${goal.targetValue}${unit}`;
+}
+
 export default function GoalsPage() {
   const goalsQuery = useGoals();
-  // Academic units, not subjects — a tertiary student has courses, and
+  // Academic units, not subjects: a tertiary student has courses, and
   // useSubjects() returns nothing for them, which left the picker empty.
   const academic = useAcademicUnits();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -66,7 +197,7 @@ export default function GoalsPage() {
     <AtmosphericBackdrop>
       <PageHeader
         title="Goals"
-        description="AI sets healthy goals based on your history. You make them happen. Schools verify the wins."
+        description="Set a target, then let your own work prove it. Practice tests, marks, mastery and streaks are counted automatically, so a goal is done when the evidence says so."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Goals" }]}
         actions={
           <Button variant="contained" color="secondary" startIcon={<AddIcon />} onClick={() => setDialogOpen(true)}>
@@ -101,6 +232,83 @@ export default function GoalsPage() {
   );
 }
 
+/**
+ * Where the student stands before they pick a target, and what that target is
+ * worth.
+ *
+ * This panel is the difference between a target input and a guessing game. The
+ * server refuses a rewarded target at or below the baseline, so without the
+ * number in front of them the student meets that error blind, having already
+ * filled in everything else. The projected figure is deliberately worded as a
+ * floor: the payout is settled at verification against the gain actually made,
+ * and quoting it as a promise would make the reward feel smaller when it lands.
+ */
+function BaselinePanel({
+  kind,
+  subjectId,
+  topicFilter,
+  targetValue,
+}: {
+  kind: GoalKind;
+  subjectId?: string | null;
+  topicFilter?: string | null;
+  targetValue: number | null;
+}) {
+  const debouncedTarget = useDebounced(targetValue);
+  const query = useGoalBaseline(kind, subjectId, topicFilter, debouncedTarget);
+
+  if (query.isPending) {
+    return <Skeleton variant="rounded" height={92} />;
+  }
+  // A failed baseline lookup must not block the form: the server re-checks on
+  // create anyway, so the honest move is to say nothing rather than guess.
+  if (query.isError || !query.data?.rewarded) return null;
+
+  const { baseline, minimumTarget, projectedPoints } = query.data;
+  const tooLow = baseline != null && targetValue != null && targetValue <= baseline;
+
+  return (
+    <Box
+      sx={{
+        p: 2,
+        borderRadius: 2,
+        border: 1,
+        borderColor: (t) =>
+          tooLow ? alpha(t.palette.warning.main, 0.5) : alpha(t.palette.achievement.main, 0.3),
+        bgcolor: (t) =>
+          alpha(tooLow ? t.palette.warning.main : t.palette.achievement.main, 0.08),
+      }}
+    >
+      <Stack direction="row" spacing={1.5} alignItems="flex-start">
+        <Box sx={{ color: "text.secondary", mt: 0.25 }}>
+          <TrendingUp size={18} />
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            {baseline === 0
+              ? "You have nothing on record here yet, so anything you hit counts."
+              : `You're at ${baseline}% right now.`}
+          </Typography>
+
+          {tooLow ? (
+            <Typography variant="caption" color="warning.dark" sx={{ display: "block", mt: 0.5 }}>
+              Aim above {baseline}%. Clearing a bar you already stand on proves nothing, so the
+              server won't take it. Try {minimumTarget}% or more.
+            </Typography>
+          ) : (
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+              Points are paid on how far past this you get, not on the number itself.
+              {projectedPoints != null && projectedPoints > 0
+                ? ` Hitting your target earns at least ${projectedPoints.toLocaleString()} points, more if you beat it or clear a harder paper.`
+                : ""}
+            </Typography>
+          )}
+        </Box>
+      </Stack>
+    </Box>
+  );
+}
+
 function NewGoalDialog({
   open,
   onClose,
@@ -123,19 +331,39 @@ function NewGoalDialog({
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [kind, setKind] = useState<NonNullable<CreateGoalInput["kind"]>>("practice_score");
+  const [targetValue, setTargetValue] = useState<string>("75");
+  const [topicFilter, setTopicFilter] = useState("");
   const [target, setTarget] = useState("");
   const [category, setCategory] = useState<NonNullable<CreateGoalInput["category"]>>("academic");
   const [subjectId, setSubjectId] = useState<string>("");
-  const [reward, setReward] = useState("");
   const [dueDate, setDueDate] = useState<string>(defaultDue);
+
+  const meta = kindMeta(kind);
+  const measurable = kind !== "custom";
+
+  // Picking a kind moves the category with it: a practice streak is a habit and
+  // a check-in streak is wellbeing, and making the student restate that in a
+  // second dropdown is just a chance to contradict themselves.
+  const changeKind = (next: NonNullable<CreateGoalInput["kind"]>) => {
+    setKind(next);
+    const m = kindMeta(next);
+    if (m) {
+      setTargetValue(m.defaultTarget ? String(m.defaultTarget) : "");
+      if (m.category) setCategory(m.category);
+    }
+    if (next !== "topic_mastery") setTopicFilter("");
+  };
 
   const reset = () => {
     setTitle("");
     setDescription("");
+    setKind("practice_score");
+    setTargetValue("75");
+    setTopicFilter("");
     setTarget("");
     setCategory("academic");
     setSubjectId("");
-    setReward("");
     setDueDate(defaultDue);
   };
 
@@ -145,26 +373,50 @@ function NewGoalDialog({
     reset();
   };
 
+  const parsedTarget = Number.parseInt(targetValue, 10);
+  const validTarget = Number.isFinite(parsedTarget) ? parsedTarget : null;
+  const targetError =
+    !measurable || targetValue === ""
+      ? null
+      : !Number.isFinite(parsedTarget) || parsedTarget <= 0
+      ? "Give it a number above zero."
+      : meta?.max && parsedTarget > meta.max
+      ? `Can't be more than ${meta.max}.`
+      : null;
+
   const submit = async () => {
     const trimmed = title.trim();
     if (!trimmed) {
       enqueueSnackbar("Give your goal a title.", { variant: "warning" });
       return;
     }
+    if (measurable && (targetError || targetValue === "")) {
+      enqueueSnackbar(targetError ?? "This goal needs a target to measure against.", {
+        variant: "warning",
+      });
+      return;
+    }
     try {
       await createGoal.mutateAsync({
         title: trimmed,
         description: description.trim() || undefined,
-        target: target.trim() || undefined,
+        kind,
+        targetValue: measurable ? parsedTarget : null,
+        topicFilter: kind === "topic_mastery" ? topicFilter.trim() || null : null,
+        // Only custom goals carry a hand-written target: every other kind has
+        // its label generated server-side from the kind and the number, so what
+        // the card claims and what the evaluator checks stay the same sentence.
+        target: measurable ? undefined : target.trim() || undefined,
         category,
         subjectId: subjectId || null,
-        reward: reward.trim() || undefined,
         dueDate: new Date(`${dueDate}T00:00:00Z`).toISOString(),
       });
       enqueueSnackbar("Goal added.", { variant: "success" });
       onClose();
       reset();
     } catch (err) {
+      // The server's baseline rejection is a real sentence, so it is shown as
+      // written rather than flattened into "something went wrong".
       enqueueSnackbar(
         `Couldn't save the goal${err instanceof Error ? `: ${err.message}` : ""}`,
         { variant: "error" },
@@ -195,6 +447,115 @@ function NewGoalDialog({
             fullWidth
             placeholder="What you'll do to get there."
           />
+
+          {/* Grouped so the trade is visible before the choice is made. Two
+              kinds pay points; the rest are checked just as honestly and pay
+              nothing, and hiding that until after creation would be a bait. */}
+          <TextField
+            label="What proves it"
+            value={kind}
+            onChange={(e) => changeKind(e.target.value as typeof kind)}
+            select
+            fullWidth
+            helperText={meta?.helper}
+          >
+            <ListSubheader sx={{ fontWeight: 700, lineHeight: 2.5 }}>Earns points</ListSubheader>
+            {REWARDED_KINDS.map((k) => (
+              <MenuItem key={k.value} value={k.value}>
+                {k.label}
+              </MenuItem>
+            ))}
+            <ListSubheader sx={{ fontWeight: 700, lineHeight: 2.5 }}>
+              Tracked, no points
+            </ListSubheader>
+            {TRACKED_KINDS.map((k) => (
+              <MenuItem key={k.value} value={k.value}>
+                {k.label}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          {meta?.whyNoPoints && (
+            <Stack direction="row" spacing={1.5} alignItems="flex-start" sx={{ px: 0.5 }}>
+              <Box sx={{ color: "text.secondary", mt: 0.25 }}>
+                <Eye size={16} />
+              </Box>
+              <Typography variant="caption" color="text.secondary">
+                {meta.whyNoPoints}
+              </Typography>
+            </Stack>
+          )}
+
+          {measurable ? (
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <TextField
+                label="Target"
+                value={targetValue}
+                onChange={(e) => setTargetValue(e.target.value.replace(/[^0-9]/g, ""))}
+                fullWidth
+                required
+                error={!!targetError}
+                helperText={targetError ?? " "}
+                slotProps={{
+                  input: {
+                    endAdornment: meta?.unit ? (
+                      <InputAdornment position="end">{meta.unit}</InputAdornment>
+                    ) : undefined,
+                  },
+                  htmlInput: { inputMode: "numeric" },
+                }}
+              />
+              <TextField
+                label="Due date"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                fullWidth
+                helperText=" "
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </Stack>
+          ) : (
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <TextField
+                label="What does done look like?"
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                fullWidth
+                placeholder="e.g. Finish the Chapter 4 notes"
+              />
+              <TextField
+                label="Due date"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                fullWidth
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </Stack>
+          )}
+
+          {kind === "topic_mastery" && (
+            <TextField
+              label="Topic (optional)"
+              value={topicFilter}
+              onChange={(e) => setTopicFilter(e.target.value)}
+              fullWidth
+              placeholder="e.g. Trigonometry"
+              helperText="Leave blank to measure across every topic you practise."
+            />
+          )}
+
+          {/* Only rendered for kinds the server actually gates and pays. */}
+          {measurable && (
+            <BaselinePanel
+              kind={kind}
+              subjectId={subjectId || null}
+              topicFilter={kind === "topic_mastery" ? topicFilter.trim() || null : null}
+              targetValue={validTarget}
+            />
+          )}
+
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
             <TextField
               label="Category"
@@ -216,6 +577,9 @@ function NewGoalDialog({
               select
               fullWidth
               disabled={category !== "academic"}
+              helperText={
+                category === "academic" ? "Narrows what counts toward this goal." : undefined
+              }
             >
               <MenuItem value="">None</MenuItem>
               {units.map((u) => (
@@ -225,30 +589,6 @@ function NewGoalDialog({
               ))}
             </TextField>
           </Stack>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <TextField
-              label="Target"
-              value={target}
-              onChange={(e) => setTarget(e.target.value)}
-              fullWidth
-              placeholder='e.g. "75% mastery" or "3 / 3"'
-            />
-            <TextField
-              label="Due date"
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              fullWidth
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
-          </Stack>
-          <TextField
-            label="Reward (optional)"
-            value={reward}
-            onChange={(e) => setReward(e.target.value)}
-            fullWidth
-            placeholder="What you'll do when you hit it."
-          />
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -297,6 +637,8 @@ function GoalsList({ goals, units }: { goals: Goal[]; units: AcademicUnit[] }) {
             setTab(v as TabValue);
             setReordering(false);
           }}
+          variant="scrollable"
+          scrollButtons={false}
         >
           {TABS.map((t) => (
             <Tab key={t} value={t} label={t} />
@@ -407,15 +749,110 @@ function GoalPriorityRow({ goal, unit }: { goal: Goal; unit?: AcademicUnit }) {
   );
 }
 
+/**
+ * The footer carries what the goal is worth and who says so.
+ *
+ * The distinction it has to hold on to: measurable and rewarded are different
+ * questions. Every kind but "custom" is checked from real work, and only two of
+ * them pay. A points chip on a goal that pays nothing would be the same lie the
+ * old rewards shop told, so an unrewarded goal gets no chip and says "Tracked"
+ * instead.
+ */
+function GoalFooter({ goal }: { goal: Goal }) {
+  const verified = goal.status === "verified";
+  const showPoints = goal.rewarded && goal.rewardPoints > 0;
+
+  return (
+    <Stack spacing={1} sx={{ width: "100%" }}>
+      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        {showPoints && (
+          <Tooltip
+            title={
+              verified
+                ? "Paid on how far you beat your own baseline, times the difficulty you cleared."
+                : "The floor. Beat your target, or clear a harder paper, and it pays more."
+            }
+          >
+            <Chip
+              size="small"
+              icon={<Sparkles size={13} />}
+              label={
+                verified
+                  ? `${goal.rewardPoints.toLocaleString()} pts earned`
+                  : `At least ${goal.rewardPoints.toLocaleString()} pts`
+              }
+              sx={{
+                fontWeight: 600,
+                bgcolor: (t) => alpha(t.palette.achievement.main, 0.14),
+                color: (t) => t.palette.achievement.dark,
+                "& .MuiChip-icon": { color: "inherit", ml: 0.75 },
+              }}
+            />
+          </Tooltip>
+        )}
+
+        {goal.autoVerified ? (
+          <Tooltip
+            title={
+              goal.rewarded
+                ? "Measured from your work. Nobody can set this by hand."
+                : "Measured from your work, but this kind pays no points."
+            }
+          >
+            <Chip
+              size="small"
+              variant="outlined"
+              icon={<ShieldCheck size={13} />}
+              label={goal.rewarded ? "Auto-checked" : "Tracked"}
+              sx={{ "& .MuiChip-icon": { ml: 0.75 } }}
+            />
+          </Tooltip>
+        ) : (
+          <Tooltip title="Nothing to check this against, so you mark it done yourself.">
+            <Chip size="small" variant="outlined" label="Self-tracked" />
+          </Tooltip>
+        )}
+
+        {/* The difficulty is why the payout is the size it is, so it is shown
+            next to it rather than buried. */}
+        {verified && goal.achievedDifficulty && (
+          <Chip
+            size="small"
+            variant="outlined"
+            label={goal.achievedDifficulty}
+            sx={{ textTransform: "capitalize" }}
+          />
+        )}
+      </Stack>
+
+      {/* Without the baseline, "68%" is just a number. With it, it is the
+          distance travelled, which is the thing being rewarded. */}
+      {goal.rewarded && goal.baselineValue != null && (
+        <Typography variant="caption" color="text.secondary">
+          {verified
+            ? `Up from ${goal.baselineValue}% when you set this.`
+            : `Started at ${goal.baselineValue}%. Now ${goal.currentValue}%.`}
+        </Typography>
+      )}
+
+      {/* Legacy free-text rewards. New goals don't set this: points replaced a
+          promise only the student could score. */}
+      {goal.reward && (
+        <Typography variant="caption" color="text.secondary">
+          {goal.reward}
+        </Typography>
+      )}
+    </Stack>
+  );
+}
+
 function GoalCard({ goal, unit }: { goal: Goal; unit?: AcademicUnit }) {
   const { enqueueSnackbar } = useSnackbar();
   const del = useDeleteGoal();
   const { confirm, dialog: confirmDialog } = useConfirm();
-  // verified -> achievement (Sacred-Amber; teacher-confirmed is the
-  // genuine earned moment). completed -> success (forest, "growing
-  // well", student self-marks complete). active -> primary. at_risk
-  // -> warning. info-blue (the old completed value) isn't a brand
-  // zone we use.
+  // verified -> achievement (Sacred-Amber; the genuine earned moment).
+  // completed -> success (forest, "growing well", student self-marks
+  // complete). active -> primary. at_risk -> warning.
   const tone =
     goal.status === "at_risk"
       ? "warning"
@@ -464,7 +901,7 @@ function GoalCard({ goal, unit }: { goal: Goal; unit?: AcademicUnit }) {
         title={goal.title}
         subtitle={unit?.name}
         description={goal.description}
-        progress={{ value: goal.progress, label: `Progress · ${goal.target}` }}
+        progress={{ value: goal.progress, label: progressLabel(goal) }}
         status={{
           kind: tone,
           dot: goal.status === "active" || goal.status === "at_risk",
@@ -475,32 +912,17 @@ function GoalCard({ goal, unit }: { goal: Goal; unit?: AcademicUnit }) {
           ),
         }}
         footerMeta={
-          <>
-            Due <RelativeTime iso={goal.dueDate} />
-          </>
+          goal.status === "verified" && goal.achievedAt ? (
+            <>
+              Verified <RelativeTime iso={goal.achievedAt} />
+            </>
+          ) : (
+            <>
+              Due <RelativeTime iso={goal.dueDate} />
+            </>
+          )
         }
-        actions={
-          goal.reward ? (
-            <Box
-              sx={{
-                width: "100%",
-                p: 1.5,
-                borderRadius: 1.5,
-                bgcolor: (t) => alpha(t.palette.achievement.main, 0.1),
-                border: 1,
-                borderColor: (t) => alpha(t.palette.achievement.main, 0.3),
-                display: "flex",
-                alignItems: "center",
-                gap: 1.5,
-              }}
-            >
-              <RedeemIcon fontSize="small" sx={{ color: "achievement.dark" }} />
-              <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                {goal.reward}
-              </Typography>
-            </Box>
-          ) : undefined
-        }
+        actions={<GoalFooter goal={goal} />}
       />
       {confirmDialog}
     </>

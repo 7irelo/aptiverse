@@ -47,7 +47,7 @@ namespace Aptiverse.Sales.Controllers
             try
             {
                 await _emailSender.SendTemplateEmailAsync(
-                    "hello@aptiverse.co.za",
+                    "support@aptiverse.co.za",
                     $"Contact enquiry: {entry.FirstName} {entry.LastName} ({entry.Reason})",
                     "contact_enquiry",
                     new
@@ -64,7 +64,7 @@ namespace Aptiverse.Sales.Controllers
             catch (Exception ex)
             {
                 _logger.LogWarning(ex,
-                    "Contact-enquiry email send failed for {FirstName} {LastName} ({Email}) — enquiry id {Id} is saved; support can pick it up from the admin dashboard.",
+                    "Contact-enquiry email send failed for {FirstName} {LastName} ({Email}). Enquiry id {Id} is saved; support can pick it up from the admin dashboard.",
                     entry.FirstName, entry.LastName, entry.Email, entry.Id);
             }
 
@@ -82,7 +82,7 @@ namespace Aptiverse.Sales.Controllers
             catch (Exception ex)
             {
                 _logger.LogWarning(ex,
-                    "Contact-enquiry acknowledgement to {Email} failed (enquiry {Id}) — non-fatal.",
+                    "Contact-enquiry acknowledgement to {Email} failed (enquiry {Id}); non-fatal.",
                     entry.Email, entry.Id);
             }
 

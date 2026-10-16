@@ -32,7 +32,7 @@ namespace Aptiverse.Infrastructure.Data
         {
             if (!env.IsDevelopment())
             {
-                logger.LogDebug("Dev test users seeder skipped — not Development environment.");
+                logger.LogDebug("Dev test users seeder skipped: not Development environment.");
                 return;
             }
 
@@ -47,7 +47,7 @@ namespace Aptiverse.Infrastructure.Data
             if (!optIn)
             {
                 logger.LogInformation(
-                    "Dev test users seeder skipped — set SEED_DEV_USERS=true to seed test logins + subscriptions.");
+                    "Dev test users seeder skipped: set SEED_DEV_USERS=true to seed test logins + subscriptions.");
                 return;
             }
 
@@ -115,7 +115,7 @@ namespace Aptiverse.Infrastructure.Data
 
             await db.SaveChangesAsync();
 
-            _ = adminId; // unused — Superuser bypasses entitlement checks via permissions
+            _ = adminId; // unused: Superuser bypasses entitlement checks via permissions
         }
 
         // Drop sample notifications onto a test user when their inbox is
@@ -152,9 +152,9 @@ namespace Aptiverse.Infrastructure.Data
         private static IEnumerable<(string Kind, string Title, string Body, TimeSpan Ago, string? ActionHref, bool Read)>
             StudentSampleNotifications() =>
             [
-                ("celebration", "5-day study streak", "You hit your goals five days in a row — treat yourself to a 'Take a break' moment.", TimeSpan.FromHours(2), "/dashboard/wellbeing", false),
+                ("celebration", "5-day study streak", "You hit your goals five days in a row. Treat yourself to a 'Take a break' moment.", TimeSpan.FromHours(2), "/dashboard/wellbeing", false),
                 ("reminder", "Maths SBA due Friday", "Your Mathematics SBA is due in 3 days. Workspace + AI tutor are ready when you are.", TimeSpan.FromHours(6), "/dashboard/workspace", false),
-                ("info", "Mastery snapshot updated", "Your Maths predicted mark moved from 68% to 72% — keep it up.", TimeSpan.FromDays(1), "/dashboard/mastery", true),
+                ("info", "Mastery snapshot updated", "Your Maths predicted mark moved from 68% to 72%. Keep it up.", TimeSpan.FromDays(1), "/dashboard/mastery", true),
                 ("alert", "Stress trending up", "Your last 3 mood check-ins are dipping. A 3-minute Take A Break helps reset the load.", TimeSpan.FromDays(2), "/dashboard/wellbeing", true),
                 ("info", "Welcome to Aptiverse", "Glad you're here. The help bot in the bottom-right knows how to do everything in the app.", TimeSpan.FromDays(5), null, true),
             ];
@@ -164,7 +164,7 @@ namespace Aptiverse.Infrastructure.Data
             [
                 ("celebration", "Brian hit a study streak", "Your son completed his goals 5 days running. Sending him a quick 'proud of you' goes a long way.", TimeSpan.FromHours(3), "/parent/celebrations", false),
                 ("info", "Weekly family recap is in", "Your weekly mastery + wellbeing recap for both learners is ready to read.", TimeSpan.FromDays(1), "/parent", true),
-                ("alert", "Amara missed yesterday's check-in", "Two days in a row now. Nothing alarming — just worth a low-pressure chat at dinner.", TimeSpan.FromDays(2), "/parent/wellbeing", true),
+                ("alert", "Amara missed yesterday's check-in", "Two days in a row now. Nothing alarming, just worth a low-pressure chat at dinner.", TimeSpan.FromDays(2), "/parent/wellbeing", true),
             ];
 
         private static async Task<string?> EnsureUserAsync(
@@ -292,7 +292,7 @@ namespace Aptiverse.Infrastructure.Data
 
                 sub.Status = "cancelled";
                 sub.UpdatedAt = DateTime.UtcNow;
-                logger.LogInformation("Cancelled legacy {Plan} subscription (id {SubId}) for {UserId} — superseded by {Kept}.",
+                logger.LogInformation("Cancelled legacy {Plan} subscription (id {SubId}) for {UserId}; superseded by {Kept}.",
                     sub.PlanCode, sub.Id, ownerUserId, kept);
             }
         }

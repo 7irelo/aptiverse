@@ -15,16 +15,15 @@ export type QuotaSnapshot = {
 export type UsageSummary = {
   aiQuick: QuotaSnapshot;
   aiDeep: QuotaSnapshot;
-  whatsapp: QuotaSnapshot;
   practiceGenerate: QuotaSnapshot;
 };
 
 // Current-month consumption across every metered quota. Powers the
 // billing-page allowance card and the help-bot drawer's quota meter.
 //
-// staleTime: 30s — usage doesn't change unless the user makes a quota'd
-// call (help bot, deep AI session, WhatsApp message). 30s of cache is
-// enough to keep the meter snappy without showing stale numbers.
+// staleTime: 30s. Usage doesn't change unless the user makes a quota'd call
+// (help bot, deep AI session, generating practice). 30s of cache is enough to
+// keep the meter snappy without showing stale numbers.
 export function useUsage(enabled = true) {
   return useQuery<UsageSummary>({
     queryKey: ["entitlements", "me", "usage"],

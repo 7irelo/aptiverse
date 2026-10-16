@@ -96,7 +96,14 @@ resource "local_sensitive_file" "ssh_private_key" {
 }
 
 # -----------------------------------------------------------------------------
-# RDS Postgres — free tier: db.t3.micro, 20 GB gp2, single-AZ, no backup
+# RDS Postgres — free tier: db.t3.micro, 20 GB gp2, single-AZ.
+#
+# Backups are ON and cost nothing here: the RDS free tier includes backup
+# storage up to the allocated size (20 GB), and this database holds far less
+# than that. It previously ran with retention 0, no final snapshot and no
+# deletion protection, which meant one bad migration or one careless destroy
+# ended the company. It now stores paying-customer records and a POPIA consent
+# trail, so that is not a risk worth carrying for zero saving.
 # -----------------------------------------------------------------------------
 resource "aws_db_subnet_group" "default" {
   name       = "aptiverse-${var.env}"
@@ -116,9 +123,32 @@ resource "aws_db_instance" "postgres" {
   db_subnet_group_name    = aws_db_subnet_group.default.name
   vpc_security_group_ids  = [aws_security_group.rds.id]
   publicly_accessible     = false
-  skip_final_snapshot     = true
-  backup_retention_period = 0
-  deletion_protection     = false
+
+  # One day of point-in-time recovery. This is the ceiling: AWS rejects
+  # anything higher on this account with FreeTierRestrictionError, since the
+  # free plan caps retention rather than only capping backup storage. One day
+  # is a small window, but the gap between one and zero is the gap between a
+  # recoverable mistake and a terminal one. Raise this to 7 the moment the
+  # account moves off the free plan.
+  backup_retention_period = 1
+  # 01:00-02:00 UTC is 03:00-04:00 SAST, the quietest hour for a South African
+  # student audience. The maintenance window must not overlap it.
+  backup_window           = "01:00-02:00"
+  maintenance_window      = "sun:02:30-sun:03:30"
+  copy_tags_to_snapshot   = true
+
+  # A destroy now leaves a restorable snapshot behind instead of nothing, and
+  # deletion protection means an accidental destroy fails rather than
+  # succeeding. Turning the database off is now a deliberate two-step act.
+  skip_final_snapshot       = false
+  final_snapshot_identifier = "aptiverse-${var.env}-final"
+  deletion_protection       = true
+
+  # Going from retention 0 to non-zero briefly suspends I/O on a single-AZ
+  # instance while the first backup is taken. Applying immediately accepts a
+  # few seconds of interruption now rather than leaving the data unprotected
+  # until the next maintenance window.
+  apply_immediately = true
 }
 
 # -----------------------------------------------------------------------------

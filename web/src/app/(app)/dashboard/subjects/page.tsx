@@ -70,15 +70,15 @@ const CATEGORY_LABELS: Record<string, string> = {
 // chip uses clears WCAG AA (≥4.5:1) on every category. The previous
 // values failed for yellow / light-blue / red-orange / blue-grey / pink.
 const CATEGORY_COLOR: Record<string, string> = {
-  language: "#C2421F",         // was #F25C2E — 5.4:1 with white
-  mathematics: "#1F8079",      // unchanged — 5.3:1
-  natural_science: "#1E6BB5",  // was #5BA3E5 — 5.0:1
-  commerce: "#8B6210",         // was #FFB733 — 6.0:1
-  humanities: "#7B1FA2",       // was #9c27b0 — 6.3:1
-  technical: "#455A64",        // was #607d8b — 6.5:1
-  services: "#2A6B45",         // was #3D9762 — 5.5:1
-  arts: "#B0094A",             // was #e91e63 — 5.6:1
-  life_orientation: "#4B4E4A", // neutral graphite — was old-brand pine #0F6963
+  language: "#C2421F",         // was #F25C2E, now 5.4:1 with white
+  mathematics: "#1F8079",      // unchanged, 5.3:1
+  natural_science: "#1E6BB5",  // was #5BA3E5, now 5.0:1
+  commerce: "#8B6210",         // was #FFB733, now 6.0:1
+  humanities: "#7B1FA2",       // was #9c27b0, now 6.3:1
+  technical: "#455A64",        // was #607d8b, now 6.5:1
+  services: "#2A6B45",         // was #3D9762, now 5.5:1
+  arts: "#B0094A",             // was #e91e63, now 5.6:1
+  life_orientation: "#4B4E4A", // neutral graphite, was old-brand pine #0F6963
 };
 
 export default function SubjectsPage() {
@@ -154,7 +154,7 @@ export default function SubjectsPage() {
             No subjects yet
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5, mt: 0.5 }}>
-            Add the subjects you're taking in Grade {profile.grade ?? 10}–12. We've already loaded the catalog for {profile.curriculumId.toUpperCase()}.
+            Add the subjects you're taking in Grade {profile.grade ?? 10} to 12. We've already loaded the catalog for {profile.curriculumId.toUpperCase()}.
           </Typography>
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => setDialogOpen(true)}>
             Add your first subject

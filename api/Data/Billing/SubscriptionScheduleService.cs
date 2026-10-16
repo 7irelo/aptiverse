@@ -1,4 +1,6 @@
+using Aptiverse.Affiliates.Application.Services;
 using Aptiverse.Api.Data;
+using Aptiverse.Api.Utilities;
 using Aptiverse.Core.Services;
 using Aptiverse.Entitlements.Domain.Models;
 using Aptiverse.Entitlements.Infrastructure.Paystack;
@@ -31,12 +33,12 @@ namespace Aptiverse.Api.Data.Billing
         // Consecutive failed renewals before a past-due sub lapses to free.
         private const int MaxRenewalAttempts = 4;
 
-        private const string BillingUrl = "https://aptiverse.co.za/dashboard/billing";
+        private static string BillingUrl => WebApp.Url("/dashboard/billing");
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             logger.LogInformation(
-                "SubscriptionScheduleService started — charging due renewals + downgrades every {Min} min.",
+                "SubscriptionScheduleService started: charging due renewals + downgrades every {Min} min.",
                 Interval.TotalMinutes);
 
             using var timer = new PeriodicTimer(Interval);
@@ -63,6 +65,7 @@ namespace Aptiverse.Api.Data.Billing
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var paystack = scope.ServiceProvider.GetRequiredService<IPaystackClient>();
             var email = scope.ServiceProvider.GetRequiredService<IEmailSender>();
+            var affiliates = scope.ServiceProvider.GetRequiredService<IAffiliateLedger>();
 
             var now = DateTime.UtcNow;
             // Every sub whose paid period has elapsed and that we can charge:
@@ -141,6 +144,30 @@ namespace Aptiverse.Api.Data.Billing
                     logger.LogInformation(
                         "Renewal {Id}: charged {Plan} {Amt}c; next charge {Next:o}.",
                         sub.Id, effectivePlanCode, amountMinor, sub.ValidUntil);
+
+                    // Payments two and three of a referral almost always come
+                    // through here rather than through checkout: this is where
+                    // a monthly renewal is actually charged. A commission hook
+                    // that only watched first payments would pay a third of
+                    // what the programme promises.
+                    //
+                    // Idempotent on the Paystack reference, so the charge.success
+                    // webhook that follows this charge accrues nothing extra.
+                    if (!string.IsNullOrWhiteSpace(charge.Reference))
+                    {
+                        await affiliates.RecordPaymentAsync(new AffiliatePaymentReceipt
+                        {
+                            PayerUserId = sub.OwnerUserId,
+                            PaymentReference = charge.Reference!,
+                            AmountZar = priceZar,
+                            PaidAt = now,
+                            SubscriptionId = sub.Id,
+                            PlanCode = effectivePlanCode,
+                            CardSignature = charge.CardSignature,
+                            CardBrand = charge.CardBrand,
+                            CardLast4 = charge.CardLast4,
+                        }, ct);
+                    }
                     await TrySendAsync(email, sub.BillingEmail, "Your Aptiverse payment", "payment_receipt", new
                     {
                         PlanName = plan.Name,

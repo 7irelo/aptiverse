@@ -14,10 +14,10 @@ import EmailIcon from "@mui/icons-material/EmailOutlined";
 import ChatIcon from "@mui/icons-material/ChatBubbleOutline";
 
 const FAQS = [
-  { q: "How does AI generate practice tests?", a: "We use your subject, current mastery and upcoming SBAs to generate aligned questions, then mark them with rubric-aware feedback." },
-  { q: "Is my diary private?", a: "Yes. Your diary is end-to-end encrypted by default. Even Aptiverse staff cannot read it." },
-  { q: "How do rewards get verified?", a: "Your school confirms with one click via an email — no paperwork on the teacher." },
-  { q: "Can I use Aptiverse offline?", a: "Yes. Practice tests, diary entries and goal modules work offline and sync when you're back online." },
+  { q: "How does AI generate practice tests?", a: "We use the subject or course you pick, the topics you choose, and your existing topic vocabulary to generate aligned questions, then mark them with feedback." },
+  { q: "Is my diary private?", a: "Your entries are yours: no parent, teacher or other student can see them. Two things you should know honestly. They are stored on our servers, not end-to-end encrypted, so treat it as private rather than sealed. And our AI reads each entry to work out the mood trend on your wellbeing page." },
+  { q: "How do rewards get verified?", a: "Measurable goals verify themselves from your own work: your logged marks and your practice results. There is nobody to ask and nothing to submit." },
+  { q: "Can I use Aptiverse offline?", a: "Not yet. Aptiverse needs a connection: practice tests are generated on demand, and your work saves to your account as you go. If you lose signal mid-test, finish the question you are on and wait for the connection before submitting." },
 ];
 
 export default function HelpPage() {

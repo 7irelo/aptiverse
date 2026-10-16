@@ -6,6 +6,9 @@ import Typography from "@mui/material/Typography";
 import type { SxProps, Theme } from "@mui/material/styles";
 
 export type SectionProps = {
+  // Anchor target, so navigation can deep-link to a section of a long page.
+  // The scroll offset below keeps the heading clear of the sticky header.
+  id?: string;
   eyebrow?: string;
   title?: React.ReactNode;
   subtitle?: React.ReactNode;
@@ -19,6 +22,7 @@ export type SectionProps = {
 };
 
 export function Section({
+  id,
   eyebrow,
   title,
   subtitle,
@@ -34,7 +38,16 @@ export function Section({
     bg === "paper" ? "background.paper" : bg === "muted" ? "action.hover" : "transparent";
 
   return (
-    <Box component="section" sx={{ py: { xs: py * 0.5, md: py }, bgcolor, ...sx }}>
+    <Box
+      component="section"
+      id={id}
+      sx={{
+        py: { xs: py * 0.5, md: py },
+        bgcolor,
+        scrollMarginTop: { xs: 72, md: 88 },
+        ...sx,
+      }}
+    >
       <Box
         sx={{
           maxWidth: 1240,

@@ -41,7 +41,7 @@ namespace Aptiverse.Wellbeing.Application.Reminders
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             logger.LogInformation(
-                "WellbeingCheckinReminderService started — polling every {Interval}, nudging after {Hour}:00 SAST.",
+                "WellbeingCheckinReminderService started: polling every {Interval}, nudging after {Hour}:00 SAST.",
                 PollInterval, ReminderHourSast);
 
             using var timer = new PeriodicTimer(PollInterval);

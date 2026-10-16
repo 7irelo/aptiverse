@@ -11,11 +11,24 @@ import Skeleton from "@mui/material/Skeleton";
 import Button from "@mui/material/Button";
 import { alpha, useTheme, type Theme } from "@mui/material/styles";
 import Link from "next/link";
-import { RadarChart } from "@mui/x-charts/RadarChart";
-import { ScatterChart } from "@mui/x-charts/ScatterChart";
-import { LineChart } from "@mui/x-charts/LineChart";
-import { ChartsReferenceLine } from "@mui/x-charts/ChartsReferenceLine";
+import dynamic from "next/dynamic";
 import { TrendingUp, Target } from "lucide-react";
+
+// @mui/x-charts is heavy and never needed for this page's first paint. The
+// three chart views live in a sibling client module and load as one shared
+// lazy chunk, each behind a height-reserved skeleton so nothing shifts.
+const CoverageRadar = dynamic(
+  () => import("./MasteryCharts").then((m) => m.CoverageRadar),
+  { ssr: false, loading: () => <Skeleton variant="rounded" height={320} /> },
+);
+const MomentumScatter = dynamic(
+  () => import("./MasteryCharts").then((m) => m.MomentumScatter),
+  { ssr: false, loading: () => <Skeleton variant="rounded" height={340} /> },
+);
+const ProjectionLine = dynamic(
+  () => import("./MasteryCharts").then((m) => m.ProjectionLine),
+  { ssr: false, loading: () => <Skeleton variant="rounded" height={320} /> },
+);
 import { PageHeader } from "@/components/common/PageHeader";
 import { ProgressRing } from "@/components/common/ProgressRing";
 import { GroupedList } from "@/components/common/GroupedList";
@@ -29,6 +42,7 @@ import {
   type TermPrediction,
 } from "@/lib/api/queries";
 import { prettifyUnitId } from "@/lib/format";
+import { useStudyVocabulary } from "@/lib/hooks/useStudyVocabulary";
 import ArrowDropUpIcon from "@mui/icons-material/ArrowDropUp";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import InsightsIcon from "@mui/icons-material/InsightsOutlined";
@@ -37,6 +51,7 @@ export default function MasteryPage() {
   const masteryQuery = useTopicMastery();
   const predictionsQuery = useTermPredictions();
   const academic = useAcademicUnits();
+  const vocab = useStudyVocabulary();
 
   const topics = masteryQuery.data ?? [];
   const predictions = predictionsQuery.data ?? [];
@@ -49,7 +64,7 @@ export default function MasteryPage() {
     <AtmosphericBackdrop>
       <PageHeader
         title="Mastery"
-        description="Where you're growing, where you're stuck, and what's coming next term."
+        description={`Where you're growing, where you're stuck, and what's coming next ${vocab.periodSingular}.`}
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Mastery" }]}
       />
 
@@ -84,6 +99,7 @@ export default function MasteryPage() {
 // ── states ────────────────────────────────────────────────────────────
 
 function EmptyMastery() {
+  const vocab = useStudyVocabulary();
   return (
     <Card>
       <CardContent sx={{ py: 8, textAlign: "center" }}>
@@ -107,7 +123,8 @@ function EmptyMastery() {
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 420, mx: "auto", mb: 3 }}>
           Take a few practice tests and log your graded marks. Topic-by-topic mastery and
-          predicted next-term marks build from your real answers, not guesses.
+          predicted {vocab.nextPeriod}{" "}
+          marks build from your real answers, not guesses.
         </Typography>
         <Stack direction="row" spacing={1.5} justifyContent="center" flexWrap="wrap" useFlexGap>
           <Button component={Link} href="/dashboard/practice" variant="contained" color="secondary">
@@ -166,6 +183,7 @@ function MasteryView({
   labelFor: (subjectId: string) => string;
 }) {
   const theme = useTheme();
+  const vocab = useStudyVocabulary();
   const hasTopics = topics.length > 0;
 
   const overall = hasTopics
@@ -270,23 +288,10 @@ function MasteryView({
                     Mastery by {unitNoun}
                   </Typography>
                   <Box sx={{ width: "100%", mx: "auto", maxWidth: 480 }}>
-                    <RadarChart
-                      height={320}
-                      hideLegend
-                      radar={{
-                        max: 100,
-                        metrics: bySubject.map((s) => s.name),
-                        labelFormatter: (name) =>
-                          name.length > 14 ? `${name.slice(0, 13)}…` : name,
-                      }}
-                      series={[
-                        {
-                          label: "Mastery",
-                          data: bySubject.map((s) => s.avg),
-                          fillArea: true,
-                          color: theme.palette.secondary.main,
-                        },
-                      ]}
+                    <CoverageRadar
+                      metrics={bySubject.map((s) => s.name)}
+                      values={bySubject.map((s) => s.avg)}
+                      color={theme.palette.secondary.main}
                     />
                   </Box>
                 </CardContent>
@@ -333,14 +338,17 @@ function MasteryView({
             <>
               <ProjectionSlope predictions={predictions} labelFor={labelFor} />
               <Typography variant="caption" color="text.secondary">
-                Each line runs from your current term mark to the predicted next-term mark. Rising
-                lines mean momentum; predictions strengthen as you log marks and practise.
+                Each line runs from your current {vocab.periodSingular}{" "}
+                mark to the predicted {vocab.nextPeriod}{" "}
+                mark. Rising lines mean momentum; predictions
+                strengthen as you log marks and practise.
               </Typography>
             </>
           ) : (
             <Box sx={{ py: 5, textAlign: "center" }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Log a couple of graded marks to see a predicted next-term projection here.
+                Log a couple of graded marks to see a predicted {vocab.nextPeriod}{" "}
+                projection here.
               </Typography>
               <Button component={Link} href="/dashboard/assessments" variant="outlined" size="small">
                 Log a mark
@@ -433,22 +441,7 @@ function MomentumCard({ topics }: { topics: TopicMastery[] }) {
         <Typography variant="h6" sx={{ mb: 0.5 }}>
           What's rising, what needs attention
         </Typography>
-        <ScatterChart
-          height={340}
-          grid={{ horizontal: true, vertical: true }}
-          xAxis={[{ min: 0, max: 100, label: "Mastery %" }]}
-          yAxis={[{ min: -trendMax, max: trendMax, label: "Recent change" }]}
-          series={series}
-        >
-          <ChartsReferenceLine
-            x={50}
-            lineStyle={{ stroke: theme.palette.divider, strokeDasharray: "4 4" }}
-          />
-          <ChartsReferenceLine
-            y={0}
-            lineStyle={{ stroke: theme.palette.divider, strokeDasharray: "4 4" }}
-          />
-        </ScatterChart>
+        <MomentumScatter series={series} trendMax={trendMax} />
         <Typography variant="caption" color="text.secondary">
           Each dot is a topic: further right is stronger, higher is improving faster. Aim to move
           the lower-left dots up and to the right.
@@ -466,26 +459,17 @@ function ProjectionSlope({
   labelFor: (subjectId: string) => string;
 }) {
   const theme = useTheme();
-  return (
-    <LineChart
-      height={320}
-      xAxis={[{ data: ["Current", "Predicted"], scaleType: "point" }]}
-      yAxis={[{ min: 0, max: 100 }]}
-      series={predictions.map((p) => {
-        const rising = p.predictedNextTerm >= p.currentTerm;
-        return {
-          label: labelFor(p.subjectId),
-          data: [p.currentTerm, p.predictedNextTerm],
-          color: rising ? theme.palette.success.main : theme.palette.warning.main,
-          curve: "linear" as const,
-          showMark: true,
-        };
-      })}
-      margin={{ top: 20, right: 24, bottom: 28, left: 40 }}
-      grid={{ horizontal: true }}
-      hideLegend={predictions.length > 6}
-    />
-  );
+  const series = predictions.map((p) => {
+    const rising = p.predictedNextTerm >= p.currentTerm;
+    return {
+      label: labelFor(p.subjectId),
+      data: [p.currentTerm, p.predictedNextTerm],
+      color: rising ? theme.palette.success.main : theme.palette.warning.main,
+      curve: "linear" as const,
+      showMark: true,
+    };
+  });
+  return <ProjectionLine series={series} hideLegend={predictions.length > 6} />;
 }
 
 function MiniStat({ value, label, tint }: { value: number; label: string; tint?: string }) {

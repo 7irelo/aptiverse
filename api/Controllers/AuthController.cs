@@ -15,10 +15,12 @@ namespace Aptiverse.Auth.Controllers
     public class AuthController(
     IAuthService authService,
     IOAuthExchangeService oauthExchangeService,
+    Aptiverse.Api.Data.Email.AffiliateWelcomeEmail affiliateWelcome,
     ILogger<AuthController> logger) : ControllerBase
     {
         private readonly IAuthService _authService = authService;
         private readonly IOAuthExchangeService _oauthExchangeService = oauthExchangeService;
+        private readonly Aptiverse.Api.Data.Email.AffiliateWelcomeEmail _affiliateWelcome = affiliateWelcome;
         private readonly ILogger<AuthController> _logger = logger;
 
         [HttpPost("register")]
@@ -28,6 +30,18 @@ namespace Aptiverse.Auth.Controllers
             {
                 await _authService.RegisterUserAsync(registerDto);
                 return Ok(200);
+            }
+            // 409, not 400: the request was well-formed, the account just
+            // already exists. The distinct type lets the sign-up page point the
+            // person at sign-in instead of showing a red validation error.
+            catch (DuplicateAccountException ex)
+            {
+                return Conflict(new
+                {
+                    message = ex.Message,
+                    type = "EmailInUse",
+                    email = ex.Email
+                });
             }
             catch (UserRegistrationException ex)
             {
@@ -113,6 +127,46 @@ namespace Aptiverse.Auth.Controllers
             }
         }
 
+        // The one endpoint that can bring a session back from the dead.
+        //
+        // [AllowAnonymous] is the entire point, not an oversight: refresh-token
+        // above is [Authorize], so it needs the very access token it is
+        // replacing, and once that four hour token lapses there is no way back
+        // in. This one authenticates on the refresh token in the body instead,
+        // which is a credential in its own right — validated against the store,
+        // single use, and rotated on every call.
+        [HttpPost("refresh")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Refresh([FromBody] RefreshRequestDto request)
+        {
+            try
+            {
+                var result = await _authService.RefreshAccessTokenAsync(request?.RefreshToken ?? string.Empty);
+                return Ok(result);
+            }
+            catch (TokenRefreshException ex)
+            {
+                // 401 for every rejection: unknown, expired, already used,
+                // malformed. The client's job is the same in all four cases —
+                // stop, and send the user to sign in.
+                return Unauthorized(new
+                {
+                    message = ex.Message,
+                    type = "TokenRefreshError"
+                });
+            }
+            catch (Exception ex)
+            {
+                // Never log the request body here — it carries the credential.
+                _logger.LogError(ex, "Unexpected error during refresh-token exchange");
+                return StatusCode(500, new
+                {
+                    message = "An unexpected error occurred during token refresh",
+                    type = "ServerError"
+                });
+            }
+        }
+
         [HttpPost("validate-token")]
         public async Task<IActionResult> ValidateToken([FromBody] ValidateTokenDto validateTokenDto)
         {
@@ -142,11 +196,14 @@ namespace Aptiverse.Auth.Controllers
 
         [HttpPost("logout")]
         [Authorize]
-        public async Task<IActionResult> Logout()
+        // Body is optional and backwards compatible: an older client that posts
+        // nothing still logs out, it just leaves its refresh token to expire on
+        // its own. A client that sends one gets it revoked immediately.
+        public async Task<IActionResult> Logout([FromBody] RefreshRequestDto? request = null)
         {
             try
             {
-                var result = await _authService.LogoutUserAsync(User);
+                var result = await _authService.LogoutUserAsync(User, request?.RefreshToken);
                 return Ok(result);
             }
             catch (AuthenticationException)
@@ -354,22 +411,30 @@ namespace Aptiverse.Auth.Controllers
         }
 
         [HttpPost("confirm-email")]
-        public async Task<IActionResult> ConfirmEmail([FromQuery] string userId, [FromQuery] string token)
+        public async Task<IActionResult> ConfirmEmail([FromQuery] string userId, [FromQuery] string token, CancellationToken ct)
         {
+            ConfirmEmailResult confirmed;
             try
             {
-                await _authService.ConfirmEmail(userId, token);
-                return Ok();
+                confirmed = await _authService.ConfirmEmail(userId, token);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error while confirming email");
-                return StatusCode(500, new
+                _logger.LogWarning(ex, "Email confirmation failed for {UserId}", userId);
+                return BadRequest(new
                 {
-                    message = "An unexpected error occurred while confirming email",
-                    type = "ServerError"
+                    message = "That confirmation link is not valid any more. Request a new one.",
+                    type = "ConfirmEmailFailed"
                 });
             }
+
+            // The address is confirmed at this point and the response does not
+            // depend on what follows. The referral email is best-effort and
+            // silent about its own failures by design.
+            await _affiliateWelcome.SendAsync(
+                confirmed.UserId, confirmed.Email, confirmed.FirstName, ct);
+
+            return Ok(new { ok = true });
         }
     }
 }

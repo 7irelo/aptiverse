@@ -203,7 +203,7 @@ function SubjectView({
               </Typography>
               {practiceTests.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                  No practice tests yet — generate one from your weakest topics.
+                  No practice tests yet. Generate one from your weakest topics.
                 </Typography>
               ) : (
                 <Stack spacing={1.25}>

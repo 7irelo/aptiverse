@@ -49,7 +49,7 @@ namespace Aptiverse.Calendar.Application.Reminders.Scheduling
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             logger.LogInformation(
-                "ReminderSchedulerService started — polling Calendar reminders every {Interval}.",
+                "ReminderSchedulerService started: polling Calendar reminders every {Interval}.",
                 PollInterval);
 
             using var timer = new PeriodicTimer(PollInterval);
@@ -134,7 +134,7 @@ namespace Aptiverse.Calendar.Application.Reminders.Scheduling
                     if (string.IsNullOrWhiteSpace(userId))
                     {
                         logger.LogWarning(
-                            "Skipping reminder {ReminderId} — event has no UserId (StudentId is empty).",
+                            "Skipping reminder {ReminderId}: event has no UserId (StudentId is empty).",
                             item.ReminderId);
                         continue;
                     }

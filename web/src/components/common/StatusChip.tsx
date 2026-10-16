@@ -27,7 +27,11 @@ export function StatusChip({ kind = "neutral", dot, sx, ...rest }: StatusChipPro
     info: theme.palette.info.main,
     neutral: theme.palette.text.secondary,
     primary: theme.palette.primary.main,
-    secondary: theme.palette.secondary.main,
+    // secondary.dark, not .main. This chip paints the colour as TEXT on a 12%
+    // wash of itself, and citron as text is 1.4:1 on light paper, so a
+    // "secondary" status chip was unreadable in light mode. secondary.dark is
+    // the deep citron kept legal for ink in both schemes.
+    secondary: theme.palette.secondary.dark,
     // Sacred-Amber Rule (DESIGN.md): reserved for earned milestones
     // (verified goals, real streaks, claimed rewards). Never decorative.
     achievement: theme.palette.achievement.main,

@@ -4,6 +4,7 @@
 
 using Aptiverse.Api.Data.Abstractions;
 using Aptiverse.Api.Data.Email;
+using Aptiverse.Api.Data.Identity;
 using Aptiverse.Core.Services;
 using Aptiverse.Domain.Interfaces;
 using Aptiverse.Domain.Models;
@@ -14,6 +15,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
@@ -32,14 +34,28 @@ namespace Aptiverse.Api.Data
 
             // Unified Postgres-backed DbContext. Migrations live in
             // api/Aptiverse.Api/Migrations/ — the host assembly itself.
+            //
+            // Sensitive-data logging writes raw SQL parameter values into the
+            // logs: emails, password-reset and email-confirmation tokens,
+            // parent-link invite tokens, Paystack customer codes and card
+            // metadata, diary text. That is a useful dev affordance and a
+            // serious disclosure risk anywhere else, so it is gated on the
+            // hosting environment rather than left on for every deployment.
             services.AddDbContext<ApplicationDbContext>((sp, options) =>
+            {
+                var isDevelopment = string.Equals(
+                    sp.GetRequiredService<IHostEnvironment>().EnvironmentName,
+                    Environments.Development,
+                    StringComparison.OrdinalIgnoreCase);
+
                 options.UseNpgsql(
                     configuration.GetConnectionString("DefaultConnection"),
                     b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName))
                        .UseSnakeCaseNamingConvention()
                        .AddInterceptors(sp.GetRequiredService<AuditableEntityInterceptor>())
-                       .EnableSensitiveDataLogging()
-                       .EnableDetailedErrors());
+                       .EnableSensitiveDataLogging(isDevelopment)
+                       .EnableDetailedErrors(isDevelopment);
+            });
 
             services.AddIdentity<User, IdentityRole>(options =>
             {
@@ -57,11 +73,26 @@ namespace Aptiverse.Api.Data
                 options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
                 options.User.RequireUniqueEmail = true;
 
-                options.SignIn.RequireConfirmedEmail = false;
+                // An unverified address cannot sign in. Note that this option only
+                // governs SignInManager; the password login path in AuthService
+                // uses UserManager.CheckPasswordAsync and enforces the same rule
+                // explicitly. Both are needed: this one covers any future
+                // SignInManager use, that one covers the path we actually run.
+                options.SignIn.RequireConfirmedEmail = true;
                 options.SignIn.RequireConfirmedPhoneNumber = false;
+
+                // Password-reset tokens get their own short-lived provider. The
+                // default data-protection provider issues tokens good for a day,
+                // which is a long window for something that can take an account
+                // over, and it contradicts what the reset email and the reset
+                // page both promise ("expires in 30 minutes"). Confirmation
+                // tokens stay on the default lifespan, where a day is fine
+                // because people often confirm an address hours later.
+                options.Tokens.PasswordResetTokenProvider = ResetPasswordTokenProviderOptions.ProviderName;
             })
             .AddEntityFrameworkStores<ApplicationDbContext>()
-            .AddDefaultTokenProviders();
+            .AddDefaultTokenProviders()
+            .AddTokenProvider<ResetPasswordTokenProvider<User>>(ResetPasswordTokenProviderOptions.ProviderName);
 
             services.AddRedisServices(configuration);
 
@@ -73,6 +104,12 @@ namespace Aptiverse.Api.Data
             // email-smtp.{region}.amazonaws.com plus SES SMTP credentials.
             services.AddSingleton<EmailQueue>();
             services.AddHostedService<EmailDispatcher>();
+
+            // Composes the one-time referral-link email sent on successful
+            // email verification. Takes IAffiliateService as an OPTIONAL
+            // constructor argument, so it resolves and no-ops cleanly in a
+            // deployment where the affiliate programme is not registered.
+            services.AddScoped<Aptiverse.Api.Data.Email.AffiliateWelcomeEmail>();
 
             // Sends tutors connection/review notifications, gating the email on
             // their Settings preferences. Scoped — uses ApplicationDbContext.
@@ -104,6 +141,12 @@ namespace Aptiverse.Api.Data
             // downgrades at period end. Singleton hosted service — resolves
             // scoped ApplicationDbContext + IPaystackClient per poll.
             services.AddHostedService<Data.Billing.SubscriptionScheduleService>();
+
+            // AI practice-test generation (BackgroundService). Drains queued
+            // PracticeGenerationJob rows ONE at a time — see the constant and
+            // its comment: production is a 1 GiB burstable t3.micro and this
+            // work used to run inline on the request thread.
+            services.AddHostedService<Aptiverse.Practice.Application.Practice.Services.PracticeGenerationWorker>();
 
             // Auth's repository contract (Aptiverse.Domain.Interfaces.IRepository<T>).
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));

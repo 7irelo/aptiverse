@@ -37,11 +37,14 @@ namespace Aptiverse.Marketplace.Controllers
                               join u in _db.Set<User>().AsNoTracking() on t.UserId equals u.Id
                               select new { t, u }).ToListAsync(ct);
 
+            // Placement is earned: featured tutors first, then verified, then
+            // rating. FeaturedRank lets the platform lift specific tutors.
             var tutors = rows
+                .OrderByDescending(x => x.t.FeaturedRank)
+                .ThenByDescending(x => x.t.IsVerified)
+                .ThenByDescending(x => x.t.Rating)
+                .ThenBy(x => $"{x.u.FirstName} {x.u.LastName}".Trim())
                 .Select(x => ToTutorDto(x.t, x.u))
-                .OrderByDescending(d => d.Verified)
-                .ThenByDescending(d => d.Rating)
-                .ThenBy(d => d.Name)
                 .ToList();
             return Ok(tutors);
         }
@@ -72,6 +75,11 @@ namespace Aptiverse.Marketplace.Controllers
             Rating = t.Rating,
             ReviewCount = t.TotalReviews,
             Verified = t.IsVerified,
+            TutorKind = string.IsNullOrWhiteSpace(t.TutorKind) ? "university_student" : t.TutorKind,
+            Institution = t.Institution ?? "",
+            StudyingToward = t.StudyingToward ?? "",
+            MatricYear = t.MatricYear,
+            Featured = t.FeaturedRank > 0,
         };
 
         [HttpGet("tutors/{id}/reviews")]
@@ -125,6 +133,12 @@ namespace Aptiverse.Marketplace.Controllers
             if (body.Bio is not null) t.Bio = body.Bio.Trim();
             if (body.TeachingStyle is not null) t.TeachingStyle = body.TeachingStyle.Trim();
             if (body.YearsOfExperience is not null) t.YearsOfExperience = Math.Max(0, body.YearsOfExperience.Value);
+            if (body.TutorKind is not null)
+                t.TutorKind = body.TutorKind is "university_student" or "graduate" or "completed_matric"
+                    ? body.TutorKind : "university_student";
+            if (body.Institution is not null) t.Institution = body.Institution.Trim();
+            if (body.StudyingToward is not null) t.StudyingToward = body.StudyingToward.Trim();
+            if (body.MatricYear is not null) t.MatricYear = body.MatricYear.Value <= 0 ? null : body.MatricYear.Value;
             if (body.AcceptingStudents is not null) t.AcceptingStudents = body.AcceptingStudents.Value;
             if (body.AvailableDays is not null) t.AvailableDays = body.AvailableDays.Trim();
             if (body.EarliestHour is not null) t.EarliestHour = Math.Clamp(body.EarliestHour.Value, 0, 23);
@@ -150,6 +164,11 @@ namespace Aptiverse.Marketplace.Controllers
             IsVerified = t.IsVerified,
             Rating = t.Rating,
             TotalReviews = t.TotalReviews,
+            TutorKind = string.IsNullOrWhiteSpace(t.TutorKind) ? "university_student" : t.TutorKind,
+            Institution = t.Institution ?? "",
+            StudyingToward = t.StudyingToward ?? "",
+            MatricYear = t.MatricYear,
+            Connects = t.Connects,
             AcceptingStudents = t.AcceptingStudents,
             AvailableDays = t.AvailableDays ?? "",
             EarliestHour = t.EarliestHour,
@@ -249,6 +268,11 @@ namespace Aptiverse.Marketplace.Controllers
         [JsonPropertyName("isVerified")] public bool IsVerified { get; init; }
         [JsonPropertyName("rating")] public double Rating { get; init; }
         [JsonPropertyName("totalReviews")] public int TotalReviews { get; init; }
+        [JsonPropertyName("tutorKind")] public string TutorKind { get; init; } = "university_student";
+        [JsonPropertyName("institution")] public string Institution { get; init; } = "";
+        [JsonPropertyName("studyingToward")] public string StudyingToward { get; init; } = "";
+        [JsonPropertyName("matricYear")] public int? MatricYear { get; init; }
+        [JsonPropertyName("connects")] public int Connects { get; init; }
         [JsonPropertyName("acceptingStudents")] public bool AcceptingStudents { get; init; }
         [JsonPropertyName("availableDays")] public string AvailableDays { get; init; } = "";
         [JsonPropertyName("earliestHour")] public int EarliestHour { get; init; }
@@ -266,6 +290,10 @@ namespace Aptiverse.Marketplace.Controllers
         [JsonPropertyName("bio")] public string? Bio { get; init; }
         [JsonPropertyName("teachingStyle")] public string? TeachingStyle { get; init; }
         [JsonPropertyName("yearsOfExperience")] public int? YearsOfExperience { get; init; }
+        [JsonPropertyName("tutorKind")] public string? TutorKind { get; init; }
+        [JsonPropertyName("institution")] public string? Institution { get; init; }
+        [JsonPropertyName("studyingToward")] public string? StudyingToward { get; init; }
+        [JsonPropertyName("matricYear")] public int? MatricYear { get; init; }
         [JsonPropertyName("acceptingStudents")] public bool? AcceptingStudents { get; init; }
         [JsonPropertyName("availableDays")] public string? AvailableDays { get; init; }
         [JsonPropertyName("earliestHour")] public int? EarliestHour { get; init; }

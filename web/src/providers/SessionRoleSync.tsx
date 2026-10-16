@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRoleStore, type Role } from "./RoleProvider";
 
-const VALID_ROLES: Role[] = ["student", "parent", "teacher", "school_admin", "tutor", "admin", "super_admin"];
+const VALID_ROLES: Role[] = ["student", "parent", "teacher", "school_admin", "tutor", "affiliate", "admin", "super_admin"];
 
 // Mirrors the authenticated user's role from the NextAuth session into
 // the zustand role store. The store is the single read source for the

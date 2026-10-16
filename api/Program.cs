@@ -7,6 +7,7 @@
 // projects into a new host, drop the references in this csproj, and
 // route the matching API path at the gateway.
 
+using Aptiverse.Api.Data.Json;     // UtcDateTimeConverter
 using Aptiverse.Auth;             // AddInfrastructure (host-level wire-up)
 using Aptiverse.Auth.Middleware;   // filter classes
 using Aptiverse.Auth.Utilities;    // BearerSecuritySchemeTransformer
@@ -99,6 +100,14 @@ builder.Services.AddControllers(opt =>
     opt.Filters.Add<ValidationFilter>();
     opt.Filters.Add<ExceptionHandlingFilter>();
     opt.Filters.Add<LoggingFilter>();
+})
+.AddJsonOptions(opt =>
+{
+    // See UtcDateTimeConverter: without this, any DateTime arriving without an
+    // offset (which is what an <input type="date"> sends) reaches Npgsql as
+    // Kind=Unspecified and the write throws. It made logging an assessment and
+    // creating a goal both return a 500.
+    opt.JsonSerializerOptions.Converters.Add(new UtcDateTimeConverter());
 });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -109,6 +118,11 @@ builder.Services.AddOpenApi(options =>
 builder.Services.AddAntiforgery();
 
 var app = builder.Build();
+
+// Resolve the public web app origin used in outbound links (invite emails,
+// reminders, billing, verification) from App:WebBaseUrl, before any background
+// worker can tick. Falls back to the production domain when unset.
+Aptiverse.Api.Utilities.WebApp.Configure(builder.Configuration);
 
 // Seed Identity roles on first run (idempotent). This is structural —
 // the Student / Teacher / Admin / etc. role definitions need to exist

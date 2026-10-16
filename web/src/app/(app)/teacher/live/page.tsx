@@ -18,6 +18,7 @@ import { StatCard } from "@/components/common/StatCard";
 import { QueryStates } from "@/components/common/QueryStates";
 import { useLiveActivity, type LiveActivity } from "@/lib/api/queries";
 import { useTicker } from "@/lib/hooks/useTicker";
+import { useChartSeriesColors } from "@/components/common/chartPalette";
 
 export default function TeacherLivePage() {
   const query = useLiveActivity(30);
@@ -53,6 +54,7 @@ export default function TeacherLivePage() {
 }
 
 function LiveView({ items }: { items: LiveActivity[] }) {
+  const seriesColor = useChartSeriesColors();
   const tick = useTicker(2000);
   const [series, setSeries] = useState<number[]>(Array.from({ length: 30 }, () => 50 + Math.round(Math.random() * 30)));
   const [scoreSeries, setScoreSeries] = useState<number[]>(Array.from({ length: 30 }, () => 40 + Math.round(Math.random() * 50)));
@@ -114,8 +116,8 @@ function LiveView({ items }: { items: LiveActivity[] }) {
                 xAxis={[{ data: Array.from({ length: 30 }, (_, i) => `${30 - i}s`), scaleType: "point" }]}
                 yAxis={[{ min: 0, max: 100 }]}
                 series={[
-                  { data: series, label: "Avg focus", color: "#0F6963", showMark: false, area: true },
-                  { data: scoreSeries, label: "Avg quiz score", color: "#F25C2E", showMark: false },
+                  { data: series, label: "Avg focus", color: seriesColor(0), showMark: false, area: true },
+                  { data: scoreSeries, label: "Avg quiz score", color: seriesColor(1), showMark: false },
                 ]}
               />
             </CardContent>

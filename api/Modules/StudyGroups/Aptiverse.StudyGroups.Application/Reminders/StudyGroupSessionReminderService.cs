@@ -36,7 +36,7 @@ namespace Aptiverse.StudyGroups.Application.Reminders
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             logger.LogInformation(
-                "StudyGroupSessionReminderService started — polling sessions every {Interval}, reminding {Window} min ahead.",
+                "StudyGroupSessionReminderService started: polling sessions every {Interval}, reminding {Window} min ahead.",
                 PollInterval, ReminderWindowMinutes);
 
             using var timer = new PeriodicTimer(PollInterval);
@@ -158,7 +158,12 @@ namespace Aptiverse.StudyGroups.Application.Reminders
                                         ["GroupName"] = groupName,
                                         ["Title"] = title,
                                         ["Minutes"] = mins.ToString(),
-                                        ["Url"] = "https://aptiverse.co.za/dashboard/study-groups",
+                                        // Straight to the group the session belongs
+                                        // to, not the list. The reminder is about
+                                        // one session; making the reader find it
+                                        // again in a list is a wasted click.
+                                        ["Url"] = Aptiverse.Api.Utilities.WebApp.Url(
+                                            $"/dashboard/study-groups/{item.StudyGroupId}"),
                                     },
                                     EnqueuedAt: DateTime.UtcNow), ct);
                             }

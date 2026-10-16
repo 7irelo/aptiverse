@@ -1,14 +1,17 @@
 // Typed fetch for the .NET API. Reads the Aptiverse JWT off the NextAuth
 // session and attaches it as a Bearer token. On 401, redirects to /login.
 //
-// Refresh-token flow (server endpoint exists at POST /api/auth/refresh-token)
-// is not yet wired here — wiring it requires extending the NextAuth jwt
-// callback to detect token expiry and call refresh, which is a separate
-// task. Until then, an expired access token redirects through the
-// standard sign-in flow.
+// Renewal happens upstream of this file. The NextAuth jwt callback
+// (lib/auth.ts) exchanges the refresh token for a new access token whenever the
+// session is read and the current one is close to expiring, and token.ts
+// re-reads the session shortly before expiry — so by the time a request is
+// built here the token is already fresh. A 401 now means the session is
+// genuinely over, not merely stale, which is why bouncing to sign-in is the
+// right response to it.
 
-import { getSession, signIn } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { humanizeApiError } from "@/lib/api/errors";
+import { clearAccessToken, getAccessToken } from "@/lib/api/token";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5100";
 
@@ -25,8 +28,9 @@ export class ApiError extends Error {
 
 async function authHeaders(): Promise<HeadersInit> {
   if (typeof window === "undefined") return { "Content-Type": "application/json" };
-  const session = await getSession();
-  const token = (session as { accessToken?: string } | null)?.accessToken;
+  // Cached in memory. See token.ts: this used to be a session round trip on
+  // every single call, in front of every single query.
+  const token = await getAccessToken();
   return token
     ? { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
     : { "Content-Type": "application/json" };
@@ -41,6 +45,9 @@ export async function fetcher<T>(path: string, init: RequestInit = {}): Promise<
 
   if (res.status === 401) {
     if (typeof window !== "undefined") {
+      // Drop the cached token first. The API has just refused it, so replaying
+      // it on the next call would only produce another 401.
+      clearAccessToken();
       void signIn();
     }
     throw new ApiError(401, "", "Not authenticated");
@@ -74,8 +81,7 @@ export function openEventStream(
 
   void (async () => {
     if (typeof window === "undefined") return;
-    const session = await getSession();
-    const token = (session as { accessToken?: string } | null)?.accessToken;
+    const token = await getAccessToken();
     try {
       const res = await fetch(`${API_URL}${path}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},

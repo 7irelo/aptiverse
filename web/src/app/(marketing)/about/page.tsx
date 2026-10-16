@@ -104,8 +104,16 @@ const VALUES = [
   },
   {
     icon: <MapPin size={18} />,
+    // "All 11 official languages" was wrong twice. There is no multilingual
+    // support at all: no i18n library, no locale routing, no language field on
+    // the user or on any AI call, and the tutor prompt asks for plain South
+    // African English. And the count was stale regardless: South Africa has
+    // had 12 official languages since South African Sign Language was
+    // recognised in 2023. Claiming someone's language is supported when it is
+    // not is a specific kind of insult, so this now claims only the curriculum,
+    // which is real.
     title: "Built for here",
-    description: "South African curricula and all 11 official languages. Built for here, not adapted.",
+    description: "CAPS, the NSC, and South African universities. Built for here, not adapted from somewhere else.",
     accent: "primary" as const,
   },
   {

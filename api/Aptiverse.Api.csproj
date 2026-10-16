@@ -17,6 +17,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="10.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OAuth" Version="2.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
+    <!-- Pin transitively-pulled Microsoft.OpenApi to a patched 2.x (GHSA-v5pm-xwqc-g5wc). -->
+    <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.11.0" />
     <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="10.0.1" />
     <PackageReference Include="Swashbuckle.AspNetCore.ReDoc" Version="10.0.1" />
@@ -38,10 +40,10 @@
     <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
 
     <!-- Mapping -->
-    <PackageReference Include="AutoMapper" Version="15.1.0" />
+    <PackageReference Include="AutoMapper" Version="15.1.1" />
 
     <!-- Email -->
-    <PackageReference Include="MailKit" Version="4.14.1" />
+    <PackageReference Include="MailKit" Version="4.16.0" />
 
     <!-- Configuration -->
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.1" />

@@ -1,7 +1,8 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
 import { useMutation } from "@tanstack/react-query";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -15,6 +16,56 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorIcon from "@mui/icons-material/ErrorOutline";
 import Link from "next/link";
 import { api } from "@/lib/api/client";
+import { homeRouteForRole } from "@/lib/home-route";
+
+// Shown once the address is confirmed. Two paths:
+//   - Already signed in (the soft gate sent them here): refresh the session so
+//     emailConfirmed flips to true, which lifts the gate, then send them to
+//     their role's home. No re-login.
+//   - Not signed in (verified from a link on another device, or an affiliate
+//     who never auto-logged-in): offer the sign-in button.
+function VerifiedSuccess() {
+  const { data: session, status, update } = useSession();
+  const router = useRouter();
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (status !== "authenticated" || refreshing) return;
+    setRefreshing(true);
+    (async () => {
+      // Bare update() forces the jwt callback to re-exchange the refresh token
+      // (see lib/auth.ts), pulling fresh user state including emailConfirmed.
+      await update();
+      const role = (session?.user as { role?: string } | undefined)?.role;
+      router.replace(homeRouteForRole(role));
+    })();
+    // update / session identity are stable enough; run once on becoming authed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
+  return (
+    <Stack spacing={3} alignItems="center" sx={{ textAlign: "center" }}>
+      <Box sx={{ width: 72, height: 72, borderRadius: "50%", bgcolor: "success.main", color: "success.contrastText", display: "grid", placeItems: "center" }}>
+        <CheckCircleIcon sx={{ fontSize: 38 }} />
+      </Box>
+      <Box>
+        <Typography variant="h3" sx={{ fontWeight: 700 }}>
+          Email verified
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mt: 1, maxWidth: 380, mx: "auto" }}>
+          {status === "authenticated"
+            ? "Your account is active. Taking you in…"
+            : "Your Aptiverse account is now active. Sign in to get started."}
+        </Typography>
+      </Box>
+      {status !== "authenticated" && (
+        <Button component={Link} href="/login" variant="contained" size="large">
+          Sign in
+        </Button>
+      )}
+    </Stack>
+  );
+}
 
 export default function VerifyEmailPage() {
   return (
@@ -68,24 +119,7 @@ function ConfirmResult({
     );
   }
   if (state.isSuccess) {
-    return (
-      <Stack spacing={3} alignItems="center" sx={{ textAlign: "center" }}>
-        <Box sx={{ width: 72, height: 72, borderRadius: "50%", bgcolor: "success.main", color: "success.contrastText", display: "grid", placeItems: "center" }}>
-          <CheckCircleIcon sx={{ fontSize: 38 }} />
-        </Box>
-        <Box>
-          <Typography variant="h3" sx={{ fontWeight: 700 }}>
-            Email verified
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mt: 1, maxWidth: 380, mx: "auto" }}>
-            Your Aptiverse account is now active. Sign in to get started.
-          </Typography>
-        </Box>
-        <Button component={Link} href="/login" variant="contained" size="large">
-          Sign in
-        </Button>
-      </Stack>
-    );
+    return <VerifiedSuccess />;
   }
   // isError
   return (
@@ -107,6 +141,14 @@ function ConfirmResult({
 }
 
 function ResendInbox() {
+  // The soft gate parks a signed-in-but-unverified user here. For them a link
+  // to /login is a dead loop: they are already authenticated, so /login sends
+  // them home and the verification gate bounces them straight back here. Offer
+  // Sign out instead, which actually lets them leave (or switch accounts).
+  // Only someone verifying from a link on another device (not signed in here)
+  // gets the plain "Back to sign in".
+  const { status } = useSession();
+  const signedIn = status === "authenticated";
   return (
     <Stack spacing={3} alignItems="center" sx={{ textAlign: "center" }}>
       <Box sx={{ width: 72, height: 72, borderRadius: "50%", bgcolor: "brandSurface.main", color: "brandSurface.contrastText", display: "grid", placeItems: "center" }}>
@@ -121,9 +163,15 @@ function ResendInbox() {
         </Typography>
       </Box>
       <ResendBlock />
-      <Button component={Link} href="/login" variant="text" size="small">
-        Back to sign in
-      </Button>
+      {signedIn ? (
+        <Button variant="text" size="small" onClick={() => signOut({ callbackUrl: "/login" })}>
+          Sign out
+        </Button>
+      ) : (
+        <Button component={Link} href="/login" variant="text" size="small">
+          Back to sign in
+        </Button>
+      )}
     </Stack>
   );
 }

@@ -1,4 +1,5 @@
 using Aptiverse.Api.Data.Email;
+using Aptiverse.Api.Utilities;
 using Aptiverse.Domain.Models;
 using Aptiverse.Marketplace.Domain.Models.Marketplace;
 using Aptiverse.Notifications.Application.Services;
@@ -18,7 +19,7 @@ namespace Aptiverse.Api.Data.Notifications
         INotificationService notifications,
         ILogger<TutorNotifier> logger)
     {
-        private const string SiteBase = "https://aptiverse.co.za";
+        private static string SiteBase => WebApp.BaseUrl;
 
         public async Task NotifyConnectionAsync(
             string tutorUserId, string studentName, string subject, CancellationToken ct = default)

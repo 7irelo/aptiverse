@@ -1,4 +1,6 @@
 ﻿using Aptiverse.Api.Data;
+using Aptiverse.Api.Services.Audit;
+using Aptiverse.Api.Services.Marketing;
 using Aptiverse.Application;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -25,6 +27,19 @@ namespace Aptiverse.Auth
             services.AddRateLimitingServices();
             services.AddLogging();
             services.AddApplicationServices();
+
+            // Server-side conversion reporting. Typed client so the factory
+            // owns the pool; a short timeout because a marketing call must
+            // never be the slow part of confirming somebody's payment.
+            services.AddHttpClient<IMetaConversionsClient, MetaConversionsClient>(
+                c => c.Timeout = TimeSpan.FromSeconds(8));
+
+            // Audit trail writer. AddIdentity already registers
+            // IHttpContextAccessor, but the trail depends on it directly and
+            // AddHttpContextAccessor is a TryAdd, so asking for it here is free
+            // insurance against identity registration moving.
+            services.AddHttpContextAccessor();
+            services.AddScoped<IAuditTrail, AuditTrail>();
 
             return services;
         }

@@ -39,6 +39,8 @@ import SummarizeIcon from "@mui/icons-material/SummarizeOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import Diversity3Icon from "@mui/icons-material/Diversity3Outlined";
 import CircleIcon from "@mui/icons-material/CircleOutlined";
+import { Gift as GiftLucide, HandCoins as HandCoinsLucide, Wallet as WalletLucide } from "lucide-react";
+import { navIcon } from "./lucide-nav-icon";
 
 export type NavIcon = React.ComponentType<{ fontSize?: "small" | "medium" | "large" }>;
 
@@ -79,6 +81,11 @@ const REGISTRY: Record<string, NavIcon> = {
   report: SummarizeIcon,
   profile: PersonOutlineIcon,
   link: Diversity3Icon,
+  // New keys use Lucide through the adapter. The MUI entries above are the
+  // existing set, being replaced separately.
+  refer: navIcon(GiftLucide),
+  affiliates: navIcon(HandCoinsLucide),
+  wallet: navIcon(WalletLucide),
 };
 
 export function iconForKey(key: string): NavIcon {

@@ -43,10 +43,20 @@ export default function ParentSettingsPage() {
             <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
               Channels
             </Typography>
+            {/*
+              The WhatsApp channel is gone: there is no WhatsApp integration and
+              no plan to build one, so it offered a delivery method that could
+              never deliver.
+              These two switches are still cosmetic, like the student settings
+              page was before it was rewired: defaultChecked, no state, no
+              onChange, nothing persisted. The User entity does carry
+              EmailNotifications and PushNotifications, so they can be wired to
+              the same endpoint the student page uses. Flagged rather than fixed
+              here to keep this change to dropping WhatsApp.
+            */}
             <Stack>
               <FormControlLabel control={<Switch defaultChecked />} label="Email" />
               <FormControlLabel control={<Switch defaultChecked />} label="Push notifications" />
-              <FormControlLabel control={<Switch />} label="WhatsApp" />
             </Stack>
           </Box>
           <Divider />

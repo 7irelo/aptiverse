@@ -24,8 +24,20 @@ namespace Aptiverse.Practice.Domain.Models.Practice
         public int IncorrectCount { get; set; }
         public int UnansweredCount { get; set; }
 
-        // Final score as a 0-100 percentage (rounded). Correct / Total.
+        // Final score as a 0-100 percentage (rounded). Correct / Total on a
+        // question-scored test; MarksAwarded / MarksTotal on a marked exam,
+        // where a five-mark question has to weigh five times a one-mark one.
         public int ScorePercent { get; set; }
+
+        // What the paper was out of, and what the student got. Null on
+        // question-scored tests, which have no marks to speak of.
+        //
+        // Kept alongside ScorePercent rather than replacing it: the percentage
+        // is what mastery and goals read, and "62%" is not what a student wants
+        // to see on an exam. They want "43/70", because that is what the real
+        // paper will say.
+        public int? MarksAwarded { get; set; }
+        public int? MarksTotal { get; set; }
 
         // Total time across all answered questions, milliseconds.
         public int TotalTimeMs { get; set; }

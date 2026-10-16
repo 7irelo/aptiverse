@@ -1,8 +1,20 @@
 import type { Components, Theme } from "@mui/material/styles";
 import { alpha } from "@mui/material/styles";
+import { brand } from "./palette";
 
 export const componentOverrides = (theme: Theme): Components<Theme> => {
   const isDark = theme.palette.mode === "dark";
+
+  // Boundary of an interactive control (input tray, outlined button). This is
+  // deliberately stronger than `divider`, which is a decorative hairline: a
+  // control that cannot be located is a usability failure, and the divider
+  // alpha was invisible on the near-black canvas.
+  const controlBorder = isDark
+    ? alpha(theme.palette.common.white, 0.28)
+    : alpha(theme.palette.text.primary, 0.28);
+  const controlBorderHover = isDark
+    ? alpha(theme.palette.common.white, 0.44)
+    : alpha(theme.palette.text.primary, 0.46);
 
   // Warm, low-slung elevation. Cards sit on a soft shadow plus a hairline
   // border instead of the old flat divider-only look, so surfaces read as
@@ -78,8 +90,13 @@ export const componentOverrides = (theme: Theme): Components<Theme> => {
         sizeSmall: { padding: "6px 12px", fontSize: "0.8125rem" },
         contained: {
           boxShadow: cardShadow,
-          "&:hover": { boxShadow: cardShadowHover, transform: "translateY(-1px)" },
-          "&:active": { transform: "translateY(0)" },
+          // No translateY lift on hover. A button that jumps under the cursor
+          // is a fidget, not feedback: it moves the target you are already
+          // aiming at, and on a touch device it never fires at all, so it is
+          // decoration for mouse users only. The shadow lift alone says
+          // "raised" without shifting the hit area. Text buttons never moved,
+          // and matching them keeps every button in the app behaving the same.
+          "&:hover": { boxShadow: cardShadowHover },
         },
         containedPrimary: {
           // Use the stable graphite brand surface, NOT primary.main. In dark
@@ -95,21 +112,64 @@ export const componentOverrides = (theme: Theme): Components<Theme> => {
               : theme.palette.brandSurface.dark,
             color: theme.palette.brandSurface.contrastText,
           },
+          // Disabled has to be stated here. The backgroundColor and color above
+          // are flat declarations on the variant class, so they beat MUI's own
+          // .Mui-disabled rule on source order and a disabled button kept the
+          // full graphite surface. It looked exactly like a live one, which is
+          // why "Signing in" appeared to leave the button clickable: it was
+          // already disabled, it just had no way to say so.
+          "&.Mui-disabled": {
+            backgroundColor: theme.palette.brandSurface.main,
+            color: theme.palette.brandSurface.contrastText,
+            opacity: 0.45,
+            boxShadow: "none",
+          },
         },
         containedSecondary: {
           backgroundColor: theme.palette.secondary.main,
           color: theme.palette.secondary.contrastText,
           "&:hover": {
-            backgroundColor: theme.palette.secondary.dark,
+            // citron[500], not secondary.dark. In light mode secondary.dark is
+            // the deep citron kept legal for text, and graphite ink on it would
+            // be dark-on-dark. The hover fill has to stay a citron SURFACE.
+            backgroundColor: brand.citron[500],
             color: theme.palette.secondary.contrastText,
+          },
+          // Same reason as containedPrimary: the flat fill above would
+          // otherwise survive into the disabled state.
+          "&.Mui-disabled": {
+            backgroundColor: theme.palette.secondary.main,
+            color: theme.palette.secondary.contrastText,
+            opacity: 0.45,
+            boxShadow: "none",
           },
         },
         outlined: {
-          borderColor: theme.palette.divider,
+          borderColor: controlBorder,
           color: theme.palette.text.primary,
           "&:hover": {
-            borderColor: theme.palette.text.secondary,
-            backgroundColor: alpha(theme.palette.text.primary, 0.03),
+            borderColor: controlBorderHover,
+            backgroundColor: alpha(theme.palette.text.primary, 0.04),
+          },
+        },
+        // MUI's default outlined+secondary paints BOTH the label and the border
+        // in secondary.main. With citron that is 1.4:1 on light paper, so the
+        // whole button disappeared. Citron stays surface-only: the label keeps
+        // full-contrast ink, the citron identity is carried by the border
+        // (secondary.dark, legal in both modes) and a citron wash on hover.
+        outlinedSecondary: {
+          color: theme.palette.text.primary,
+          borderColor: theme.palette.secondary.dark,
+          "&:hover": {
+            color: theme.palette.text.primary,
+            borderColor: theme.palette.secondary.dark,
+            backgroundColor: alpha(theme.palette.secondary.main, isDark ? 0.16 : 0.22),
+          },
+        },
+        textSecondary: {
+          color: theme.palette.text.primary,
+          "&:hover": {
+            backgroundColor: alpha(theme.palette.secondary.main, isDark ? 0.16 : 0.22),
           },
         },
         text: { color: theme.palette.text.primary },
@@ -232,9 +292,7 @@ export const componentOverrides = (theme: Theme): Components<Theme> => {
               : alpha(theme.palette.brandSurface.main, 0.05),
           },
           "&:hover .MuiOutlinedInput-notchedOutline": {
-            borderColor: isDark
-              ? alpha(theme.palette.common.white, 0.22)
-              : theme.palette.text.disabled,
+            borderColor: controlBorderHover,
           },
           "&.Mui-focused": {
             boxShadow: focusRing,
@@ -250,8 +308,10 @@ export const componentOverrides = (theme: Theme): Components<Theme> => {
           "&.Mui-disabled": { backgroundColor: "transparent" },
         },
         notchedOutline: {
-          // A visible hairline so the tray has a crisp edge in both modes.
-          borderColor: isDark ? alpha(theme.palette.common.white, 0.12) : theme.palette.divider,
+          // A visible hairline so the tray has a crisp edge in both modes. This
+          // is a control boundary, so it uses the stronger alpha rather than
+          // `divider`, which was too faint to locate a field on either canvas.
+          borderColor: controlBorder,
           transition: "border-color 140ms ease",
           // No label riding the border → collapse any residual notch legend.
           "& legend": { width: 0 },
@@ -259,7 +319,10 @@ export const componentOverrides = (theme: Theme): Components<Theme> => {
         input: {
           paddingTop: 13,
           paddingBottom: 13,
-          "&::placeholder": { color: theme.palette.text.disabled, opacity: 1 },
+          // Placeholders are content, not disabled text, so they take the
+          // secondary text token. text.disabled sat at 1.5:1 on light paper,
+          // which made every placeholder unreadable.
+          "&::placeholder": { color: theme.palette.text.secondary, opacity: 1 },
         },
       },
     },
@@ -332,7 +395,13 @@ export const componentOverrides = (theme: Theme): Components<Theme> => {
             : theme.palette.grey[100],
           color: theme.palette.text.primary,
         },
-        outlined: { borderColor: theme.palette.divider },
+        outlined: { borderColor: controlBorder },
+        // Same surface-only rule as the outlined button: a citron label on a
+        // citron hairline was unreadable in light mode.
+        outlinedSecondary: {
+          color: theme.palette.text.primary,
+          borderColor: theme.palette.secondary.dark,
+        },
       },
     },
     MuiTooltip: {

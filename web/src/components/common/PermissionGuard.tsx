@@ -2,8 +2,7 @@
 
 import { type Permission } from "@/lib/rbac";
 import { usePermission } from "@/lib/hooks/usePermission";
-import { EmptyState } from "./EmptyState";
-import LockIcon from "@mui/icons-material/LockOutlined";
+import { SignedInForbidden } from "./Forbidden";
 
 export type PermissionGuardProps = {
   require: Permission | Permission[];
@@ -12,6 +11,10 @@ export type PermissionGuardProps = {
   fallback?: React.ReactNode;
 };
 
+// Permissions are part of who you are, not part of what you have paid for, so
+// the denial here is a 403 and not an upgrade wall. Callers gating a single
+// control inside a page still pass fallback={null} and get nothing rendered,
+// which is what you want for a button that should simply not be offered.
 export function PermissionGuard({ require, any, children, fallback }: PermissionGuardProps) {
   const { can, canAny, canAll } = usePermission();
   const allowed = Array.isArray(require)
@@ -22,11 +25,5 @@ export function PermissionGuard({ require, any, children, fallback }: Permission
 
   if (allowed) return <>{children}</>;
   if (fallback !== undefined) return <>{fallback}</>;
-  return (
-    <EmptyState
-      icon={<LockIcon />}
-      title="You don't have access to this area"
-      description="If you believe this is a mistake, contact your school admin or our support team."
-    />
-  );
+  return <SignedInForbidden />;
 }

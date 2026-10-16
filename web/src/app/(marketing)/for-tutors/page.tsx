@@ -56,7 +56,7 @@ export default function ForTutorsPage() {
                 <Button component={Link} href="/register?role=tutor" variant="contained" color="secondary" size="large">
                   List your profile free
                 </Button>
-                <Button component={Link} href="/pricing" variant="outlined" size="large">
+                <Button component={Link} href="/pricing?for=tutors" variant="outlined" size="large">
                   See tutor plans
                 </Button>
               </Stack>
@@ -199,7 +199,7 @@ export default function ForTutorsPage() {
             <Button component={Link} href="/register?role=tutor" variant="contained" color="secondary" size="large">
               List your profile free
             </Button>
-            <Button component={Link} href="/pricing" variant="outlined" size="large">
+            <Button component={Link} href="/pricing?for=tutors" variant="outlined" size="large">
               See tutor plans
             </Button>
           </Stack>

@@ -14,6 +14,7 @@ import Alert from "@mui/material/Alert";
 import Link from "next/link";
 import { resetPasswordSchema, type ResetPasswordValues } from "@/lib/schemas";
 import { api } from "@/lib/api/client";
+import { useHydrated } from "@/lib/hooks/useHydrated";
 
 // next/navigation's useSearchParams requires a Suspense boundary in the
 // app router. Wrap the real form once so the page is self-contained.
@@ -34,7 +35,7 @@ function ResetPasswordForm() {
     register,
     handleSubmit,
     setValue,
-    formState: { errors, isValid },
+    formState: { errors },
   } = useForm<ResetPasswordValues>({
     resolver: zodResolver(resetPasswordSchema),
     mode: "onTouched",
@@ -49,6 +50,7 @@ function ResetPasswordForm() {
   }, [userId, token, setValue]);
 
   const mutation = useMutation({ mutationFn: api.resetPassword });
+  const hydrated = useHydrated();
 
   const missingToken = !userId || !token;
 
@@ -113,7 +115,13 @@ function ResetPasswordForm() {
               error={!!errors.confirm}
               helperText={errors.confirm?.message}
             />
-            <Button type="submit" variant="contained" size="large" disabled={!isValid || mutation.isPending}>
+            {/* Gated on hydration, never on `isValid`. See useHydrated. */}
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={!hydrated || mutation.isPending}
+            >
               {mutation.isPending ? "Saving…" : "Update password"}
             </Button>
           </Stack>

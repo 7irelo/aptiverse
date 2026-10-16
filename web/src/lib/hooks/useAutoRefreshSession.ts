@@ -7,6 +7,15 @@ import { useRefreshSession } from "./useRefreshSession";
 // Re-issues the access token before it expires so a long-open tab
 // doesn't get bounced to /login mid-session.
 //
+// LARGELY REDUNDANT since the jwt callback in lib/auth.ts started refreshing
+// on demand. That callback runs on every session read and renews from the
+// refresh token, which works whether or not a tab was awake — this poll only
+// ever helped a tab that was awake. It is kept for now because it is also the
+// path that picks up new entitlements without a full sign-in (it calls the
+// [Authorize]d /api/auth/refresh-token, see useRefreshSession), and removing it
+// in the same change as a login-path rewrite would mix two risks. Delete it
+// once the on-demand path has run in production for a while.
+//
 // Reads the JWT's `exp` claim from the session's access token, polls
 // every 60 seconds, and calls useRefreshSession() when we're within
 // REFRESH_THRESHOLD_S of expiry. The actual refresh runs once at a

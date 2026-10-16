@@ -5,12 +5,16 @@ import Card from "@mui/material/Card";
 import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import { alpha } from "@mui/material/styles";
 import { CheckCircle2, Globe } from "lucide-react";
 
 // Big text-on-one-side, demo-on-the-other block. Alternates left/right
 // via the `reverse` prop. The demo slot is whatever React node makes
 // sense for the feature: a chat UI, a chart, a check-in.
 export type FeatureShowcaseProps = {
+  // Optional anchor so the top navigation can deep-link straight to one
+  // showcase instead of dropping the reader at the top of a long page.
+  id?: string;
   eyebrow: string;
   title: string;
   body: string;
@@ -20,6 +24,7 @@ export type FeatureShowcaseProps = {
 };
 
 export function FeatureShowcase({
+  id,
   eyebrow,
   title,
   body,
@@ -29,7 +34,9 @@ export function FeatureShowcase({
 }: FeatureShowcaseProps) {
   return (
     <Box
+      id={id}
       sx={{
+        scrollMarginTop: { xs: 72, md: 88 },
         display: "grid",
         gridTemplateColumns: { xs: "1fr", md: "5fr 7fr" },
         gap: { xs: 3.5, md: 8 },
@@ -70,10 +77,14 @@ export function FeatureShowcase({
               position: "absolute",
               inset: -24,
               borderRadius: 4,
+              // Derived from the live palette so the glow follows the brand and
+              // both schemes. The hardcoded values here were leftover Chalk &
+              // Pine teal, which matched neither mode.
               background: (t) =>
-                t.palette.mode === "dark"
-                  ? "radial-gradient(60% 60% at 50% 50%, rgba(114,177,163,0.20) 0%, rgba(114,177,163,0) 70%)"
-                  : "radial-gradient(60% 60% at 50% 50%, rgba(15,110,92,0.12) 0%, rgba(15,110,92,0) 70%)",
+                `radial-gradient(60% 60% at 50% 50%, ${alpha(
+                  t.palette.secondary.main,
+                  t.palette.mode === "dark" ? 0.2 : 0.22,
+                )} 0%, ${alpha(t.palette.secondary.main, 0)} 70%)`,
               filter: "blur(20px)",
               pointerEvents: "none",
               zIndex: 0,
@@ -104,10 +115,13 @@ export function MockAppFrame({
       sx={{
         borderRadius: 3,
         overflow: "hidden",
+        // Graphite-tinted shadow from the brand surface token. Was a leftover
+        // Chalk & Pine green-black that read as a colour cast on light.
         boxShadow: (t) =>
-          t.palette.mode === "dark"
-            ? "0 20px 50px -20px rgba(0,0,0,0.5)"
-            : "0 20px 50px -20px rgba(8,68,56,0.22)",
+          `0 20px 50px -20px ${alpha(
+            t.palette.mode === "dark" ? "#000000" : t.palette.brandSurface.main,
+            t.palette.mode === "dark" ? 0.5 : 0.22,
+          )}`,
       }}
     >
       <Box

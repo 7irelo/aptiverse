@@ -15,6 +15,10 @@ export type FeatureKey =
   | "wellbeing.basic"
   | "past_papers.read"
   | "universities.read"
+  // Career navigator: admission and progression targets. Free on purpose. The
+  // key survives because the entitlements seeder still lists it; nothing in the
+  // app gates on it any more.
+  | "career_navigator"
   | "calendar"
   | "notifications"
   | "settings"
@@ -35,7 +39,6 @@ export type FeatureKey =
   | "past_papers.solved"
   | "sba.coach"
   | "mastery.predictions"
-  | "career_navigator"
   | "rewards.redeem"
   | "tutor.connect"
   | "study_groups"
@@ -44,10 +47,8 @@ export type FeatureKey =
 
   // -------- Student Max (exam-finals tier) --------
   | "exam.simulator"
-  | "audio.explanations"
   | "study_plan.ai"
   | "ai_debrief.weekly"
-  | "whatsapp.contextual"
 
   // -------- Family entry --------
   | "parent.dashboard"
@@ -61,7 +62,6 @@ export type FeatureKey =
   // -------- Family Pro --------
   | "parent.uni_readiness"
   | "family.shared_calendar"
-  | "family.whatsapp_recap"
   | "counselling.session_included"
 
   // -------- Family Max --------
@@ -133,6 +133,10 @@ export const FEATURE_MIN_PLAN: Record<FeatureKey, PlanCode> = {
   "wellbeing.basic": "free",
   "past_papers.read": "free",
   "universities.read": "free",
+  // Was "student.pro". Un-gated: a student who cannot afford a plan is exactly
+  // the student who most needs to know they are 12 marks short of the degree
+  // they want, and which subject those 12 marks are in.
+  career_navigator: "free",
   calendar: "free",
   notifications: "free",
   settings: "free",
@@ -153,7 +157,6 @@ export const FEATURE_MIN_PLAN: Record<FeatureKey, PlanCode> = {
   "past_papers.solved": "student.pro",
   "sba.coach": "student.pro",
   "mastery.predictions": "student.pro",
-  career_navigator: "student.pro",
   "rewards.redeem": "student.pro",
   "tutor.connect": "student.pro",
   study_groups: "student.pro",
@@ -162,10 +165,8 @@ export const FEATURE_MIN_PLAN: Record<FeatureKey, PlanCode> = {
 
   // Student Max
   "exam.simulator": "student.max",
-  "audio.explanations": "student.max",
   "study_plan.ai": "student.max",
   "ai_debrief.weekly": "student.max",
-  "whatsapp.contextual": "student.max",
 
   // Parent track — every parent tier grants the same tooling, so the entry
   // tier (parent, 1 child) is the cheapest plan that unlocks these.
@@ -178,7 +179,6 @@ export const FEATURE_MIN_PLAN: Record<FeatureKey, PlanCode> = {
   "family.linked_children": "parent",
   "parent.uni_readiness": "parent",
   "family.shared_calendar": "parent",
-  "family.whatsapp_recap": "parent",
 
   // School-only parent extras (a real counselling session + concierge/coach
   // features). No paid parent tier grants these, so School is the min plan.

@@ -16,6 +16,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { useTutorProfile, type TutorProfile } from "@/lib/api/queries";
+import { tutorKindLabel } from "@/lib/tutoring-labels";
 
 export default function TutorProfilePage() {
   const profileQuery = useTutorProfile();
@@ -85,6 +86,11 @@ function ProfileShowcase({ profile }: { profile: TutorProfile }) {
                 {profile.specialization}
               </Typography>
             )}
+            {identityLine(profile) && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                {identityLine(profile)}
+              </Typography>
+            )}
           </Box>
           {profile.isVerified && (
             <Chip
@@ -121,6 +127,18 @@ function ProfileShowcase({ profile }: { profile: TutorProfile }) {
       </CardContent>
     </Card>
   );
+}
+
+// A one-line "who they are" summary from the tutor's identity fields, shown
+// under their headline so a learner can place them at a glance.
+function identityLine(profile: TutorProfile): string {
+  return [
+    profile.tutorKind ? tutorKindLabel(profile.tutorKind) : null,
+    profile.institution ? `at ${profile.institution}` : null,
+    profile.studyingToward ? `studying ${profile.studyingToward}` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function Detail({ label, children }: { label: string; children: React.ReactNode }) {

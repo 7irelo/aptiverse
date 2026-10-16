@@ -1,6 +1,7 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
+import { useRouter } from "next/navigation";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -12,72 +13,99 @@ import Chip from "@mui/material/Chip";
 import Link from "next/link";
 import dayjs from "dayjs";
 import { motion } from "framer-motion";
-import AssignmentIcon from "@mui/icons-material/AssignmentOutlined";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForwardOutlined";
+import {
+  ClipboardList,
+  ArrowRight,
+  Pencil,
+  Trash2,
+  PanelsTopLeft,
+  Sparkles,
+} from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatusChip } from "@/components/common/StatusChip";
 import { QueryStates } from "@/components/common/QueryStates";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { TasksEditor } from "@/components/workspace/TasksEditor";
-import { useAssessment, useAcademicUnits } from "@/lib/api/queries";
-import type { Assessment } from "@/lib/mockData";
-import { formatDate } from "@/lib/format";
-import { enter, enterStagger } from "@/lib/motion";
+import { UploadsStrip } from "@/components/workspace/UploadsStrip";
+import {
+  useAssessment,
+  useAcademicUnits,
+  useTermPredictions,
+  usePracticeTests,
+  useDeleteAssessment,
+} from "@/lib/api/queries";
+import {
+  ASSESSMENT_TYPE_LABELS,
+  ASSESSMENT_STATUS_LABELS,
+  type Assessment,
+} from "@/lib/mockData";
+import { formatDate, prettifyUnitId } from "@/lib/format";
+import { useStudyVocabulary } from "@/lib/hooks/useStudyVocabulary";
+import { enter } from "@/lib/motion";
+import { LifecyclePanel, statusKind, isSettled, isOpen } from "../AssessmentLifecycle";
 
 export default function AssessmentDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const assessmentQuery = useAssessment(id);
   const academic = useAcademicUnits();
+  const vocab = useStudyVocabulary();
+  const del = useDeleteAssessment();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const unitName = academic.nameFor(assessmentQuery.data?.subjectId);
+  const a = assessmentQuery.data;
+  // Resolve through the unit list, not a subjects-only lookup: for a tertiary
+  // student subjectId is a course practiceKey and the subjects endpoint is
+  // always empty. prettifyUnitId is the fallback so an unresolved id degrades
+  // to "Calculus I" rather than showing the student our internal key.
+  const unit = a ? academic.units.find((u) => u.id === a.subjectId) : undefined;
+  const unitName = unit?.name ?? (a ? prettifyUnitId(a.subjectId) : undefined);
 
   return (
     <>
       <PageHeader
-        title={assessmentQuery.data?.title ?? "Assessment"}
+        title={a?.title ?? "Assessment"}
         description={
-          assessmentQuery.data
-            ? `${unitName ?? ""} · ${assessmentQuery.data.type} · weighting ${assessmentQuery.data.weight}%`
+          a
+            ? `${unitName} · ${ASSESSMENT_TYPE_LABELS[a.type] ?? a.type} · worth ${a.weight}% of the ${vocab.periodSingular} mark`
             : undefined
         }
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
           { label: "Assessments", href: "/dashboard/assessments" },
-          { label: assessmentQuery.data?.title ?? "Assessment" },
+          { label: a?.title ?? "Assessment" },
         ]}
         actions={
-          <>
-            <Button component={Link} href={`/dashboard/assessments/${id}/edit`} variant="outlined">
-              Edit
-            </Button>
-            <Button component={Link} href="/dashboard/practice" variant="outlined">
-              Generate practice
-            </Button>
-            <Button component={Link} href="/dashboard/workspace" variant="contained" color="secondary">
-              Open in workspace
-            </Button>
-          </>
+          a ? (
+            <>
+              <Button
+                component={Link}
+                href={`/dashboard/assessments/${id}/edit`}
+                variant="outlined"
+                color="inherit"
+                startIcon={<Pencil size={16} />}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="outlined"
+                color="inherit"
+                startIcon={<Trash2 size={16} />}
+                onClick={() => setConfirmOpen(true)}
+              >
+                Delete
+              </Button>
+            </>
+          ) : null
         }
         meta={
-          assessmentQuery.data ? (
+          a ? (
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               <StatusChip
-                kind={
-                  assessmentQuery.data.status === "graded"
-                    ? "success"
-                    : assessmentQuery.data.status === "in_progress"
-                      ? "info"
-                      : assessmentQuery.data.status === "submitted"
-                        ? "primary"
-                        : "neutral"
-                }
-                label={assessmentQuery.data.status.replace("_", " ")}
-                sx={{ textTransform: "capitalize" }}
+                kind={statusKind(a.status)}
+                label={ASSESSMENT_STATUS_LABELS[a.status] ?? a.status}
               />
-              <Chip
-                label={`Due ${formatDate(assessmentQuery.data.dueDate)}`}
-                size="small"
-                variant="outlined"
-              />
+              <Chip label={`Due ${formatDate(a.dueDate)}`} size="small" variant="outlined" />
             </Stack>
           ) : null
         }
@@ -87,9 +115,9 @@ export default function AssessmentDetail({ params }: { params: Promise<{ id: str
         query={assessmentQuery}
         isEmpty={() => false}
         empty={{
-          icon: <AssignmentIcon />,
+          icon: <ClipboardList />,
           title: "Assessment not found",
-          description: "This SBA doesn't exist or has been removed.",
+          description: "This assessment does not exist, or it has been removed.",
           action: (
             <Button component={Link} href="/dashboard/assessments" variant="outlined">
               All assessments
@@ -97,199 +125,348 @@ export default function AssessmentDetail({ params }: { params: Promise<{ id: str
           ),
         }}
       >
-        {(a) => (
-          <AssessmentBody assessment={a} subjectName={unitName} isTertiary={academic.isTertiary} />
+        {(assessment) => (
+          <AssessmentBody
+            assessment={assessment}
+            unitName={unitName}
+            unitHref={unit?.href}
+          />
         )}
       </QueryStates>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete this assessment?"
+        description={
+          a
+            ? `"${a.title}" and its tasks, notes and attachments will be removed. This cannot be undone.`
+            : undefined
+        }
+        confirmLabel="Delete"
+        loading={del.isPending}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() =>
+          del.mutate(id, { onSuccess: () => router.push("/dashboard/assessments") })
+        }
+      />
     </>
   );
 }
 
 function AssessmentBody({
   assessment: a,
-  subjectName,
-  isTertiary,
+  unitName,
+  unitHref,
 }: {
   assessment: Assessment;
-  subjectName?: string;
-  isTertiary: boolean;
+  unitName?: string;
+  unitHref?: string;
 }) {
-  const dueAt = dayjs(a.dueDate);
-  const daysLeft = Math.ceil((+dueAt.toDate() - Date.now()) / 86400000);
-  // A logged actual mark is what "graded" means to the student — don't also
-  // require the status field to say "graded" (they're set independently in the
-  // form, and the assessments list already treats a mark as graded).
-  const isGraded = a.actualMark != null;
-  const isOverdue = daysLeft < 0 && !isGraded;
+  const vocab = useStudyVocabulary();
+  const predictionsQuery = useTermPredictions();
+  const practiceQuery = usePracticeTests();
 
-  // Stat tile model — only show stats backed by real fields. No invented
-  // "readiness", no AI-estimate label on a user-entered prediction.
-  const stats: { label: string; value: string; hint?: string; index: number }[] = [];
+  const daysLeft = dayjs(a.dueDate).startOf("day").diff(dayjs().startOf("day"), "day");
+  const settled = isSettled(a);
+  const isOverdue = daysLeft < 0 && isOpen(a);
 
-  if (isGraded) {
-    stats.push({ label: "Actual mark", value: `${a.actualMark}%`, hint: "Graded", index: 0 });
-  }
-  if (a.predictedMark != null) {
-    stats.push({
-      label: "Your prediction",
-      value: `${a.predictedMark}%`,
-      hint: isGraded ? `Set at creation` : `Target you set`,
-      index: stats.length,
-    });
-  }
-  stats.push({ label: "Weight", value: `${a.weight}%`, hint: "of term grade", index: stats.length });
-  stats.push({
-    label: isGraded ? "Submitted" : isOverdue ? "Overdue" : "Days left",
-    value: isGraded ? formatDate(a.dueDate) : isOverdue ? `${Math.abs(daysLeft)}d` : `${daysLeft}`,
-    hint: isGraded ? "Marked complete" : isOverdue ? "Past due date" : `due ${dueAt.format("DD MMM")}`,
-    index: stats.length,
-  });
+  // Server truth, read verbatim. currentTerm is the weighted average of this
+  // unit's graded marks, computed by MasteryController.GetPredictions. The
+  // client must never recompute it a second, differing way.
+  const prediction = (predictionsQuery.data ?? []).find((p) => p.subjectId === a.subjectId);
+
+  // Practice that genuinely exists for this unit. Not a suggestion engine:
+  // a straight filter over GET /api/practice/tests.
+  const practice = (practiceQuery.data ?? []).filter((t) => t.subjectId === a.subjectId);
 
   return (
-    <>
-      <Grid container spacing={2.5} sx={{ mb: 3 }}>
-        {stats.map((s) => (
-          <Grid key={s.label} size={{ xs: 6, sm: 6, md: stats.length === 3 ? 4 : 3 }}>
-            <Stat {...s} />
-          </Grid>
-        ))}
+    <Stack spacing={3}>
+      <motion.div {...enter}>
+        <Card>
+          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+            <Typography variant="overline" sx={{ color: "text.secondary", letterSpacing: "0.08em" }}>
+              Progress
+            </Typography>
+            <Box sx={{ mt: 1.5 }}>
+              <LifecyclePanel assessment={a} />
+            </Box>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <Grid container spacing={2}>
+        <Facet
+          label={settled ? "Your mark" : "Weight"}
+          value={settled ? `${a.actualMark}%` : `${a.weight}%`}
+          hint={settled ? `on a ${a.weight}% weighting` : `of the ${vocab.periodSingular} mark`}
+        />
+        <Facet
+          label={settled ? "Marked" : isOverdue ? "Overdue by" : "Due in"}
+          value={
+            settled
+              ? formatDate(a.dueDate)
+              : isOverdue
+                ? `${Math.abs(daysLeft)}d`
+                : daysLeft === 0
+                  ? "Today"
+                  : `${daysLeft}d`
+          }
+          hint={settled ? "due date" : dayjs(a.dueDate).format("DD MMM YYYY")}
+          tone={isOverdue ? "warning" : "default"}
+        />
+        {a.predictedMark != null && (
+          <Facet
+            label="You predicted"
+            value={`${a.predictedMark}%`}
+            hint={
+              settled && a.actualMark != null
+                ? markDelta(a.actualMark, a.predictedMark)
+                : "your own target"
+            }
+          />
+        )}
+        {prediction && prediction.currentTerm > 0 && (
+          <Facet
+            label={`${unitName ?? vocab.PeriodSingular} so far`}
+            value={`${prediction.currentTerm}%`}
+            // Deliberately not phrased as "N points above your average": this
+            // figure already includes this assessment's own mark, so comparing
+            // the two would be self-referential (and reads as "exactly your
+            // average" whenever this is the only marked work in the unit).
+            // The two tiles sit side by side; the student can read the gap.
+            hint="weighted average of all marked work"
+          />
+        )}
       </Grid>
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, lg: 7 }}>
-          <TasksCard assessmentId={a.id} tasks={a.tasks ?? []} />
+          <Stack spacing={3}>
+            <Panel eyebrow="Plan" title="Tasks">
+              <TasksEditor assessmentId={a.id} tasks={a.tasks ?? []} />
+            </Panel>
+            {/* UploadsStrip brings its own "Attachments" header and collapse
+                toggle, so it gets a bare surface rather than a Panel that
+                would print the heading twice. */}
+            <motion.div {...enter}>
+              <Card>
+                <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+                  <UploadsStrip assessmentId={a.id} />
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Stack>
         </Grid>
+
         <Grid size={{ xs: 12, lg: 5 }}>
           <Stack spacing={3}>
-            {a.notes && <NotesCard notes={a.notes} />}
-            <RelatedCard unitName={subjectName} unitId={a.subjectId} isTertiary={isTertiary} />
+            {a.notes && (
+              <Panel eyebrow="Yours" title="Notes">
+                <Typography variant="body2" sx={{ whiteSpace: "pre-line" }}>
+                  {a.notes}
+                </Typography>
+              </Panel>
+            )}
+
+            <PracticeCard
+              practice={practice}
+              subjectId={a.subjectId}
+              unitName={unitName}
+              unitNoun={vocab.unitSingular}
+              loading={practiceQuery.isLoading}
+            />
+
+            {a.status !== "graded" && (
+              <Panel eyebrow="Workspace" title="Work on this">
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Notes, a draft, and your attachments, side by side.
+                </Typography>
+                <Button
+                  component={Link}
+                  href={`/dashboard/workspace?assessment=${encodeURIComponent(a.id)}`}
+                  variant="contained"
+                  color="secondary"
+                  size="small"
+                  endIcon={<PanelsTopLeft size={16} />}
+                >
+                  Open workspace
+                </Button>
+              </Panel>
+            )}
+
+            {unitName && unitHref && (
+              <Panel eyebrow="Context" title={unitName}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Every assessment for this {vocab.unitSingular}, in one place.
+                </Typography>
+                <Button
+                  component={Link}
+                  href={unitHref}
+                  variant="outlined"
+                  color="inherit"
+                  size="small"
+                  endIcon={<ArrowRight size={16} />}
+                >
+                  Open {unitName}
+                </Button>
+              </Panel>
+            )}
           </Stack>
         </Grid>
       </Grid>
-    </>
+    </Stack>
   );
 }
 
-// ─── Stat tile (plain, no icon swatch) ──────────────────────────────
+// "8 points above your prediction" beats "72% vs 64%": the student already
+// knows both numbers, what they want is the gap between them. Only used for
+// predicted vs actual, where the two figures are genuinely independent.
+function markDelta(mark: number, against: number) {
+  const d = mark - against;
+  if (d === 0) return "exactly your prediction";
+  return `${Math.abs(d)} ${Math.abs(d) === 1 ? "point" : "points"} ${d > 0 ? "above" : "below"} your prediction`;
+}
 
-function Stat({ label, value, hint, index }: { label: string; value: string; hint?: string; index: number }) {
+// --- Building blocks --------------------------------------------------
+
+function Facet({
+  label,
+  value,
+  hint,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "default" | "warning";
+}) {
   return (
-    <motion.div {...enterStagger(index)} style={{ height: "100%" }}>
+    <Grid size={{ xs: 6, md: 3 }}>
       <Card sx={{ height: "100%" }}>
-        <CardContent>
-          <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: "0.08em" }}>
+        <CardContent sx={{ p: { xs: 2, sm: 2.5 }, "&:last-child": { pb: { xs: 2, sm: 2.5 } } }}>
+          <Typography
+            variant="overline"
+            noWrap
+            sx={{ color: "text.secondary", letterSpacing: "0.08em", display: "block" }}
+          >
             {label}
           </Typography>
-          <Typography variant="h4" component="div" sx={{ fontWeight: 600, lineHeight: 1.1, mt: 0.5 }}>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 600,
+              lineHeight: 1.1,
+              mt: 0.5,
+              fontVariantNumeric: "tabular-nums",
+              color: tone === "warning" ? "warning.main" : "text.primary",
+            }}
+          >
             {value}
           </Typography>
           {hint && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.75 }}>
               {hint}
             </Typography>
           )}
         </CardContent>
       </Card>
-    </motion.div>
+    </Grid>
   );
 }
 
-// ─── Tasks ──────────────────────────────────────────────────────────
-
-function TasksCard({
-  assessmentId,
-  tasks,
+function Panel({
+  eyebrow,
+  title,
+  children,
 }: {
-  assessmentId: string;
-  tasks: Assessment["tasks"];
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
 }) {
   return (
     <motion.div {...enter}>
       <Card>
         <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-end" sx={{ mb: 2 }}>
-            <Box>
-              <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: "0.08em" }}>
-                Plan
-              </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Tasks
-              </Typography>
-            </Box>
-          </Stack>
-          <TasksEditor assessmentId={assessmentId} tasks={tasks ?? []} />
+          <Typography variant="overline" sx={{ color: "text.secondary", letterSpacing: "0.08em" }}>
+            {eyebrow}
+          </Typography>
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+            {title}
+          </Typography>
+          {children}
         </CardContent>
       </Card>
     </motion.div>
   );
 }
 
-// ─── Notes (only rendered when present) ─────────────────────────────
-
-function NotesCard({ notes }: { notes: string }) {
-  return (
-    <motion.div {...enter}>
-      <Card>
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: "0.08em" }}>
-            Yours
-          </Typography>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1.5 }}>
-            Notes
-          </Typography>
-          <Typography variant="body2" sx={{ whiteSpace: "pre-line", color: "text.primary" }}>
-            {notes}
-          </Typography>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-}
-
-// ─── Subject / course link ──────────────────────────────────────────
-
-function RelatedCard({
+function PracticeCard({
+  practice,
+  subjectId,
   unitName,
-  unitId,
-  isTertiary,
+  unitNoun,
+  loading,
 }: {
+  practice: { id: string; title: string; questionCount: number; attempts: number; bestScore?: number }[];
+  subjectId: string;
   unitName?: string;
-  unitId: string;
-  isTertiary: boolean;
+  unitNoun: string;
+  loading: boolean;
 }) {
-  if (!unitName) return null;
-  // High-school subjects have a detail page that groups their assessments.
-  // Tertiary courses don't, so we point at practice scoped to the course.
-  const href = isTertiary
-    ? `/dashboard/practice?subject=${encodeURIComponent(unitId)}`
-    : `/dashboard/subjects/${unitId}`;
-  const blurb = isTertiary
-    ? "Jump into practice tailored to this course."
-    : "Open the subject to see every assessment grouped together.";
+  if (loading) return null;
+
   return (
-    <motion.div {...enter}>
-      <Card>
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: "0.08em" }}>
-            Context
-          </Typography>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-            {unitName}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {blurb}
-          </Typography>
-          <Button
-            component={Link}
-            href={href}
-            variant="outlined"
-            size="small"
-            endIcon={<ArrowForwardIcon />}
-          >
-            {isTertiary ? "Practice" : `Open ${unitName}`}
-          </Button>
-        </CardContent>
-      </Card>
-    </motion.div>
+    <Panel eyebrow="Prepare" title="Practice">
+      {practice.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          No practice tests exist for {unitName ?? `this ${unitNoun}`} yet. Generate one and it
+          will be waiting here.
+        </Typography>
+      ) : (
+        <Stack spacing={1} sx={{ mb: 2 }}>
+          {practice.slice(0, 4).map((t) => (
+            <Box
+              key={t.id}
+              component={Link}
+              href={`/dashboard/workspace?test=${encodeURIComponent(t.id)}`}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5,
+                p: 1.25,
+                borderRadius: 1.5,
+                border: 1,
+                borderColor: "divider",
+                textDecoration: "none",
+                color: "inherit",
+                transition: "border-color 150ms ease, background-color 150ms ease",
+                "&:hover": { borderColor: "text.secondary", bgcolor: "action.hover" },
+              }}
+            >
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
+                  {t.title}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {t.questionCount} questions
+                  {t.attempts > 0 && t.bestScore != null ? ` · best ${t.bestScore}%` : ""}
+                </Typography>
+              </Box>
+              <ArrowRight size={15} style={{ flexShrink: 0, opacity: 0.5 }} />
+            </Box>
+          ))}
+        </Stack>
+      )}
+      <Button
+        component={Link}
+        href={`/dashboard/practice?subject=${encodeURIComponent(subjectId)}`}
+        variant="outlined"
+        color="inherit"
+        size="small"
+        startIcon={<Sparkles size={16} />}
+      >
+        {practice.length === 0 ? "Generate practice" : "More practice"}
+      </Button>
+    </Panel>
   );
 }

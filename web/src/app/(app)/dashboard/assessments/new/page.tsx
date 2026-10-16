@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useSnackbar } from "notistack";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useCreateAssessment } from "@/lib/api/queries";
+import { useStudyVocabulary } from "@/lib/hooks/useStudyVocabulary";
 import {
   AssessmentForm,
   parseMark,
@@ -14,6 +15,7 @@ export default function NewAssessmentPage() {
   const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
   const createAssessment = useCreateAssessment();
+  const vocab = useStudyVocabulary();
 
   const submit = async (v: AssessmentFormValues) => {
     try {
@@ -42,7 +44,7 @@ export default function NewAssessmentPage() {
     <>
       <PageHeader
         title="New assessment"
-        description="Log an SBA, test, project, or exam. Fill in marks as the term progresses."
+        description={`Log a test, essay, project, or exam. Fill in marks as the ${vocab.periodSingular} progresses.`}
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
           { label: "Assessments", href: "/dashboard/assessments" },

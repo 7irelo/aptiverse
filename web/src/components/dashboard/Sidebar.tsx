@@ -63,14 +63,20 @@ function useNavTree(): NavNode[] {
   // the one "Subjects" nav item so the rail matches their world and skips the
   // subjects -> courses redirect bounce. The data layer already unifies both
   // behind a single study-unit id (practiceKey), so this is label-only.
+  //
+  // Past papers is the NSC (matric) archive, so it is high-school only. The
+  // server nav already drops it for tertiary students; this repeats the rule
+  // for the static fallback above, which renders before the server nav lands.
   const resolved = isTertiary
     ? sections.map((s) => ({
         ...s,
-        items: s.items.map((i) =>
-          i.href === "/dashboard/subjects"
-            ? { ...i, label: "Courses", href: "/dashboard/courses" }
-            : i,
-        ),
+        items: s.items
+          .filter((i) => i.href !== "/dashboard/past-papers")
+          .map((i) =>
+            i.href === "/dashboard/subjects"
+              ? { ...i, label: "Courses", href: "/dashboard/courses" }
+              : i,
+          ),
       }))
     : sections;
 
@@ -132,7 +138,7 @@ function DesktopRail({ tree }: { tree: NavNode[] }) {
           // Full-height rail, pinned while content scrolls beside it.
           position: "sticky",
           top: 0,
-          height: "100vh",
+          height: "100dvh",
           transition: (t) =>
             t.transitions.create("width", { duration: t.transitions.duration.shorter }),
         },

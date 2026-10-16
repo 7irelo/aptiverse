@@ -7,6 +7,7 @@ import LinearProgress from "@mui/material/LinearProgress";
 import Divider from "@mui/material/Divider";
 import dayjs from "dayjs";
 import { useAcademicSignals } from "@/lib/api/queries";
+import { useStudyVocabulary } from "@/lib/hooks/useStudyVocabulary";
 
 // Short, honest due label with an urgency tone. Past-due (still ungraded) reads
 // as overdue; anything inside a week is warm; further out shows the date.
@@ -31,6 +32,7 @@ const TONE_COLOR: Record<string, string> = {
 // a subject/course card.
 export function UnitSignals({ unitId }: { unitId: string }) {
   const { signalsFor } = useAcademicSignals();
+  const vocab = useStudyVocabulary();
   const sig = signalsFor(unitId);
 
   const masteryColor =
@@ -47,7 +49,10 @@ export function UnitSignals({ unitId }: { unitId: string }) {
   return (
     <Stack spacing={1.75} sx={{ flex: 1 }}>
       <Stack direction="row" spacing={4}>
-        <Metric label="Term mark" value={sig.currentMark != null ? `${sig.currentMark}%` : "–"} />
+        <Metric
+          label={`${vocab.PeriodSingular} mark`}
+          value={sig.currentMark != null ? `${sig.currentMark}%` : "–"}
+        />
         <Metric
           label="Projected"
           value={sig.predictedMark != null ? `${sig.predictedMark}%` : "–"}

@@ -13,11 +13,7 @@ import Tab from "@mui/material/Tab";
 import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
 import Divider from "@mui/material/Divider";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
-import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
-import CloseIcon from "@mui/icons-material/Close";
-import HandshakeOutlinedIcon from "@mui/icons-material/HandshakeOutlined";
+import { CheckCircle2, Handshake, Mail, Phone, Undo2, X } from "lucide-react";
 import { useSnackbar } from "notistack";
 import dayjs from "dayjs";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -26,7 +22,7 @@ import { StatusChip } from "@/components/common/StatusChip";
 import { RelativeTime } from "@/components/common/RelativeTime";
 import {
   useSchoolEnquiries,
-  useMarkEnquiryContacted,
+  useSetEnquiryContacted,
   type SchoolEnquiry,
 } from "@/lib/api/queries";
 
@@ -58,14 +54,14 @@ export default function AdminSchoolEnquiriesPage() {
     <>
       <PageHeader
         title="School enquiries"
-        description="Sales pipeline — leads from the public Contact-sales form."
+        description="Sales pipeline: leads from the public Contact-sales form on /for-schools."
         breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "School enquiries" }]}
       />
 
       <QueryStates
         query={query}
         empty={{
-          icon: <HandshakeOutlinedIcon />,
+          icon: <Handshake />,
           title: "No school enquiries yet",
           description:
             "When a school fills in the Contact-sales form on /for-schools, the lead lands here.",
@@ -117,9 +113,14 @@ function EnquiriesView({
 
   return (
     <>
+      {/* Fixed-width tabs compress into unreadable slivers at phone width.
+          Scrollable keeps each label legible and lets the row pan instead. */}
       <Tabs
         value={tab}
         onChange={(_, v) => onTab(v as TabKey)}
+        variant="scrollable"
+        scrollButtons="auto"
+        allowScrollButtonsMobile
         sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
       >
         {TABS.map((t) => (
@@ -189,12 +190,12 @@ function EnquiryCard({ enquiry, onClick }: { enquiry: SchoolEnquiry; onClick: ()
             </Typography>
             <Stack direction="row" spacing={2} sx={{ mt: 1.5 }} flexWrap="wrap" useFlexGap>
               <Stack direction="row" spacing={0.75} alignItems="center">
-                <EmailOutlinedIcon sx={{ fontSize: 16, color: "text.secondary" }} />
+                <Mail size={16} />
                 <Typography variant="caption">{enquiry.email}</Typography>
               </Stack>
               {enquiry.phone && (
                 <Stack direction="row" spacing={0.75} alignItems="center">
-                  <PhoneOutlinedIcon sx={{ fontSize: 16, color: "text.secondary" }} />
+                  <Phone size={16} />
                   <Typography variant="caption">{enquiry.phone}</Typography>
                 </Stack>
               )}
@@ -204,7 +205,7 @@ function EnquiryCard({ enquiry, onClick }: { enquiry: SchoolEnquiry; onClick: ()
                 </Typography>
               )}
               {curricula.length > 0 && (
-                <Stack direction="row" spacing={0.5}>
+                <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
                   {curricula.map((c) => (
                     <Chip
                       key={c}
@@ -241,13 +242,20 @@ function EnquiryDrawer({
   onClose: () => void;
 }) {
   const { enqueueSnackbar } = useSnackbar();
-  const markContacted = useMarkEnquiryContacted();
+  const setContacted = useSetEnquiryContacted();
 
-  const handleMark = async () => {
+  // Contacted is a toggle. It used to be one-way, so a mis-click moved a live
+  // lead into the Contacted tab with no way to put it back.
+  const handleSet = async (contacted: boolean) => {
     if (!enquiry) return;
     try {
-      await markContacted.mutateAsync(enquiry.id);
-      enqueueSnackbar(`Marked ${enquiry.schoolName} as contacted.`, { variant: "success" });
+      await setContacted.mutateAsync({ id: enquiry.id, contacted });
+      enqueueSnackbar(
+        contacted
+          ? `Marked ${enquiry.schoolName} as contacted.`
+          : `${enquiry.schoolName} moved back to Fresh.`,
+        { variant: "success" },
+      );
       onClose();
     } catch (err) {
       enqueueSnackbar(
@@ -282,7 +290,7 @@ function EnquiryDrawer({
               </Typography>
             </Box>
             <IconButton onClick={onClose} aria-label="Close">
-              <CloseIcon />
+              <X size={18} />
             </IconButton>
           </Stack>
 
@@ -312,7 +320,7 @@ function EnquiryDrawer({
 
             <Field label="Email">
               <Stack direction="row" spacing={0.75} alignItems="center">
-                <EmailOutlinedIcon sx={{ fontSize: 18, color: "primary.main" }} />
+                <Mail size={18} />
                 <Typography sx={{ fontWeight: 500 }}>
                   <a href={`mailto:${enquiry.email}`} style={{ color: "inherit", textDecoration: "underline" }}>
                     {enquiry.email}
@@ -324,7 +332,7 @@ function EnquiryDrawer({
             {enquiry.phone && (
               <Field label="Phone">
                 <Stack direction="row" spacing={0.75} alignItems="center">
-                  <PhoneOutlinedIcon sx={{ fontSize: 18, color: "primary.main" }} />
+                  <Phone size={18} />
                   <Typography sx={{ fontWeight: 500 }}>
                     <a href={`tel:${enquiry.phone}`} style={{ color: "inherit", textDecoration: "underline" }}>
                       {enquiry.phone}
@@ -363,22 +371,40 @@ function EnquiryDrawer({
             )}
           </Stack>
 
-          {!enquiry.contacted && (
-            <Box sx={{ pt: 2, mt: 2, borderTop: 1, borderColor: "divider" }}>
-              <Button
-                variant="contained"
-                fullWidth
-                startIcon={<CheckCircleOutlineIcon />}
-                onClick={handleMark}
-                disabled={markContacted.isPending}
-              >
-                {markContacted.isPending ? "Saving…" : "Mark as contacted"}
-              </Button>
-              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1, textAlign: "center" }}>
-                Logs the timestamp and moves this enquiry to the Contacted tab.
-              </Typography>
-            </Box>
-          )}
+          <Box sx={{ pt: 2, mt: 2, borderTop: 1, borderColor: "divider" }}>
+            {enquiry.contacted ? (
+              <>
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  startIcon={<Undo2 size={16} />}
+                  onClick={() => void handleSet(false)}
+                  disabled={setContacted.isPending}
+                >
+                  {setContacted.isPending ? "Saving…" : "Move back to Fresh"}
+                </Button>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1, textAlign: "center" }}>
+                  Clears the contacted timestamp. Recorded in the audit log.
+                </Typography>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="contained"
+                  fullWidth
+                  startIcon={<CheckCircle2 size={16} />}
+                  onClick={() => void handleSet(true)}
+                  disabled={setContacted.isPending}
+                >
+                  {setContacted.isPending ? "Saving…" : "Mark as contacted"}
+                </Button>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1, textAlign: "center" }}>
+                  Logs the timestamp, moves this enquiry to the Contacted tab, and records who did
+                  it in the audit log.
+                </Typography>
+              </>
+            )}
+          </Box>
         </Box>
       )}
     </Drawer>

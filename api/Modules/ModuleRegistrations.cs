@@ -21,6 +21,10 @@ namespace Aptiverse.Api.Modules
             IConfiguration configuration)
         {
             Aptiverse.AcademicPlanning.Application.ServiceCollectionExtensions.AddApplicationServices(services);
+            // Affiliates: registers the referral/commission services AND
+            // AddHostedService<AffiliateMaintenanceService> (hold release +
+            // referral-code backfill). Registered only here.
+            Aptiverse.Affiliates.Application.ServiceCollectionExtensions.AddApplicationServices(services);
             Aptiverse.Audit.Application.ServiceCollectionExtensions.AddApplicationServices(services);
             Aptiverse.Booking.Application.ServiceCollectionExtensions.AddApplicationServices(services);
             Aptiverse.Calendar.Application.ServiceCollectionExtensions.AddApplicationServices(services);

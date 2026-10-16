@@ -94,10 +94,24 @@ namespace Aptiverse.Support.Controllers
         {
             return Ok(new[]
             {
-                new FrontendFaqDto { Id = "f1", Q = "How does AI generate practice tests?", A = "We use your subject, current mastery and upcoming SBAs to generate aligned questions, then mark them with rubric-aware feedback.", Category = "ai" },
-                new FrontendFaqDto { Id = "f2", Q = "Is my diary private?", A = "Yes. Your diary is end-to-end encrypted by default. Even Aptiverse staff cannot read it.", Category = "privacy" },
-                new FrontendFaqDto { Id = "f3", Q = "How do rewards get verified?", A = "Your school confirms with one click via an email — no paperwork on the teacher.", Category = "rewards" },
-                new FrontendFaqDto { Id = "f4", Q = "Can I use Aptiverse offline?", A = "Yes. Practice tests, diary entries and goal modules work offline and sync when you're back online.", Category = "general" },
+                new FrontendFaqDto { Id = "f1", Q = "How does AI generate practice tests?", A = "We use the subject or course you pick, the topics you choose, and your existing topic vocabulary to generate aligned questions, then mark them with feedback.", Category = "ai" },
+                // This answered "is my diary private" with "end-to-end encrypted,
+                // even staff cannot read it". Neither half was true.
+                // DiaryEntry.Content is a plain string, and the same row carries
+                // SentimentAnalysis and SentimentScore, which the server computes
+                // by reading the entry. End-to-end encryption is not merely absent
+                // here, it is impossible while the mood trend exists: we cannot
+                // analyse text we cannot read. A student decides what to confide
+                // based on this answer, so it is the last place to overclaim.
+                new FrontendFaqDto { Id = "f2", Q = "Is my diary private?", A = "Your entries are yours: no parent, teacher or other student can see them. Two things you should know honestly. They are stored on our servers, not end-to-end encrypted, so treat it as private rather than sealed. And our AI reads each entry to work out the mood trend on your wellbeing page.", Category = "privacy" },
+                new FrontendFaqDto { Id = "f3", Q = "How do rewards get verified?", A = "Measurable goals verify themselves from your own work: your logged marks and your practice results. There is nobody to ask and nothing to submit.", Category = "rewards" },
+                // There is no offline support to speak of: no service worker, no
+                // PWA config, no workbox, nothing in next.config. The previous
+                // answer promised offline practice, diary and goals plus
+                // background sync, none of which exists. Worth being blunt about
+                // rather than vague, because a student on limited data who
+                // believes this will lose work.
+                new FrontendFaqDto { Id = "f4", Q = "Can I use Aptiverse offline?", A = "Not yet. Aptiverse needs a connection: practice tests are generated on demand, and your work saves to your account as you go. If you lose signal mid-test, finish the question you are on and wait for the connection before submitting.", Category = "general" },
             });
         }
     }

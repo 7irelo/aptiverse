@@ -1,7 +1,10 @@
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Aptiverse.Affiliates.Application.Services;
 using Aptiverse.Api.Data;
+using Aptiverse.Api.Services.Marketing;
+using Aptiverse.Api.Utilities;
 using Aptiverse.Core.Services;
 using Aptiverse.Entitlements.Application.Services;
 using Aptiverse.Entitlements.Domain.Models;
@@ -31,17 +34,21 @@ namespace Aptiverse.Entitlements.Controllers
         IPaystackClient paystack,
         IPaystackSubscriptionService lifecycle,
         IEmailSender email,
+        IMetaConversionsClient metaConversions,
+        IAffiliateLedger affiliateLedger,
         ILogger<PaymentsController> logger) : ControllerBase
     {
         private readonly ApplicationDbContext _db = db;
         private readonly IPaystackClient _paystack = paystack;
         private readonly IPaystackSubscriptionService _lifecycle = lifecycle;
         private readonly IEmailSender _email = email;
+        private readonly IMetaConversionsClient _meta = metaConversions;
+        private readonly IAffiliateLedger _affiliates = affiliateLedger;
         private readonly ILogger<PaymentsController> _logger = logger;
 
-        // Where billing emails send people to manage their plan (matches the
-        // hardcoded frontend origin the auth emails already use).
-        private const string BillingUrl = "https://aptiverse.co.za/dashboard/billing";
+        // Where billing emails send people to manage their plan. Built from the
+        // configured web app origin (App:WebBaseUrl) so it resolves per env.
+        private static string BillingUrl => WebApp.Url("/dashboard/billing");
 
         private string? CurrentUserId()
             => User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -60,6 +67,169 @@ namespace Aptiverse.Entitlements.Controllers
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Billing email {Type} to {To} failed to enqueue.", templateType, to);
+            }
+        }
+
+        // Fold the browser's attribution bundle into Paystack metadata, so it
+        // comes back to us on both the verify response and the webhook body.
+        //
+        // Nothing is written unless the buyer consented, and the consent flag
+        // itself is written so the read side can tell "they said no" apart from
+        // "an old transaction predates this code". Values are length-capped
+        // because they originate in a URL the visitor controls.
+        private static void AddMarketingMetadata(
+            IDictionary<string, string> metadata, CheckoutAttributionDto? a)
+        {
+            if (a is null || !a.MarketingConsent) return;
+
+            void Put(string key, string? value)
+            {
+                if (string.IsNullOrWhiteSpace(value)) return;
+                metadata[key] = value.Trim().Length > MarketingMetadata.MaxValueLength
+                    ? value.Trim()[..MarketingMetadata.MaxValueLength]
+                    : value.Trim();
+            }
+
+            metadata[MarketingMetadata.ConsentKey] = "1";
+            Put(MarketingMetadata.EventIdKey, a.EventId);
+            Put(MarketingMetadata.FbpKey, a.Fbp);
+            Put(MarketingMetadata.FbcKey, a.Fbc);
+            Put(MarketingMetadata.UtmSourceKey, a.UtmSource);
+            Put(MarketingMetadata.UtmMediumKey, a.UtmMedium);
+            Put(MarketingMetadata.UtmCampaignKey, a.UtmCampaign);
+            Put(MarketingMetadata.UtmContentKey, a.UtmContent);
+        }
+
+        // Report a confirmed purchase to the ad platform.
+        //
+        // Called from BOTH the verify path and the webhook path on purpose.
+        // Whichever lands first wins and the other is deduplicated by Meta on
+        // the shared event_id, which is exactly why the browser generates that
+        // id at checkout. Belt and braces is the right posture here: verify
+        // misses the buyer who closes the tab, the webhook misses a host it
+        // cannot reach, and between them the number is right.
+        //
+        // Never awaited into the caller's failure path. If Meta is down, the
+        // person who just paid still gets their subscription.
+        private async Task ReportPurchaseAsync(
+            IReadOnlyDictionary<string, string> metadata,
+            string? email,
+            decimal valueZar,
+            string? planCode,
+            bool includeRequestContext,
+            CancellationToken ct)
+        {
+            if (!MarketingMetadata.HasConsent(metadata)) return;
+            var eventId = MarketingMetadata.Take(metadata, MarketingMetadata.EventIdKey);
+            if (string.IsNullOrWhiteSpace(eventId)) return;
+
+            try
+            {
+                await _meta.SendPurchaseAsync(new MetaPurchaseEvent
+                {
+                    MarketingConsent = true,
+                    EventId = eventId,
+                    Value = valueZar,
+                    Currency = "ZAR",
+                    Email = email,
+                    Fbp = MarketingMetadata.Take(metadata, MarketingMetadata.FbpKey),
+                    Fbc = MarketingMetadata.Take(metadata, MarketingMetadata.FbcKey),
+                    // Only on the verify path, where the buyer's own browser is
+                    // making the request. The webhook is Paystack's server, and
+                    // sending Paystack's IP as the buyer's would be worse than
+                    // sending nothing.
+                    ClientIpAddress = includeRequestContext ? HttpContext.Connection.RemoteIpAddress?.ToString() : null,
+                    ClientUserAgent = includeRequestContext ? Request.Headers.UserAgent.FirstOrDefault() : null,
+                    EventSourceUrl = WebApp.Url("/welcome"),
+                    PlanCode = planCode,
+                    UtmSource = MarketingMetadata.Take(metadata, MarketingMetadata.UtmSourceKey),
+                    UtmMedium = MarketingMetadata.Take(metadata, MarketingMetadata.UtmMediumKey),
+                    UtmCampaign = MarketingMetadata.Take(metadata, MarketingMetadata.UtmCampaignKey),
+                    UtmContent = MarketingMetadata.Take(metadata, MarketingMetadata.UtmContentKey),
+                }, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Purchase conversion reporting failed; billing is unaffected.");
+            }
+        }
+
+        // The key an affiliate referral code travels under, in Paystack
+        // transaction metadata, so it comes back on both the verify response
+        // and the webhook body.
+        private const string ReferralCodeKey = "referral_code";
+
+        // Unlike the marketing bundle, this is NOT gated on marketing consent.
+        // A referral code is not ad measurement: it is the term of a
+        // commercial arrangement with a third party who is owed money, and
+        // dropping it would mean quietly not paying somebody what they earned.
+        // It is a short opaque code the affiliate themselves handed out, and
+        // it carries nothing about the buyer.
+        private static void AddReferralMetadata(
+            IDictionary<string, string> metadata, CheckoutAttributionDto? a)
+        {
+            var code = a?.ReferralCode?.Trim();
+            if (string.IsNullOrWhiteSpace(code)) return;
+            metadata[ReferralCodeKey] = code.Length > 32 ? code[..32] : code;
+        }
+
+        // Fold a confirmed payment into the affiliate ledger.
+        //
+        // Called from BOTH the verify path and the webhook path, exactly like
+        // the conversion reporting above and for exactly the same reason:
+        // verify misses the buyer who closed the tab, the webhook misses a
+        // host it cannot reach, and the ledger has to be right either way.
+        // Idempotent on the Paystack reference, so a double fire accrues once.
+        //
+        // Never awaited into a failure path. Somebody who has just paid gets
+        // their subscription whether or not a commission could be written.
+        private async Task AccrueAffiliateCommissionAsync(
+            string payerUserId,
+            string reference,
+            decimal amountZar,
+            long? subscriptionId,
+            string? planCode,
+            string? cardSignature,
+            string? cardBrand,
+            string? cardLast4,
+            IReadOnlyDictionary<string, string>? metadata,
+            CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(payerUserId) || string.IsNullOrWhiteSpace(reference)) return;
+            try
+            {
+                string? hint = null;
+                if (metadata is not null && metadata.TryGetValue(ReferralCodeKey, out var code))
+                    hint = code;
+
+                // Annual charges commission fewer payments. Read the cycle off
+                // the subscription this payment settled.
+                var isAnnual = false;
+                if (subscriptionId is { } sid)
+                {
+                    var billing = await _db.Set<Subscription>().AsNoTracking()
+                        .Where(s => s.Id == sid).Select(s => s.Billing).FirstOrDefaultAsync(ct);
+                    isAnnual = string.Equals(billing, "annual", StringComparison.OrdinalIgnoreCase);
+                }
+
+                await _affiliates.RecordPaymentAsync(new AffiliatePaymentReceipt
+                {
+                    PayerUserId = payerUserId,
+                    PaymentReference = reference,
+                    AmountZar = amountZar,
+                    PaidAt = DateTime.UtcNow,
+                    SubscriptionId = subscriptionId,
+                    PlanCode = planCode,
+                    IsAnnual = isAnnual,
+                    CardSignature = cardSignature,
+                    CardBrand = cardBrand,
+                    CardLast4 = cardLast4,
+                    ReferralCodeHint = hint,
+                }, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Affiliate accrual failed for {Reference}; billing is unaffected.", reference);
             }
         }
 
@@ -195,7 +365,7 @@ namespace Aptiverse.Entitlements.Controllers
             if (priceZar <= 0m)
                 return BadRequest($"Plan '{plan.Code}' is not a paid plan; nothing to charge.");
 
-            var result = await StartCheckoutAsync(userId, plan, annual, email, body.CallbackUrl, ct);
+            var result = await StartCheckoutAsync(userId, plan, annual, email, body.CallbackUrl, body.Attribution, ct);
             return result is null
                 ? StatusCode(StatusCodes.Status502BadGateway, "Could not start the Paystack transaction.")
                 : Ok(result);
@@ -205,7 +375,8 @@ namespace Aptiverse.Entitlements.Controllers
         // starts the Paystack hosted checkout. Returns null on a Paystack
         // error. Shared by first-time checkout and plan upgrades.
         private async Task<CheckoutResultDto?> StartCheckoutAsync(
-            string userId, Plan plan, bool annual, string email, string? callbackUrl, CancellationToken ct)
+            string userId, Plan plan, bool annual, string email, string? callbackUrl,
+            CheckoutAttributionDto? attribution, CancellationToken ct)
         {
             var priceZar = annual
                 ? plan.AnnualPriceZar ?? plan.MonthlyPriceZar ?? 0m
@@ -255,6 +426,8 @@ namespace Aptiverse.Entitlements.Controllers
                 ["initiated_by"] = userId,
                 ["billing"] = annual ? "annual" : "monthly",
             };
+            AddMarketingMetadata(metadata, attribution);
+            AddReferralMetadata(metadata, attribution);
 
             try
             {
@@ -351,9 +524,18 @@ namespace Aptiverse.Entitlements.Controllers
             // gift ones (no Paystack link) and the old paid plan being replaced
             // on an upgrade — disable those on Paystack so they stop charging.
             // Leaves exactly the one they just paid for.
+            //
+            // Restricted to subscriptions the buyer is themselves a member of,
+            // which is what makes a sub "their own plan". Parent coverage subs
+            // are owned by the parent but their member is the CHILD, so without
+            // this filter a parent buying or upgrading their own plan silently
+            // cancelled every covered child's Student Pro on the way past.
+            // Every purchase, seed and admin-created sub adds an owner member,
+            // so this only ever excludes coverage.
             var others = await _db.Set<Subscription>()
                 .Where(s => s.OwnerUserId == userId && s.Id != localId
-                    && (s.Status == "active" || s.Status == "past_due"))
+                    && (s.Status == "active" || s.Status == "past_due")
+                    && s.Members.Any(m => m.UserId == userId))
                 .ToListAsync(ct);
             foreach (var o in others)
             {
@@ -384,6 +566,22 @@ namespace Aptiverse.Entitlements.Controllers
                     CardLast4 = info.CardLast4 ?? "",
                     BillingUrl,
                 });
+
+            // The subscription is genuinely active and the money genuinely
+            // moved. This is the only honest place to say so to an ad platform.
+            await ReportPurchaseAsync(
+                info.Metadata, info.Email ?? localSub.BillingEmail, paidZar,
+                localSub.PlanCode, includeRequestContext: true, ct);
+
+            // Whoever referred this buyer earns 40% of what was just received,
+            // for their first three payments. The subscription owner is the
+            // person whose card was charged, which is who the referral is
+            // bound to.
+            await AccrueAffiliateCommissionAsync(
+                localSub.OwnerUserId, body.Reference.Trim(), paidZar,
+                localSub.Id, localSub.PlanCode,
+                info.CardSignature, info.CardBrand, info.CardLast4,
+                info.Metadata, ct);
 
             return Ok(new
             {
@@ -432,7 +630,10 @@ namespace Aptiverse.Entitlements.Controllers
                 if (string.IsNullOrWhiteSpace(body.Email))
                     return BadRequest("email is required for an upgrade.");
 
-                var result = await StartCheckoutAsync(userId, target, annual, body.Email, body.CallbackUrl, ct);
+                // No attribution on a plan change. An existing customer moving
+                // tier is not an acquisition, and reporting it as one would
+                // teach the ad platform to chase people it already has.
+                var result = await StartCheckoutAsync(userId, target, annual, body.Email, body.CallbackUrl, null, ct);
                 return result is null
                     ? StatusCode(StatusCodes.Status502BadGateway, "Could not start the Paystack transaction.")
                     : Ok(new { mode = "checkout", authorizationUrl = result.AuthorizationUrl, reference = result.Reference });
@@ -710,6 +911,82 @@ namespace Aptiverse.Entitlements.Controllers
                 return Ok(new { handled = false, message = "no event" });
 
             var outcome = await _lifecycle.HandleEventAsync(evt, ct);
+
+            // Webhook-side conversion reporting. This is the path that catches
+            // the buyer who closed the tab before /welcome could call verify,
+            // which on a phone on a slow connection is not a rare case. When
+            // both paths fire, Meta collapses them on the shared event_id.
+            if (outcome.Handled
+                && string.Equals(evt.Event, "charge.success", StringComparison.OrdinalIgnoreCase))
+            {
+                await ReportPurchaseAsync(
+                    evt.Metadata,
+                    evt.CustomerEmail,
+                    ReadChargeAmountZar(rawBody),
+                    MarketingMetadata.Take(evt.Metadata, "plan_code"),
+                    includeRequestContext: false,
+                    ct);
+            }
+
+            // Affiliate accrual on the webhook path.
+            //
+            // This is deliberately NOT gated on `outcome.Handled`. The
+            // lifecycle service reports "handled" for the subscription state
+            // machine, and a renewal charge whose subscription is already
+            // active can legitimately be a no-op there while still being a
+            // real payment somebody is owed commission on. What money did is
+            // a separate question from what the state machine did.
+            //
+            // This is also the only path that fires when the buyer closes the
+            // tab before /welcome can call verify, which on a phone on a slow
+            // connection is not a rare case at all. A hook on verify alone
+            // would silently miss real conversions in production.
+            if (string.Equals(evt.Event, "charge.success", StringComparison.OrdinalIgnoreCase))
+            {
+                var reference = ReadStringProperty(rawBody, "reference");
+                var subscriptionId = evt.LocalSubscriptionId
+                    ?? outcome.SubscriptionId;
+                if (!string.IsNullOrWhiteSpace(reference) && subscriptionId is { } subId)
+                {
+                    var ownerUserId = await _db.Set<Subscription>().AsNoTracking()
+                        .Where(s => s.Id == subId)
+                        .Select(s => s.OwnerUserId)
+                        .FirstOrDefaultAsync(ct);
+                    if (!string.IsNullOrWhiteSpace(ownerUserId))
+                    {
+                        await AccrueAffiliateCommissionAsync(
+                            ownerUserId!, reference!, ReadChargeAmountZar(rawBody),
+                            subId, MarketingMetadata.Take(evt.Metadata, "plan_code"),
+                            ReadAuthorizationSignature(rawBody), null, null,
+                            evt.Metadata, ct);
+                    }
+                }
+            }
+
+            // Clawback. A refund or a chargeback means the money did not stay
+            // received, so the commission it produced does not stay earned.
+            // The 30-day hold exists precisely so that most of these land
+            // before anything has been paid out; the ones that do not are
+            // recorded as a negative balance against the next payout rather
+            // than chased as cash.
+            if (IsMoneyReturnedEvent(evt.Event))
+            {
+                var refunded = ReadRefundedReference(rawBody);
+                if (!string.IsNullOrWhiteSpace(refunded))
+                {
+                    try
+                    {
+                        await _affiliates.ReverseForPaymentAsync(
+                            refunded!, $"Paystack {evt.Event}", "system", ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex,
+                            "Affiliate clawback failed for {Reference} on {Event}.", refunded, evt.Event);
+                    }
+                }
+            }
+
             return Ok(new
             {
                 handled = outcome.Handled,
@@ -717,6 +994,119 @@ namespace Aptiverse.Entitlements.Controllers
                 subscriptionId = outcome.SubscriptionId?.ToString(),
                 status = outcome.NewStatus,
             });
+        }
+
+        // What was actually charged, in rand. Paystack bills in minor units, so
+        // a purchase value reported straight off data.amount would be a hundred
+        // times too large and would poison every return-on-ad-spend number the
+        // ad platform computes. Zero when absent, which Meta accepts.
+        private static decimal ReadChargeAmountZar(string rawBody)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(rawBody);
+                if (doc.RootElement.TryGetProperty("data", out var d)
+                    && d.ValueKind == JsonValueKind.Object
+                    && d.TryGetProperty("amount", out var amt)
+                    && amt.ValueKind == JsonValueKind.Number)
+                {
+                    return amt.GetInt64() / 100m;
+                }
+            }
+            catch
+            {
+                /* the caller already parsed this body once; never fail here */
+            }
+            return 0m;
+        }
+
+        // A flat string off `data`, e.g. the transaction reference.
+        private static string? ReadStringProperty(string rawBody, string property)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(rawBody);
+                if (doc.RootElement.TryGetProperty("data", out var d)
+                    && d.ValueKind == JsonValueKind.Object
+                    && d.TryGetProperty(property, out var v)
+                    && v.ValueKind == JsonValueKind.String)
+                {
+                    return v.GetString();
+                }
+            }
+            catch
+            {
+                /* the caller already parsed this body once; never fail here */
+            }
+            return null;
+        }
+
+        // The card fingerprint off `data.authorization.signature`. Used only
+        // as a self-referral signal, and hashed before it is stored.
+        private static string? ReadAuthorizationSignature(string rawBody)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(rawBody);
+                if (doc.RootElement.TryGetProperty("data", out var d)
+                    && d.ValueKind == JsonValueKind.Object
+                    && d.TryGetProperty("authorization", out var au)
+                    && au.ValueKind == JsonValueKind.Object
+                    && au.TryGetProperty("signature", out var sig)
+                    && sig.ValueKind == JsonValueKind.String)
+                {
+                    return sig.GetString();
+                }
+            }
+            catch
+            {
+                /* never fail here */
+            }
+            return null;
+        }
+
+        // Paystack events that mean money went back to the customer.
+        private static bool IsMoneyReturnedEvent(string? eventName)
+            => eventName is not null
+            && (eventName.Equals("refund.processed", StringComparison.OrdinalIgnoreCase)
+             || eventName.Equals("charge.dispute.create", StringComparison.OrdinalIgnoreCase)
+             || eventName.Equals("charge.dispute.resolve", StringComparison.OrdinalIgnoreCase));
+
+        // Refund and dispute payloads nest the original transaction, so the
+        // reference is one level down rather than at the root of `data`.
+        private static string? ReadRefundedReference(string rawBody)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(rawBody);
+                if (!doc.RootElement.TryGetProperty("data", out var d)
+                    || d.ValueKind != JsonValueKind.Object) return null;
+
+                if (d.TryGetProperty("transaction", out var txn)
+                    && txn.ValueKind == JsonValueKind.Object
+                    && txn.TryGetProperty("reference", out var tr)
+                    && tr.ValueKind == JsonValueKind.String)
+                {
+                    return tr.GetString();
+                }
+
+                if (d.TryGetProperty("transaction_reference", out var tref)
+                    && tref.ValueKind == JsonValueKind.String)
+                {
+                    return tref.GetString();
+                }
+
+                if (d.TryGetProperty("reference", out var r)
+                    && r.ValueKind == JsonValueKind.String)
+                {
+                    return r.GetString();
+                }
+            }
+            catch
+            {
+                /* never fail here */
+            }
+            return null;
         }
 
         // Maps Paystack's webhook envelope onto the Application-layer event.
@@ -737,6 +1127,7 @@ namespace Aptiverse.Entitlements.Controllers
             string? email = null;
             long? localId = null;
             DateTime? nextPayment = null;
+            var metadata = new Dictionary<string, string>(StringComparer.Ordinal);
 
             if (root.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Object)
             {
@@ -765,14 +1156,31 @@ namespace Aptiverse.Entitlements.Controllers
 
                 // Our correlation id from init metadata.
                 if (data.TryGetProperty("metadata", out var meta)
-                    && meta.ValueKind == JsonValueKind.Object
-                    && meta.TryGetProperty("subscription_id", out var sid))
+                    && meta.ValueKind == JsonValueKind.Object)
                 {
-                    var sidStr = sid.ValueKind == JsonValueKind.String
-                        ? sid.GetString()
-                        : sid.ValueKind == JsonValueKind.Number ? sid.GetRawText() : null;
-                    if (long.TryParse(sidStr, out var parsedId))
-                        localId = parsedId;
+                    if (meta.TryGetProperty("subscription_id", out var sid))
+                    {
+                        var sidStr = sid.ValueKind == JsonValueKind.String
+                            ? sid.GetString()
+                            : sid.ValueKind == JsonValueKind.Number ? sid.GetRawText() : null;
+                        if (long.TryParse(sidStr, out var parsedId))
+                            localId = parsedId;
+                    }
+
+                    // Everything else, flat scalars only, so the marketing
+                    // attribution bundle survives to the caller.
+                    foreach (var prop in meta.EnumerateObject())
+                    {
+                        var value = prop.Value.ValueKind switch
+                        {
+                            JsonValueKind.String => prop.Value.GetString(),
+                            JsonValueKind.Number => prop.Value.GetRawText(),
+                            JsonValueKind.True => "true",
+                            JsonValueKind.False => "false",
+                            _ => null,
+                        };
+                        if (!string.IsNullOrEmpty(value)) metadata[prop.Name] = value;
+                    }
                 }
             }
 
@@ -784,6 +1192,7 @@ namespace Aptiverse.Entitlements.Controllers
                 CustomerEmail = email,
                 LocalSubscriptionId = localId,
                 NextPaymentDate = nextPayment,
+                Metadata = metadata,
             };
         }
     }
@@ -814,6 +1223,34 @@ namespace Aptiverse.Entitlements.Controllers
         // "monthly" (default) or "annual".
         [JsonPropertyName("billing")] public string? Billing { get; init; }
         [JsonPropertyName("callbackUrl")] public string? CallbackUrl { get; init; }
+        // Which advert, if any, produced this checkout. Optional: a checkout
+        // with no attribution is a perfectly normal checkout.
+        [JsonPropertyName("attribution")] public CheckoutAttributionDto? Attribution { get; init; }
+    }
+
+    // Marketing attribution as the browser assembled it. Passed straight into
+    // Paystack transaction metadata and read back when the payment confirms,
+    // so a purchase can be reported to the ad platform from the server without
+    // a new column, a new table or a migration.
+    //
+    // MarketingConsent is the load-bearing field. When it is false the browser
+    // sends nothing else, and the server sends nothing to anyone.
+    public record CheckoutAttributionDto
+    {
+        [JsonPropertyName("marketingConsent")] public bool MarketingConsent { get; init; }
+        [JsonPropertyName("eventId")] public string? EventId { get; init; }
+        [JsonPropertyName("fbp")] public string? Fbp { get; init; }
+        [JsonPropertyName("fbc")] public string? Fbc { get; init; }
+        [JsonPropertyName("utmSource")] public string? UtmSource { get; init; }
+        [JsonPropertyName("utmMedium")] public string? UtmMedium { get; init; }
+        [JsonPropertyName("utmCampaign")] public string? UtmCampaign { get; init; }
+        [JsonPropertyName("utmContent")] public string? UtmContent { get; init; }
+        // The affiliate referral code this buyer arrived on, if any. Travels
+        // regardless of the marketing-consent flag above, because it is a
+        // commercial term rather than ad measurement: somebody is owed a commission on
+        // this payment and silently dropping the code would mean not paying
+        // them.
+        [JsonPropertyName("referralCode")] public string? ReferralCode { get; init; }
     }
 
     public record CheckoutResultDto

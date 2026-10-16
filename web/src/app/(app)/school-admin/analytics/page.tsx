@@ -4,13 +4,23 @@ import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Grid from "@mui/material/Grid";
 import Typography from "@mui/material/Typography";
+import Skeleton from "@mui/material/Skeleton";
+import dynamic from "next/dynamic";
 import { AptiverseLineChart as LineChart } from "@/components/common/AptiverseLineChart";
 import { AptiverseBarChart as BarChart } from "@/components/common/AptiverseBarChart";
-import { PieChart } from "@mui/x-charts/PieChart";
+// The Bar/Line wrappers already lazy-load @mui/x-charts, but this page also
+// pulls PieChart directly, which would drag the whole charts bundle back into
+// the first-load JS. Defer it the same way, behind a height-reserved skeleton.
+const PieChart = dynamic(() => import("@mui/x-charts/PieChart").then((m) => m.PieChart), {
+  ssr: false,
+  loading: () => <Skeleton variant="rounded" height={260} />,
+});
 import { PieChartArcLabel } from "@/components/common/PieChartArcLabel";
 import { PageHeader } from "@/components/common/PageHeader";
+import { useChartSeriesColors } from "@/components/common/chartPalette";
 
 export default function SchoolAnalyticsPage() {
+  const seriesColor = useChartSeriesColors();
   return (
     <>
       <PageHeader
@@ -30,8 +40,8 @@ export default function SchoolAnalyticsPage() {
                 height={320}
                 xAxis={[{ data: ["Maths", "PhSci", "Eng HL", "LSci", "Geo", "Afr FAL", "LO"], scaleType: "band" }]}
                 series={[
-                  { data: [71, 68, 76, 70, 72, 64, 82], label: "School", color: "#0F6963" },
-                  { data: [62, 60, 70, 65, 68, 58, 78], label: "Province", color: "#9FB1C2" },
+                  { data: [71, 68, 76, 70, 72, 64, 82], label: "School", color: seriesColor(0) },
+                  { data: [62, 60, 70, 65, 68, 58, 78], label: "Province", color: seriesColor(2) },
                 ]}
                 grid={{ horizontal: true }}
               />
@@ -77,7 +87,7 @@ export default function SchoolAnalyticsPage() {
                 xAxis={[{ data: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov"], scaleType: "point" }]}
                 yAxis={[{ min: 1, max: 5 }]}
                 series={[
-                  { data: [3.6, 3.7, 3.5, 3.4, 3.5, 3.7, 3.8, 3.6, 3.4, 3.3, 3.5], label: "Avg mood (1-5)", curve: "monotoneX", color: "#F25C2E" },
+                  { data: [3.6, 3.7, 3.5, 3.4, 3.5, 3.7, 3.8, 3.6, 3.4, 3.3, 3.5], label: "Avg mood (1-5)", curve: "monotoneX", color: seriesColor(1) },
                 ]}
                 grid={{ horizontal: true }}
               />

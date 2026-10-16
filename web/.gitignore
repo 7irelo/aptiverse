@@ -16,6 +16,10 @@ pnpm-debug.log*
 # TypeScript incremental build cache
 *.tsbuildinfo
 
+# Exported ad creative. Generated from src/app/(marketing)/ads/units by
+# scripts/export-ads.mjs; the code is the source of truth, not the PNGs.
+marketing/ad-exports/
+
 # Playwright / E2E artefacts
 tests/e2e/.env
 tests/e2e/.auth/

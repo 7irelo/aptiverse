@@ -46,14 +46,164 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to EC2
+      # This step is new because the deploy assumed /opt/aptiverse/compose.prod.yml
+      # was already on the box. It never was: that file lives in the infra repo
+      # and nothing copied it across, so `docker compose pull` failed with
+      # "no such file or directory" on every run since May. The script had no
+      # set -e and ended with `docker image prune -f`, which succeeds against an
+      # empty daemon, so the step exited 0 and every deploy reported success
+      # while shipping nothing. Writing the file here means a deploy no longer
+      # depends on a box someone configured by hand once.
+      - name: Write compose file
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            set -euo pipefail
+            sudo mkdir -p /opt/aptiverse
+            sudo chown ec2-user:ec2-user /opt/aptiverse
+            cat > /opt/aptiverse/compose.prod.yml <<'COMPOSE'
+            services:
+              redis:
+                image: redis:7-alpine
+                container_name: aptiverse-redis
+                restart: unless-stopped
+                volumes:
+                  - redis_data:/data
+                healthcheck:
+                  test: ["CMD", "redis-cli", "ping"]
+                  interval: 10s
+                  timeout: 5s
+                  retries: 5
+
+              api:
+                image: ghcr.io/aptiverse-labs/api:latest
+                container_name: aptiverse-api
+                restart: unless-stopped
+                ports:
+                  - "80:5100"
+                environment:
+                  ASPNETCORE_ENVIRONMENT: Production
+                  ASPNETCORE_URLS: http://0.0.0.0:5100
+                  ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING}
+                  ConnectionStrings__Redis: redis:6379,abortConnect=false
+                  Jwt__Key: ${JWT_KEY}
+                  Jwt__Issuer: ${JWT_ISSUER}
+                  Jwt__Audience: ${JWT_AUDIENCE}
+                  EmailSettings__Server: ${EMAIL_SMTP_HOST}
+                  EmailSettings__Port: ${EMAIL_SMTP_PORT}
+                  EmailSettings__Username: ${EMAIL_SMTP_USER}
+                  EmailSettings__Password: ${EMAIL_SMTP_PASSWORD}
+                  EmailSettings__SenderEmail: ${EMAIL_FROM_ADDRESS}
+                  EmailSettings__SenderName: Aptiverse
+                  Anthropic__ApiKey: ${ANTHROPIC_API_KEY}
+                  Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID}
+                  # No default: a blank key must fail loudly as "not configured"
+                  # rather than resolve to a working-looking blank. Checkout,
+                  # renewals, refunds and the admin cockpit all read this.
+                  Paystack__SecretKey: ${PAYSTACK_SECRET_KEY}
+                  # Meta pixel + Conversions API. Both must be set or the
+                  # server-side CAPI (MetaConversionsClient) is a silent no-op.
+                  META_PIXEL_ID: ${META_PIXEL_ID}
+                  META_CAPI_ACCESS_TOKEN: ${META_CAPI_ACCESS_TOKEN}
+                depends_on:
+                  redis:
+                    condition: service_healthy
+
+            volumes:
+              redis_data:
+            COMPOSE
+
+      # Rewritten every deploy rather than only when missing, so a rotated
+      # secret actually reaches the box instead of the stack silently keeping
+      # the old value. umask 077 before the write, so it is never briefly
+      # world-readable.
+      - name: Write environment file
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: DB_CONNECTION_STRING,JWT_KEY,JWT_ISSUER,JWT_AUDIENCE,EMAIL_SMTP_HOST,EMAIL_SMTP_PORT,EMAIL_SMTP_USER,EMAIL_SMTP_PASSWORD,EMAIL_FROM_ADDRESS,ANTHROPIC_API_KEY,GOOGLE_CLIENT_ID,PAYSTACK_SECRET_KEY,META_PIXEL_ID,META_CAPI_ACCESS_TOKEN
+          script: |
+            set -euo pipefail
+            umask 077
+            : > /opt/aptiverse/.env
+            {
+              printf 'DB_CONNECTION_STRING=%s\n' "$DB_CONNECTION_STRING"
+              printf 'JWT_KEY=%s\n'              "$JWT_KEY"
+              printf 'JWT_ISSUER=%s\n'           "$JWT_ISSUER"
+              printf 'JWT_AUDIENCE=%s\n'         "$JWT_AUDIENCE"
+              printf 'EMAIL_SMTP_HOST=%s\n'      "$EMAIL_SMTP_HOST"
+              printf 'EMAIL_SMTP_PORT=%s\n'      "$EMAIL_SMTP_PORT"
+              printf 'EMAIL_SMTP_USER=%s\n'      "$EMAIL_SMTP_USER"
+              printf 'EMAIL_SMTP_PASSWORD=%s\n'  "$EMAIL_SMTP_PASSWORD"
+              printf 'EMAIL_FROM_ADDRESS=%s\n'   "$EMAIL_FROM_ADDRESS"
+              printf 'ANTHROPIC_API_KEY=%s\n'    "$ANTHROPIC_API_KEY"
+              printf 'GOOGLE_CLIENT_ID=%s\n'     "$GOOGLE_CLIENT_ID"
+              printf 'PAYSTACK_SECRET_KEY=%s\n'  "$PAYSTACK_SECRET_KEY"
+              printf 'META_PIXEL_ID=%s\n'          "$META_PIXEL_ID"
+              printf 'META_CAPI_ACCESS_TOKEN=%s\n' "$META_CAPI_ACCESS_TOKEN"
+            } >> /opt/aptiverse/.env
+            test -s /opt/aptiverse/.env
+        env:
+          DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING }}
+          JWT_KEY: ${{ secrets.JWT_KEY }}
+          JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
+          JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
+          EMAIL_SMTP_HOST: ${{ secrets.EMAIL_SMTP_HOST }}
+          EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT }}
+          EMAIL_SMTP_USER: ${{ secrets.EMAIL_SMTP_USER }}
+          EMAIL_SMTP_PASSWORD: ${{ secrets.EMAIL_SMTP_PASSWORD }}
+          EMAIL_FROM_ADDRESS: ${{ secrets.EMAIL_FROM_ADDRESS }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.AUTHENTICATION__GOOGLE__CLIENTID }}
+          PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+          META_PIXEL_ID: ${{ secrets.META_PIXEL_ID }}
+          META_CAPI_ACCESS_TOKEN: ${{ secrets.META_CAPI_ACCESS_TOKEN }}
+
+      - name: Deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          # envs: forwards these into the remote shell. A step-level `env:`
+          # alone only sets them on the runner, and this script runs on the box,
+          # so they arrive unbound and set -u aborts.
+          envs: GHCR_USER,GHCR_TOKEN
+          script: |
+            set -euo pipefail
             cd /opt/aptiverse
-            docker compose -f compose.prod.yml pull api
-            docker compose -f compose.prod.yml up -d api
+            echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USER}" --password-stdin
+            docker compose -f compose.prod.yml pull
+            docker compose -f compose.prod.yml up -d
             docker image prune -f
+            docker compose -f compose.prod.yml ps
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Without this, the job goes green whenever ssh merely connects, which is
+      # exactly how a deploy that shipped nothing passed for two months. The API
+      # has to actually answer before this counts as deployed.
+      - name: Verify /health
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            for i in $(seq 1 45); do
+              if curl -fsS http://localhost/health >/dev/null 2>&1; then
+                echo "API answered /health after ${i}s"
+                exit 0
+              fi
+              sleep 1
+            done
+            echo "API did not answer /health within 45s. Recent logs:"
+            docker logs --tail=60 aptiverse-api 2>&1 || true
+            exit 1

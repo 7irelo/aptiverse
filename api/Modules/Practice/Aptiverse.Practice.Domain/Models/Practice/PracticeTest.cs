@@ -60,8 +60,26 @@ namespace Aptiverse.Practice.Domain.Models.Practice
 
         public int DurationMinutes { get; set; }
 
-        // Optional link to an Academic Planning SBA (assessment) id.
-        public string? AlignedSBA { get; set; }
+        // The Academic Planning assessment this test was generated for. A
+        // student cannot conjure practice out of nothing: they generate it
+        // against something they have actually logged, past or upcoming, and
+        // the assessment is what supplies the subject and the level.
+        //
+        // Null on seeded/teacher-authored tests and on anything generated
+        // before this was required, so it stays nullable.
+        //
+        // The column is still called aligned_sba. "SBA" is CAPS high-school
+        // language and this now carries a university student's assessments
+        // too, so the property reads level-neutrally while the mapping keeps
+        // the existing column and costs no migration.
+        //
+        // The name is spelled out in full because the snake_case convention
+        // only derives a column name for properties that don't declare one, and
+        // an explicit [Column] is taken verbatim. "AlignedSBA" here produced a
+        // quoted "AlignedSBA" that does not exist, and every read of the
+        // practice list 500'd on it.
+        [Column("aligned_sba")]
+        public string? AssessmentId { get; set; }
 
         // True when the test was produced by the practice-test generator
         // service rather than hand-authored.
@@ -117,5 +135,35 @@ namespace Aptiverse.Practice.Domain.Models.Practice
         // Drives per-topic correctness aggregation. Falls back to the test's
         // first topic at score time when blank.
         public string? Topic { get; set; }
+
+        // ---- Exam papers -------------------------------------------------
+        // Only meaningful when the parent test's Format is "exam". Everything
+        // below rides in the same jsonb column as the rest of the question, so
+        // none of it is a migration: an older question simply deserialises with
+        // the defaults.
+
+        // What this question is out of. A real paper is marked out of a total,
+        // not out of a question count: "1.3 (5)" means five marks are on offer
+        // and a student budgets their time by that number. Defaults to 1, which
+        // is exactly what every non-exam test already behaves like, so
+        // marks-based scoring and question-count scoring agree on those.
+        public int Marks { get; set; } = 1;
+
+        // Section this question sits in ("A", "B", "C"). Null outside an exam.
+        // Sections are what make a paper feel like a paper: a block of
+        // multiple-choice to warm up, then short answers, then something long.
+        public string? Section { get; set; }
+
+        // The marking memo for a written answer: what an examiner is looking
+        // for, and where the marks are. Kind == "short" or "long" only.
+        //
+        // This exists because ExpectedAnswer above cannot carry a real memo. It
+        // holds one canonical string matched case-insensitively, which is fine
+        // for "1789" and useless for "explain why the reaction is exothermic",
+        // where a correct answer can be written fifty ways and half marks are
+        // normal. The memo is handed to the marker along with the student's
+        // answer, so partial credit is awarded against stated criteria rather
+        // than invented on the spot.
+        public string? MarkingMemo { get; set; }
     }
 }

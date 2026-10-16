@@ -11,8 +11,10 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { StatCard } from "@/components/common/StatCard";
 import { LiveActivityFeed } from "@/components/dashboard/LiveActivityFeed";
 import Link from "next/link";
+import { useChartSeriesColors } from "@/components/common/chartPalette";
 
 export default function SchoolAdminDashboard() {
+  const seriesColor = useChartSeriesColors();
   return (
     <>
       <PageHeader
@@ -48,8 +50,8 @@ export default function SchoolAdminDashboard() {
                 height={320}
                 xAxis={[{ data: ["2023 T1", "2023 T2", "2023 T3", "2023 T4", "2024 T1", "2024 T2", "2024 T3", "2024 T4", "2025 T1", "2025 T2", "2025 T3", "2025 T4"], scaleType: "point" }]}
                 series={[
-                  { data: [62, 64, 65, 66, 64, 66, 67, 68, 67, 69, 70, 71], label: "Mastery %", curve: "monotoneX", color: "#0F6963" },
-                  { data: [55, 56, 58, 59, 60, 61, 62, 63, 62, 64, 65, 67], label: "Provincial avg", curve: "monotoneX", color: "#9FB1C2" },
+                  { data: [62, 64, 65, 66, 64, 66, 67, 68, 67, 69, 70, 71], label: "Mastery %", curve: "monotoneX", color: seriesColor(0) },
+                  { data: [55, 56, 58, 59, 60, 61, 62, 63, 62, 64, 65, 67], label: "Provincial avg", curve: "monotoneX", color: seriesColor(2) },
                 ]}
                 grid={{ horizontal: true }}
               />

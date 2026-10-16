@@ -32,7 +32,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           display: "flex",
           alignItems: "stretch",
           bgcolor: "background.default",
-          ...(fullBleed ? { height: "100dvh", overflow: "hidden" } : { minHeight: "100vh" }),
+          // 100dvh, not 100vh. On mobile Safari and Chrome Android 100vh is
+          // the viewport with the browser chrome retracted, so a plain
+          // `minHeight: 100vh` page is always ~110px taller than what the
+          // student can see and always has a phantom scrollbar.
+          ...(fullBleed ? { height: "100dvh", overflow: "hidden" } : { minHeight: "100dvh" }),
         }}
       >
         {/* Full-height rail owns the brand (top) — Euphoria layout. */}
@@ -45,7 +49,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             minWidth: 0,
             display: "flex",
             flexDirection: "column",
-            ...(fullBleed ? { height: "100dvh", minHeight: 0 } : { minHeight: "100vh" }),
+            ...(fullBleed ? { height: "100dvh", minHeight: 0 } : { minHeight: "100dvh" }),
           }}
         >
           <AppTopBar onMobileMenuClick={() => setMobileOpen(true)} />
@@ -59,8 +63,29 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               ...(fullBleed
                 ? { display: "flex", flexDirection: "column", minHeight: 0 }
                 : {
-                    px: { xs: 2, sm: 3, lg: 5 },
-                    py: { xs: 3, md: 4 },
+                    // Gutters are the designed 16/24/40 unless a safe-area
+                    // inset is larger. Landscape on a notched phone puts the
+                    // notch on a side edge, and viewport-fit=cover (set in the
+                    // root layout) means the page paints under it, so the
+                    // gutter has to pay it back or text runs under the cutout.
+                    pl: {
+                      xs: "max(env(safe-area-inset-left), 16px)",
+                      sm: "max(env(safe-area-inset-left), 24px)",
+                      lg: "max(env(safe-area-inset-left), 40px)",
+                    },
+                    pr: {
+                      xs: "max(env(safe-area-inset-right), 16px)",
+                      sm: "max(env(safe-area-inset-right), 24px)",
+                      lg: "max(env(safe-area-inset-right), 40px)",
+                    },
+                    pt: { xs: 3, md: 4 },
+                    // The gesture bar always eats the bottom edge. Without
+                    // this the last card and any page-level primary action sit
+                    // under the home indicator.
+                    pb: {
+                      xs: "calc(env(safe-area-inset-bottom) + 24px)",
+                      md: "calc(env(safe-area-inset-bottom) + 32px)",
+                    },
                     maxWidth: 1480,
                     mx: "auto",
                   }),

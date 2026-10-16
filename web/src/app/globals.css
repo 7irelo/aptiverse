@@ -5,6 +5,54 @@ body {
   height: 100%;
 }
 
+/* Stop iOS Safari inflating text when the device rotates to landscape.
+ * Without this the type scale silently changes mid-session on a phone. */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Long unbroken strings (email addresses, tokens, URLs, subject codes) are
+ * the single most common cause of a phone-width layout blowing out. Breaking
+ * them inside their own box is always better than the page scrolling
+ * sideways. `break-word` rather than `anywhere` on purpose: it does not
+ * change intrinsic min-content sizing, so it cannot quietly reflow desktop
+ * layouts that were tuned against the old measure. */
+body {
+  overflow-wrap: break-word;
+}
+
+/* First-paint colour scheme, OS-driven, before any JS runs.
+ *
+ * MUI paints one fixed theme into the SSR styles (light), and the React
+ * theme only corrects to the OS preference after hydration. That left a
+ * full-viewport white flash on reload for dark-OS users. These unlayered
+ * rules paint the base surface correctly at first paint from the CSS media
+ * query alone. Because MUI's CssBaseline lives in a lower CSS @layer
+ * (enableCssLayer), unlayered declarations win, so the body background and
+ * text are right immediately and stay right once the theme resolves.
+ *
+ * Values mirror palette.ts: light background.default / text.primary, then
+ * dark background.default (#050506) / text.primary (#E9EAE6). color-scheme
+ * lets native controls, the overscroll canvas, and default UI follow the OS
+ * too. OS-driven only by design: there is no persisted manual choice here. */
+:root {
+  color-scheme: light dark;
+}
+
+html,
+body {
+  background-color: #f6f7f5;
+  color: #1b1d22;
+}
+
+@media (prefers-color-scheme: dark) {
+  html,
+  body {
+    background-color: #050506;
+    color: #e9eae6;
+  }
+}
+
 #__next,
 main {
   height: 100%;
@@ -78,6 +126,141 @@ img {
   *::-webkit-scrollbar-thumb:hover {
     background-color: rgba(255, 255, 255, 0.4);
   }
+}
+
+/*
+ * Text selection. Without an explicit rule the browser default keeps each
+ * element's own text colour and only tints the background, so white-on-black
+ * text vanishes against a light highlight and black-on-white against a dark one.
+ * Force a single legible pair everywhere, graphite ink on citron, which reads
+ * in both light and dark mode regardless of the underlying text colour.
+ */
+::selection {
+  background-color: #c3e84f;
+  color: #1b1d22;
+}
+::-moz-selection {
+  background-color: #c3e84f;
+  color: #1b1d22;
+}
+
+/* ------------------------------------------------------------------ touch
+ *
+ * Everything below is gated on `pointer: coarse`, so it applies to phones and
+ * tablets and changes nothing on a mouse-driven desktop. These rules are
+ * unlayered, which means they beat MUI's own styles (MUI ships inside a lower
+ * CSS @layer via enableCssLayer) without needing !important or a theme edit.
+ */
+@media (pointer: coarse) {
+  /* iOS Safari zooms the whole viewport when a focused field's text is under
+   * 16px, and then leaves the page zoomed. The theme's body1 is 15px, so every
+   * TextField in the app triggers it. Raising the control font to 16px on
+   * touch devices is the fix; the label and helper text stay at their designed
+   * sizes because only the control itself zooms. */
+  input,
+  textarea,
+  select,
+  .MuiInputBase-input {
+    font-size: 16px;
+  }
+
+  /* Touch target floor. 44px is the Apple HIG minimum and roughly the pad of a
+   * thumb. MUI's medium IconButton is 40px and its small Button is 35px, both
+   * of which mis-tap constantly on a bumpy taxi ride. min-height/min-width
+   * rather than height so nothing that is already larger shrinks. */
+  .MuiIconButton-root,
+  .MuiFab-root {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .MuiButton-root {
+    min-height: 44px;
+  }
+
+  /* Chips are frequently the only way to filter or pick something, and MUI's
+   * small chip is 24px tall. 32px plus the gap its row already carries clears
+   * the WCAG 2.2 target-size minimum without turning a chip row into a wall of
+   * buttons.
+   *
+   * Applied to every chip, not only the interactive ones. Sizing by
+   * interactivity is correct reasoning about touch targets and wrong about
+   * layout: chips sit in mixed rows, so on the dashboard header the linked
+   * plan chip grew to 32px while the static institution chip stayed at 24px
+   * and the two sat at visibly different heights. A row of chips has to read
+   * as one row. Static chips gaining 8px on touch costs nothing. */
+  .MuiChip-root {
+    min-height: 32px;
+  }
+
+  /* The delete affordance inside a chip is a 16px icon by default. */
+  .MuiChip-deleteIcon {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* -------------------------------------------------------------- safe areas
+ *
+ * viewport-fit=cover (set in app/layout.tsx) lets the page paint under the
+ * notch and the home indicator, which is what makes these insets resolve to
+ * anything. Anything pinned to an edge has to pay them back or it sits under
+ * system chrome.
+ */
+
+/* Fixed and sticky overlays that MUI portals to <body>: drawers, dialogs,
+ * menus. These are rendered outside the app tree, so a component-level fix
+ * would have to be repeated at every call site. */
+.MuiDrawer-paper {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.MuiDrawer-paperAnchorLeft {
+  padding-left: env(safe-area-inset-left);
+}
+
+.MuiDrawer-paperAnchorRight {
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Dialogs on a phone. MUI's default paper margin is 32px a side, which eats
+ * 18% of a 360px screen and squeezes two-button action rows onto two lines.
+ * 16px is enough separation to still read as a layer above the page, and the
+ * max-height keeps the action row on screen instead of pushing it below the
+ * fold where it cannot be reached. */
+@media (max-width: 599.95px) {
+  .MuiDialog-paper {
+    margin: 16px;
+    width: calc(100% - 32px);
+    max-width: calc(100% - 32px);
+    max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
+  }
+
+  .MuiDialog-paperFullScreen {
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: 100dvh;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* A dialog's actions are its point. Let them wrap and stretch rather than
+   * truncate when two long labels will not sit side by side at 328px. */
+  .MuiDialog-paper .MuiDialogActions-root {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .MuiDialog-paper .MuiDialogActions-root > :not(:first-of-type) {
+    margin-left: 0;
+  }
+}
+
+/* Popover-based surfaces (Menu, Select, Autocomplete) can otherwise render
+ * their last item under the home indicator. */
+.MuiPopover-paper,
+.MuiMenu-paper {
+  max-width: calc(100vw - 16px);
 }
 
 @media (prefers-reduced-motion: reduce) {

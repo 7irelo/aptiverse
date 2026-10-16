@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Aptiverse.Api.Data;
 using Aptiverse.Api.Services.Goals;
 using Aptiverse.Domain.Models;
+using Aptiverse.Entitlements.Domain.Models;
 using Aptiverse.Goals.Application.Frontend.Dtos;
 using Aptiverse.Goals.Domain.Models.Goals;
 using Aptiverse.Notifications.Application.Services;
@@ -42,15 +43,7 @@ namespace Aptiverse.Goals.Controllers
 
             var goals = await _evaluator.EvaluateAllAsync(userId, ct);
 
-            var goalIds = goals.Select(g => g.Id).ToList();
-            var allowances = await _db.Set<GoalAllowance>()
-                .AsNoTracking()
-                .Where(a => goalIds.Contains(a.GoalId) && a.Status != AllowanceStatuses.Cancelled)
-                .ToListAsync(ct);
-
-            var byGoal = allowances.GroupBy(a => a.GoalId).ToDictionary(g => g.Key, g => g.First());
-
-            return Ok(goals.Select(g => ToDto(g, byGoal.GetValueOrDefault(g.Id))).ToList());
+            return Ok(goals.Select(ToDto).ToList());
         }
 
         [HttpPost]
@@ -68,6 +61,27 @@ namespace Aptiverse.Goals.Controllers
             // is precisely the bug this design exists to kill.
             if (GoalKinds.IsMeasurable(kind) && (body.TargetValue is null || body.TargetValue <= 0))
                 return BadRequest("A verifiable goal needs a target value above zero.");
+
+            // Where they already are. Rewarded goals pay on the distance past
+            // this, so it is measured before the goal exists and frozen onto the
+            // row: recomputing it later would let a bad week quietly inflate
+            // the payout.
+            int? baseline = null;
+            if (GoalKinds.NeedsBaseline(kind))
+            {
+                baseline = await _evaluator.BaselineForAsync(
+                    userId, kind, body.SubjectId, body.TopicFilter, ct);
+
+                // The anti-sandbagging rule. A target at or below the baseline
+                // is not a goal, it is a description of the present, and paying
+                // for it would teach students to aim at where they already
+                // stand. Refused at creation rather than accepted and silently
+                // priced at zero, because a goal that can never pay should never
+                // have been offered.
+                if (body.TargetValue <= baseline)
+                    return BadRequest(
+                        $"You're already at {baseline}%. Aim higher than that, otherwise there's nothing to prove.");
+            }
 
             if (IsPercentKind(kind) && body.TargetValue > 100)
                 return BadRequest("A percentage target cannot exceed 100.");
@@ -90,7 +104,11 @@ namespace Aptiverse.Goals.Controllers
                 DueDate = body.DueDate ?? DateTime.UtcNow.AddDays(30),
                 Category = string.IsNullOrWhiteSpace(body.Category) ? "academic" : body.Category!,
                 Reward = body.Reward,
-                RewardPoints = GoalEvaluator.PriceOf(kind, body.TargetValue),
+                BaselineValue = baseline,
+                AssessmentId = body.AssessmentId,
+                // A projection, not a promise: the real figure is settled when
+                // the goal verifies, against how far past the baseline they got.
+                RewardPoints = GoalEvaluator.ProjectedPoints(kind, body.TargetValue, baseline),
             };
 
             _db.Set<Goal>().Add(goal);
@@ -101,7 +119,51 @@ namespace Aptiverse.Goals.Controllers
             await _evaluator.EvaluateAllAsync(userId, ct);
             await _db.Entry(goal).ReloadAsync(ct);
 
-            return CreatedAtAction(nameof(GetGoals), new { id = goal.Id }, ToDto(goal, null));
+            return CreatedAtAction(nameof(GetGoals), new { id = goal.Id }, ToDto(goal));
+        }
+
+        // What a goal of this shape would be measured against, asked before it
+        // exists.
+        //
+        // CreateGoal refuses a rewarded target at or below the baseline. That
+        // rule is right, but it is only fair if the student can see the bar
+        // before they aim at it, so the dialog asks here first and shows the
+        // number next to the target input. It also prices the target, using the
+        // same GoalEvaluator the payout comes from: re-implementing that curve
+        // in TypeScript would give the student a figure that drifts from the
+        // one they are eventually paid.
+        [HttpGet("baseline")]
+        public async Task<ActionResult<FrontendGoalBaselineDto>> GetBaseline(
+            [FromQuery] string kind,
+            [FromQuery] string? subjectId,
+            [FromQuery] string? topicFilter,
+            [FromQuery] int? targetValue,
+            CancellationToken ct)
+        {
+            var userId = CurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+            if (string.IsNullOrWhiteSpace(kind) || !GoalKinds.All.Contains(kind))
+                return BadRequest($"Unknown goal kind '{kind}'.");
+
+            // Unrewarded kinds have no baseline gate and pay nothing. Say so
+            // plainly rather than returning a zero that reads like a baseline.
+            if (!GoalKinds.NeedsBaseline(kind))
+            {
+                return Ok(new FrontendGoalBaselineDto { Kind = kind, Rewarded = GoalKinds.IsRewarded(kind) });
+            }
+
+            var baseline = await _evaluator.BaselineForAsync(userId, kind, subjectId, topicFilter, ct);
+
+            return Ok(new FrontendGoalBaselineDto
+            {
+                Kind = kind,
+                Rewarded = true,
+                Baseline = baseline,
+                MinimumTarget = baseline + 1,
+                ProjectedPoints = targetValue is > 0
+                    ? GoalEvaluator.ProjectedPoints(kind, targetValue, baseline)
+                    : null,
+            });
         }
 
         [HttpPatch("{id}")]
@@ -159,7 +221,7 @@ namespace Aptiverse.Goals.Controllers
                     ct);
             }
 
-            return Ok(ToDto(goal, null));
+            return Ok(ToDto(goal));
         }
 
         [HttpDelete("{id}")]
@@ -172,14 +234,6 @@ namespace Aptiverse.Goals.Controllers
             var goal = await _db.Set<Goal>().FirstOrDefaultAsync(g => g.Id == goalId && g.StudentId == userId, ct);
             if (goal is null) return NotFound();
 
-            // An earned allowance is a debt between two people; deleting the
-            // goal must not quietly erase it.
-            var owed = await _db.Set<GoalAllowance>()
-                .AnyAsync(a => a.GoalId == goalId && a.Status == AllowanceStatuses.Earned, ct);
-            if (owed)
-                return BadRequest("This goal has an allowance that's been earned but not paid. It can't be deleted yet.");
-
-            await _db.Set<GoalAllowance>().Where(a => a.GoalId == goalId).ExecuteDeleteAsync(ct);
             _db.Set<Goal>().Remove(goal);
             await _db.SaveChangesAsync(ct);
             return NoContent();
@@ -357,145 +411,123 @@ namespace Aptiverse.Goals.Controllers
             return streak;
         }
 
-        // ── allowances ────────────────────────────────────────────────────
+        // ── rewards ───────────────────────────────────────────────────────
+        //
+        // Points buy time-boxed top-ups on metered features, and nothing else.
+        // The catalogue is fixed in code (RewardCatalog) because each entry is
+        // joined to running behaviour: the QuotaKey has to be one UsageMeter
+        // actually meters, or the student pays points for a number nobody reads.
 
-        // Aptiverse never holds or moves the money. These endpoints record a
-        // promise and a receipt; the rand changes hands between a parent and
-        // their child exactly as it did before. See GoalAllowance.
-        [HttpGet("allowances")]
-        public async Task<ActionResult<IEnumerable<FrontendAllowanceDto>>> GetAllowances(CancellationToken ct)
+        [HttpGet("rewards")]
+        public async Task<ActionResult<IEnumerable<FrontendRewardDto>>> GetRewards(CancellationToken ct)
         {
             var userId = CurrentUserId();
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-            // One endpoint, two readings: a parent sees what they've promised,
-            // a student sees what's been promised them.
-            var rows = await _db.Set<GoalAllowance>()
+            var points = await _db.Set<StudentPoints>()
                 .AsNoTracking()
-                .Include(a => a.Goal)
-                .Where(a => a.SponsorUserId == userId || a.StudentId == userId)
-                .OrderByDescending(a => a.CreatedAt)
+                .FirstOrDefaultAsync(p => p.StudentId == userId, ct);
+            var balance = points?.AvailablePoints ?? 0;
+
+            return Ok(RewardCatalog.All.Select(r => new FrontendRewardDto
+            {
+                Code = r.Code,
+                Title = r.Title,
+                Description = r.Description,
+                QuotaKey = r.QuotaKey,
+                Bonus = r.Bonus,
+                Days = r.Days,
+                CostPoints = r.CostPoints,
+                // Affordability is computed here rather than in the client so a
+                // disabled button and a 400 can never disagree.
+                Affordable = balance >= r.CostPoints,
+            }).ToList());
+        }
+
+        [HttpGet("rewards/active")]
+        public async Task<ActionResult<IEnumerable<FrontendGrantDto>>> GetActiveGrants(CancellationToken ct)
+        {
+            var userId = CurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var now = DateTime.UtcNow;
+            var rows = await _db.Set<QuotaGrant>()
+                .AsNoTracking()
+                .Where(g => g.StudentId == userId && g.ExpiresAt > now)
+                .OrderBy(g => g.ExpiresAt)
                 .ToListAsync(ct);
 
-            var studentIds = rows.Select(a => a.StudentId).Distinct().ToList();
-            var names = await _db.Users
-                .Where(u => studentIds.Contains(u.Id))
-                .Select(u => new { u.Id, Name = u.FirstName + " " + u.LastName })
-                .ToDictionaryAsync(u => u.Id, u => u.Name, ct);
-
-            return Ok(rows.Select(a => ToAllowanceDto(a, names.GetValueOrDefault(a.StudentId) ?? "")).ToList());
+            return Ok(rows.Select(ToGrantDto).ToList());
         }
 
-        [HttpPost("{goalId}/allowance")]
-        public async Task<ActionResult<FrontendAllowanceDto>> PledgeAllowance(
-            string goalId, [FromBody] PledgeAllowanceDto body, CancellationToken ct)
+        [HttpPost("rewards/{code}/redeem")]
+        public async Task<ActionResult<FrontendGrantDto>> RedeemReward(string code, CancellationToken ct)
         {
             var userId = CurrentUserId();
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
-            if (!long.TryParse(goalId, out var id)) return NotFound();
-            if (body.AmountZar <= 0) return BadRequest("An allowance needs an amount above zero.");
-            if (body.AmountZar > 10_000) return BadRequest("That's beyond what this is for. Keep an allowance under R10 000.");
 
-            var goal = await _db.Set<Goal>().FirstOrDefaultAsync(g => g.Id == id, ct);
-            if (goal is null || goal.StudentId is null) return NotFound();
+            var option = RewardCatalog.Find(code);
+            if (option is null) return NotFound($"No reward '{code}'.");
 
-            // Only a parent the student actually accepted can pledge. The link
-            // is the student's consent, so this is theirs to grant, not ours.
-            var link = await _db.Set<ParentLink>()
-                .FirstOrDefaultAsync(l =>
-                    l.ParentUserId == userId &&
-                    l.StudentUserId == goal.StudentId &&
-                    l.Status == "accepted", ct);
-            if (link is null) return Forbid();
+            var points = await _db.Set<StudentPoints>()
+                .FirstOrDefaultAsync(p => p.StudentId == userId, ct);
+            if (points is null || points.AvailablePoints < option.CostPoints)
+                return BadRequest($"That costs {option.CostPoints} points and you have {points?.AvailablePoints ?? 0}. Verify a goal to earn more.");
 
-            var existing = await _db.Set<GoalAllowance>()
-                .FirstOrDefaultAsync(a => a.GoalId == id && a.Status != AllowanceStatuses.Cancelled, ct);
-            if (existing is not null) return Conflict("This goal already has an allowance on it.");
+            // Debit and grant in one SaveChanges. Splitting them would let a
+            // crash between the two either hand out a free reward or take the
+            // points and give nothing.
+            points.AvailablePoints -= option.CostPoints;
+            points.UpdatedAt = DateTime.UtcNow;
 
-            var allowance = new GoalAllowance
+            var now = DateTime.UtcNow;
+            var grant = new QuotaGrant
             {
-                GoalId = id,
-                StudentId = goal.StudentId,
-                SponsorUserId = userId,
-                SponsorName = link.ParentName,
-                AmountZar = decimal.Round(body.AmountZar, 2),
-                Status = AllowanceStatuses.Pledged,
-                Note = string.IsNullOrWhiteSpace(body.Note) ? null : body.Note!.Trim(),
+                StudentId = userId,
+                QuotaKey = option.QuotaKey,
+                Bonus = option.Bonus,
+                RewardCode = option.Code,
+                PointsSpent = option.CostPoints,
+                GrantedAt = now,
+                ExpiresAt = now.AddDays(option.Days),
             };
+            _db.Set<QuotaGrant>().Add(grant);
 
-            // A goal already achieved is earned the moment it's pledged on.
-            if (goal.AchievedAt is not null)
+            // Negative entry, so the ledger explains where the points went and
+            // the balance can be re-derived from it.
+            _db.Set<PointsTransaction>().Add(new PointsTransaction
             {
-                allowance.Status = AllowanceStatuses.Earned;
-                allowance.EarnedAt = DateTime.UtcNow;
-            }
+                StudentPointsId = points.Id,
+                Points = -option.CostPoints,
+                Description = $"Redeemed: {option.Title}",
+                Source = "reward",
+                TransactionDate = now,
+            });
 
-            _db.Set<GoalAllowance>().Add(allowance);
             await _db.SaveChangesAsync(ct);
 
             await _notifications.EnqueueAsync(
-                goal.StudentId,
-                "info",
-                $"{link.ParentName} put an allowance on a goal",
-                $"R{allowance.AmountZar:0.##} for: {goal.Title}. Hit the target and it's yours.",
-                "/dashboard/rewards",
-                ct);
-
-            allowance.Goal = goal;
-            return Ok(ToAllowanceDto(allowance, ""));
-        }
-
-        [HttpPatch("allowances/{id}/paid")]
-        public async Task<ActionResult<FrontendAllowanceDto>> MarkAllowancePaid(string id, CancellationToken ct)
-        {
-            var userId = CurrentUserId();
-            if (string.IsNullOrEmpty(userId)) return Unauthorized();
-            if (!long.TryParse(id, out var allowanceId)) return NotFound();
-
-            var allowance = await _db.Set<GoalAllowance>()
-                .Include(a => a.Goal)
-                .FirstOrDefaultAsync(a => a.Id == allowanceId && a.SponsorUserId == userId, ct);
-            if (allowance is null) return NotFound();
-
-            // Only the person who owes it can say it's settled, and only once
-            // it's actually owed.
-            if (allowance.Status != AllowanceStatuses.Earned)
-                return BadRequest("This allowance hasn't been earned yet.");
-
-            allowance.Status = AllowanceStatuses.Paid;
-            allowance.PaidAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
-
-            await _notifications.EnqueueAsync(
-                allowance.StudentId,
+                userId,
                 "celebration",
-                "Your allowance was paid",
-                $"{allowance.SponsorName} marked R{allowance.AmountZar:0.##} as handed over.",
+                option.Title,
+                $"Yours until {grant.ExpiresAt:d MMM}. Go and use it.",
                 "/dashboard/rewards",
                 ct);
 
-            return Ok(ToAllowanceDto(allowance, ""));
+            return Ok(ToGrantDto(grant));
         }
 
-        [HttpDelete("allowances/{id}")]
-        public async Task<IActionResult> CancelAllowance(string id, CancellationToken ct)
+        private static FrontendGrantDto ToGrantDto(QuotaGrant g) => new()
         {
-            var userId = CurrentUserId();
-            if (string.IsNullOrEmpty(userId)) return Unauthorized();
-            if (!long.TryParse(id, out var allowanceId)) return NotFound();
-
-            var allowance = await _db.Set<GoalAllowance>()
-                .FirstOrDefaultAsync(a => a.Id == allowanceId && a.SponsorUserId == userId, ct);
-            if (allowance is null) return NotFound();
-
-            // Withdrawing a promise the child already kept isn't a thing.
-            if (allowance.Status is AllowanceStatuses.Earned or AllowanceStatuses.Paid)
-                return BadRequest("This one's already been earned. It can't be withdrawn.");
-
-            allowance.Status = AllowanceStatuses.Cancelled;
-            await _db.SaveChangesAsync(ct);
-            return NoContent();
-        }
+            Id = g.Id.ToString(),
+            RewardCode = g.RewardCode,
+            Title = RewardCatalog.Find(g.RewardCode)?.Title ?? g.RewardCode,
+            QuotaKey = g.QuotaKey,
+            Bonus = g.Bonus,
+            PointsSpent = g.PointsSpent,
+            GrantedAt = g.GrantedAt,
+            ExpiresAt = g.ExpiresAt,
+        };
 
         // ── milestones ────────────────────────────────────────────────────
 
@@ -677,7 +709,7 @@ namespace Aptiverse.Goals.Controllers
             _ => null,
         };
 
-        private static FrontendGoalDto ToDto(Goal g, GoalAllowance? allowance) => new()
+        private static FrontendGoalDto ToDto(Goal g) => new()
         {
             Id = g.Id.ToString(),
             SubjectId = g.SubjectId,
@@ -695,26 +727,13 @@ namespace Aptiverse.Goals.Controllers
             TopicFilter = g.TopicFilter,
             RewardPoints = g.RewardPoints,
             AchievedAt = g.AchievedAt,
+            BaselineValue = g.BaselineValue,
+            AchievedDifficulty = g.AchievedDifficulty,
+            AssessmentId = g.AssessmentId,
             AutoVerified = GoalKinds.IsMeasurable(g.Kind),
-            Allowance = allowance is null ? null : ToAllowanceDto(allowance, ""),
+            Rewarded = GoalKinds.IsRewarded(g.Kind),
         };
 
-        private static FrontendAllowanceDto ToAllowanceDto(GoalAllowance a, string studentName) => new()
-        {
-            Id = a.Id.ToString(),
-            GoalId = a.GoalId.ToString(),
-            GoalTitle = a.Goal?.Title ?? "",
-            StudentId = a.StudentId,
-            StudentName = studentName,
-            SponsorName = a.SponsorName,
-            AmountZar = a.AmountZar,
-            Status = a.Status,
-            EarnedAt = a.EarnedAt,
-            PaidAt = a.PaidAt,
-            Note = a.Note,
-            GoalProgress = a.Goal?.Progress ?? 0,
-            GoalTarget = a.Goal?.Target ?? "",
-        };
     }
 
     public record FrontendMilestoneDto
@@ -751,11 +770,6 @@ namespace Aptiverse.Goals.Controllers
         [JsonPropertyName("goalIds")] public string[] GoalIds { get; init; } = Array.Empty<string>();
     }
 
-    public record PledgeAllowanceDto
-    {
-        [JsonPropertyName("amountZar")] public decimal AmountZar { get; init; }
-        [JsonPropertyName("note")] public string? Note { get; init; }
-    }
 
     public record CreateGoalDto
     {
@@ -765,6 +779,7 @@ namespace Aptiverse.Goals.Controllers
         [JsonPropertyName("kind")] public string? Kind { get; init; }
         [JsonPropertyName("targetValue")] public int? TargetValue { get; init; }
         [JsonPropertyName("topicFilter")] public string? TopicFilter { get; init; }
+        [JsonPropertyName("assessmentId")] public long? AssessmentId { get; init; }
         [JsonPropertyName("dueDate")] public DateTime? DueDate { get; init; }
         [JsonPropertyName("category")] public string? Category { get; init; }
         [JsonPropertyName("subjectId")] public string? SubjectId { get; init; }

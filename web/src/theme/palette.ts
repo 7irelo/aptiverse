@@ -123,31 +123,49 @@ const inkLight = "#1B1D22";
 export const lightPalette: PaletteOptions = {
   mode: "light",
   primary: {
-    light: brand.teal[400],
-    main: brand.teal[600], // #0F6E5C
+    // `light` is a text-legal step, not a tint: teal[400] only reached 4.43:1
+    // on background.default, so anything using primary.light as a label failed
+    // body-text contrast. teal[500] clears it at 7.85:1.
+    light: brand.teal[500],
+    main: brand.teal[600],
     dark: brand.teal[800],
     contrastText: "#FFFFFF",
   },
   secondary: {
+    // Citron is SURFACE-ONLY in light mode: main and light are backgrounds that
+    // take graphite ink on top, never text colours (main scores 1.40:1 on
+    // paper). `dark` is deliberately the deep citron so that the one step a
+    // developer is likely to reach for as a text or icon colour is legal
+    // (4.99:1 on paper). Hover fills use citron[500] directly in components.ts.
     light: brand.citron[300],
     main: brand.citron[400], // #C3E84F - signature accent, used sparingly
-    dark: brand.citron[600],
+    dark: brand.citron[700],
     contrastText: "#1B1D22",
   },
-  success: { main: brand.forest[500], light: brand.forest[400], dark: brand.forest[600] },
-  warning: { main: brand.terracotta[400], light: brand.terracotta[300], dark: brand.terracotta[600] },
-  info: { main: "#2C7DCB", light: "#5BA3E5", dark: "#1A5994" },
+  // Semantic `main` steps double as text/icon colours all over the app, so in
+  // light mode they are the darker ramp steps. The lighter steps stay available
+  // as `.light` for fills.
+  success: { main: brand.forest[600], light: brand.forest[400], dark: "#20603C" },
+  warning: { main: brand.terracotta[600], light: brand.terracotta[300], dark: "#7E3527" },
+  info: { main: "#1F6FB8", light: "#5BA3E5", dark: "#1A5994" },
   error: { main: brand.rose[500], light: brand.rose[400], dark: brand.rose[600] },
   background: {
-    default: brand.gray[50], // #FBFAF6
+    default: brand.gray[50],
     paper: "#FFFFFF",
   },
   text: {
     primary: inkLight,
+    // gray[300] was 1.46:1 on the canvas, which made every placeholder and
+    // disabled label effectively invisible. gray[400] reads as muted without
+    // disappearing.
     secondary: brand.gray[500],
-    disabled: brand.gray[300],
+    disabled: brand.gray[400],
   },
-  divider: "rgba(27, 43, 39, 0.10)",
+  // Hairline that is actually visible on both #FFFFFF paper and the #F6F7F5
+  // canvas. Decorative separators sit below the 3:1 non-text threshold by
+  // design; control boundaries (inputs, outlined buttons) use the stronger
+  // alpha values in components.ts instead.
+  divider: "rgba(27, 29, 34, 0.16)",
   grey: {
     50: brand.gray[50],
     100: brand.gray[100],
@@ -179,7 +197,9 @@ export const darkPalette: PaletteOptions = {
   success: { main: brand.forest[400], light: "#7BCB9D", dark: brand.forest[500] },
   warning: { main: brand.terracotta[400], light: brand.terracotta[300], dark: brand.terracotta[600] },
   info: { main: "#5BA3E5", light: "#8BC0EE", dark: "#2C7DCB" },
-  error: { main: brand.rose[400], light: "#C18E94", dark: brand.rose[500] },
+  // rose[400] only managed 4.00:1 on paper in dark mode, so error labels were
+  // the one semantic colour that failed here. Lifted one step.
+  error: { main: "#C18E94", light: "#D6B0B4", dark: brand.rose[400] },
   background: {
     default: "#050506", // near-pure black with a faint graphite cast
     paper: "#0F1012", // cards lift just enough off the canvas to read
@@ -189,7 +209,10 @@ export const darkPalette: PaletteOptions = {
     secondary: "#9A9C98",
     disabled: brand.gray[500],
   },
-  divider: "rgba(255, 255, 255, 0.08)",
+  // 0.08 white over the #050506 canvas landed at 1.16:1, which is where the
+  // "card edges vanish in dark mode" reports come from. 0.16 keeps the hairline
+  // quiet but present on both the canvas and #0F1012 paper.
+  divider: "rgba(255, 255, 255, 0.16)",
   grey: {
     50: brand.gray[900],
     100: brand.gray[800],
@@ -222,11 +245,15 @@ export const wellbeingDark = {
   contrastText: "#2A0618",
 };
 
+// Gold is the hardest hue to keep legible on a light canvas: amber[500] only
+// reached 2.90:1, so every "streak" or "badge earned" label was borderline
+// invisible. main moves to the deep gold (5.29:1) and takes white ink; the old
+// bright steps stay reachable as `.light` for fills and medal shapes.
 export const achievementLight = {
   light: brand.amber[300],
-  main: brand.amber[500],
-  dark: brand.amber[700],
-  contrastText: "#2A1C05",
+  main: "#8A5E17",
+  dark: brand.amber[800],
+  contrastText: "#FFFFFF",
 };
 
 export const achievementDark = {

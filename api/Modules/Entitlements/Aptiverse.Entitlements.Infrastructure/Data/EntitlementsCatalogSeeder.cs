@@ -38,7 +38,17 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 {
                     Code = "free",
                     Name = "Free",
-                    Description = "Genuinely useful — start here. SBA tracking, basic AI practice, wellbeing.",
+                    // "SBA tracking" was CAPS vocabulary on a plan every
+                    // university student also lands on, and SBA means nothing
+                    // to someone doing modules at Wits. Now level-neutral, in
+                    // step with the vocabulary layer the app itself uses.
+                    //
+                    // The allowances are named because vagueness reads as a
+                    // trap on a free tier: someone who signs up expecting
+                    // unlimited practice and hits a wall at the third test
+                    // feels misled, even though nothing was promised. Saying
+                    // the number up front is both honest and a better filter.
+                    Description = "Free for good, not a trial. Track up to 6 courses or subjects, everything that is due, and how you are actually doing. Includes 3 AI-generated practice tests and 15 quick questions a month, plus goals, the diary and mood check-ins.",
                     MonthlyPriceZar = null,
                     AnnualPriceZar = null,
                     MaxMembers = 1,
@@ -50,7 +60,34 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 {
                     Code = "student.pro",
                     Name = "Student Pro",
-                    Description = "Adds the moat features — curriculum-aware AI tutor, SBA coach, adaptive practice, past-paper walk-throughs, career navigator.",
+                    // Sold "career navigator" as a Pro feature. It is free now
+                    // (features.ts lists career_navigator as "free" and no server
+                    // path checks the entitlement), so charging for it here was
+                    // advertising a perk the student already has. Also said "the
+                    // moat features", which is pitch-deck language for investors
+                    // that had no business facing a paying student, and named the
+                    // SBA coach unqualified in a plan tertiary students buy too.
+                    // Same treatment as Max. Three of the five things this
+                    // claimed do not exist.
+                    //
+                    // Gone: worked past-paper solutions (past papers are a
+                    // signpost to the DBE archive and the app hosts nothing),
+                    // adaptive practice that scales to your level (generation
+                    // is real, the adaptivity is not), and SBA draft feedback
+                    // (there is no rubric model and no draft-analysis
+                    // endpoint). All three are a key in the frontend's
+                    // features.ts and a row in this seeder, and nothing else.
+                    //
+                    // Kept the AI tutor, which genuinely receives the student's
+                    // name, level, marks, topic mastery and upcoming work and
+                    // is instructed to draw examples from the subjects or
+                    // courses they are actually enrolled in. Kept mastery
+                    // predictions, which compute from real graded work.
+                    //
+                    // The limits are the honest headline and were not mentioned
+                    // at all before: free is 3 generated tests, 15 quick AI
+                    // questions and no deep ones a month.
+                    Description = "Adds the AI tutor that can see your courses, your marks and what is due, mastery predictions per course, the workspace, and unlimited study units. Practice goes from 3 generated tests a month to 40, and quick AI questions from 15 to 300.",
                     MonthlyPriceZar = 129m,
                     AnnualPriceZar = 1290m,
                     MaxMembers = 1,
@@ -60,7 +97,27 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 {
                     Code = "student.max",
                     Name = "Student Max",
-                    Description = "For matric finalists — exam simulator, weekly AI debrief, audio explanations, study-plan AI, contextual WhatsApp tutor.",
+                    // Rewritten to what Max actually delivers. It previously
+                    // sold five things, of which one existed.
+                    //
+                    // Gone: the contextual WhatsApp tutor (there is no WhatsApp
+                    // integration at all, no transport and no webhook), plus
+                    // audio explanations, the weekly AI debrief and study-plan
+                    // AI. Those three exist only as a key in the frontend's
+                    // features.ts and a row in this seeder: nothing reads them
+                    // and no endpoint serves them. The frontend already treats
+                    // them as unshipped; this string was the last place still
+                    // promising them, and it renders on /pricing, which is
+                    // where every advert lands.
+                    //
+                    // Kept: the exam simulator, which has shipped. Added: the
+                    // allowance jump, which is the honest reason to upgrade and
+                    // is real and metered. Pro is 300 quick, 20 deep and 40
+                    // generations a month; Max is 1200, 40 and 150.
+                    //
+                    // The matric framing is gone too. Tertiary students buy
+                    // this plan, and the beachhead is university.
+                    Description = "Everything in Pro, plus the exam simulator: a full paper, timed, one attempt only. Roughly four times the AI questions and practice tests, for when the term gets heavy.",
                     MonthlyPriceZar = 229m,
                     AnnualPriceZar = 2290m,
                     MaxMembers = 1,
@@ -154,7 +211,7 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 {
                     Code = "school",
                     Name = "School",
-                    Description = "Whole-school deployment — teacher AI tools, school analytics, SSO, success manager.",
+                    Description = "Whole-school deployment: teacher AI tools, school analytics, SSO, success manager.",
                     MonthlyPriceZar = null,
                     AnnualPriceZar = null,
                     MaxMembers = 5000,
@@ -213,42 +270,31 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
             {
                 ("free",         "ai.quick",   15),
                 ("free",         "ai.deep",     0),
-                ("free",         "whatsapp",    0),
 
                 ("student.pro",  "ai.quick",  300),
                 ("student.pro",  "ai.deep",    20),
-                ("student.pro",  "whatsapp",   50),
                 ("student.max",  "ai.quick", 1200),
                 ("student.max",  "ai.deep",    40),
-                ("student.max",  "whatsapp",  200),
 
                 // Parent tiers pool one Student-Pro allowance per child.
                 ("parent",       "ai.quick",  300),
                 ("parent",       "ai.deep",    20),
-                ("parent",       "whatsapp",   50),
                 ("parent.2",     "ai.quick",  600),
                 ("parent.2",     "ai.deep",    40),
-                ("parent.2",     "whatsapp",  100),
                 ("parent.3",     "ai.quick",  900),
                 ("parent.3",     "ai.deep",    60),
-                ("parent.3",     "whatsapp",  150),
                 ("parent.4",     "ai.quick", 1200),
                 ("parent.4",     "ai.deep",    80),
-                ("parent.4",     "whatsapp",  200),
 
                 ("tutor.free",   "ai.quick",   15),
                 ("tutor.free",   "ai.deep",     0),
-                ("tutor.free",   "whatsapp",   10),
                 ("tutor.pro",    "ai.quick",  300),
                 ("tutor.pro",    "ai.deep",    15),
-                ("tutor.pro",    "whatsapp",  100),
                 ("tutor.premium","ai.quick", 1500),
                 ("tutor.premium","ai.deep",    50),
-                ("tutor.premium","whatsapp",  500),
 
                 ("school",       "ai.quick",   -1),
                 ("school",       "ai.deep",    -1),
-                ("school",       "whatsapp",   -1),
 
                 // Claude-generated practice tests. Each generation is an
                 // Opus call (+ a verify pass for STEM), so allowances are
@@ -394,14 +440,23 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 "support.priority",
             ];
 
-            // Max — exam-finals tier. Long-context AI, audio, simulator.
+            // Max — exam-finals tier.
+            //
+            // audio.explanations is gone. It was granted here and typed in the
+            // frontend, and that was the whole of it: no transport, no endpoint,
+            // nothing that reads the key. Granting a feature nobody implements
+            // means a paying Max subscriber holds an entitlement that can never
+            // do anything, and it puts the claim back into the catalogue after
+            // it was deliberately taken out of the plan copy.
+            //
+            // study_plan.ai and ai_debrief.weekly are in exactly the same state
+            // and are kept only because removing them was not asked for. They
+            // should go the same way unless something is going to implement them.
             string[] studentMaxAdds =
             [
                 "exam.simulator",            // timed full papers, AI-marked
-                "audio.explanations",        // listen on the commute
                 "study_plan.ai",             // cross-subject weekly plan
                 "ai_debrief.weekly",         // long Sonnet session reviewing the week
-                "whatsapp.contextual",       // WhatsApp tutor that remembers you
             ];
 
             // ----- Parent track -----------------------------------------
@@ -418,7 +473,6 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
                 "family.linked_children",
                 "parent.uni_readiness",      // university match probability
                 "family.shared_calendar",
-                "family.whatsapp_recap",     // weekly WhatsApp recap to parent
             ];
 
             // School-only parent extras (a real counselling session + the
@@ -427,7 +481,6 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
             [
                 "parent.uni_readiness",      // university match probability
                 "family.shared_calendar",
-                "family.whatsapp_recap",     // weekly WhatsApp recap to parent
                 "counselling.session_included",
             ];
 

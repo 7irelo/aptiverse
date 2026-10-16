@@ -11,8 +11,8 @@ import {
   GraduationCap,
   Users,
   Presentation,
-  WifiOff,
-  Languages,
+  BookOpenCheck,
+  ShieldCheck,
   FileCheck2,
 } from "lucide-react";
 import { Hero } from "@/components/marketing/Hero";
@@ -37,14 +37,21 @@ export default function HomePage() {
           </Typography>
         </Stack>
 
+        {/* Claims checked against the tutor's actual system prompt.
+            "Stays in scope for your course" was the opposite of the truth: the
+            prompt says "Answer the question you are actually asked. Never tell
+            a student that a subject or level is not your focus." And it points
+            you to no sources, so "points you to the right source" described
+            nothing. What it really does is know your level and subjects, which
+            is worth saying plainly. */}
         <FeatureShowcase
-          eyebrow="Curriculum-aware study assistant"
-          title="Anchored to your work, not the whole internet."
-          body="The study assistant follows your curriculum and your own material, so it explains in the right terms and points you to the right source, not a random web page."
+          eyebrow="A tutor that knows what you are studying"
+          title="It knows your subjects, so you stop re-explaining yourself."
+          body="It reads your grade or your modules from your profile, so a Grade 11 term test and a second-year module get answered differently. Ask it anything academic and it helps, whatever the subject."
           bullets={[
-            "Stays in scope for your course",
-            "Explains a concept, then sets you a question to try",
-            "Guides you through the work instead of handing over answers",
+            "Pitched at your level, not a generic one",
+            "Shows the working step by step, and sets you original questions to try",
+            "Gives structure on essays instead of writing them for you",
           ]}
           demo={<TutorChatDemo />}
         />
@@ -62,12 +69,12 @@ export default function HomePage() {
         </Stack>
       </Section>
 
-      {/* Three audiences: students, families, tutors. */}
+      {/* Three audiences: students, parents, tutors. */}
       <Section
         bg="paper"
         eyebrow="Built for you"
-        title="Made for students, families, and tutors"
-        subtitle="A focused workspace for the student, a calm read for the family, and a profile that gets tutors found."
+        title="Made for students, parents, and tutors"
+        subtitle="A focused workspace for the student, a calm read for the parent, and a profile that gets tutors found."
       >
         <Grid container spacing={3}>
           {ROLES.map((r) => (
@@ -123,8 +130,9 @@ export default function HomePage() {
                   Start free. Grow at your pace.
                 </Typography>
                 <Typography color="text.secondary" sx={{ fontSize: "1rem" }}>
-                  The free tier is genuinely useful: goals, diary, basic practice, and
-                  wellbeing tools. Upgrade only when you are ready.
+                  The free tier is genuinely useful: goals, diary, practice, past papers,
+                  term predictions, and the whole career navigator. Upgrade only when you
+                  are ready.
                 </Typography>
               </Stack>
               <Stack direction="row" spacing={1.25} flexWrap="wrap" useFlexGap>
@@ -153,15 +161,23 @@ export default function HomePage() {
 const ROLES = [
   {
     icon: <GraduationCap size={18} />,
+    // Not "watch your results climb". We cannot promise an outcome, and a
+    // student who works and does not climb was told a lie about themselves.
+    // "Plan your term" was reading as the study planner, which does not
+    // exist. Tracking your own assessments is the real thing.
     title: "Students",
-    description: "Plan, practise, and watch your results climb, with wellbeing built in.",
+    description: "Track your term, practise what you are weakest at, and keep an honest read on how you are doing.",
     href: "/for-students",
     accent: "primary" as const,
   },
   {
     icon: <Users size={18} />,
-    title: "Families",
-    description: "A calm, honest read on how each child is doing, academically and emotionally. Never invasive.",
+    // "An honest read on how each child is doing, academically and
+    // emotionally" is two reads a parent cannot get. No endpoint returns a
+    // child's marks or mood to a parent; ParentLink is consulted in exactly
+    // one file. What they get is the children they linked and what is due.
+    title: "Parents",
+    description: "See your children's deadlines in one place, and nothing they would not want you reading.",
     href: "/for-families",
     accent: "secondary" as const,
   },
@@ -174,23 +190,38 @@ const ROLES = [
   },
 ];
 
+// Every line here has to survive someone opening the app and checking.
+//
+// What used to be here did not. "The diary works offline and practice caches"
+// described a feature that does not exist in any form: there is no service
+// worker, no manifest, no local store, nothing. "All 11 official languages"
+// was both unbuilt and wrong, since South Africa has had 12 since South African
+// Sign Language was recognised in 2023. And "real past papers" implied a
+// library we host, when /dashboard/past-papers is a link to the DBE's own
+// public archive.
+//
+// A parent deciding where their money goes deserves better than three
+// sentences we would have to walk back.
 const SA_CONTEXT = [
   {
-    icon: <WifiOff size={18} />,
-    title: "Data-light and offline",
-    description: "The diary works offline and practice caches, syncing next time you are online.",
-    accent: "primary" as const,
-  },
-  {
-    icon: <Languages size={18} />,
-    title: "All 11 official languages",
-    description: "The AI explains and replies in any of South Africa's 11 official languages.",
+    icon: <BookOpenCheck size={18} />,
+    title: "CAPS and university, together",
+    description:
+      "Grade 10 to 12 on the CAPS curriculum, and your own modules if you are at university. The assistant pitches to whichever you are actually doing.",
     accent: "primary" as const,
   },
   {
     icon: <FileCheck2 size={18} />,
-    title: "Curriculum-aligned",
-    description: "Built around South African universities and curricula, with real past papers and course material.",
+    title: "Straight to the DBE archive",
+    description:
+      "Past papers come from the Department of Basic Education's official NSC archive. We point you at the real thing rather than a copy of it.",
+    accent: "primary" as const,
+  },
+  {
+    icon: <ShieldCheck size={18} />,
+    title: "Your diary stays yours",
+    description:
+      "What you write is private. Parents see how you are tracking, never what you wrote.",
     accent: "primary" as const,
   },
 ];

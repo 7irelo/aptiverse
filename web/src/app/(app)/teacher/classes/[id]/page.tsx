@@ -17,6 +17,7 @@ import { StatCard } from "@/components/common/StatCard";
 import { QueryStates } from "@/components/common/QueryStates";
 import { useClasses } from "@/lib/api/queries";
 import type { ClassRecord } from "@/lib/mockData";
+import { useChartSeriesColors } from "@/components/common/chartPalette";
 
 export default function ClassDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -59,6 +60,7 @@ export default function ClassDetail({ params }: { params: Promise<{ id: string }
 }
 
 function ClassDetailBody({ record: c }: { record: ClassRecord }) {
+  const seriesColor = useChartSeriesColors();
   return (
     <>
       <Grid container spacing={3} sx={{ mb: 3 }}>
@@ -83,7 +85,7 @@ function ClassDetailBody({ record: c }: { record: ClassRecord }) {
           <BarChart
             height={280}
             xAxis={[{ data: ["0-39", "40-49", "50-59", "60-69", "70-79", "80-89", "90+"], scaleType: "band" }]}
-            series={[{ data: [1, 3, 6, 8, 5, 3, 2], label: "Learners", color: "#0F6963" }]}
+            series={[{ data: [1, 3, 6, 8, 5, 3, 2], label: "Learners", color: seriesColor(0) }]}
           />
         </CardContent>
       </Card>

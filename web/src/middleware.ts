@@ -1,5 +1,6 @@
 import { getToken } from "next-auth/jwt";
 import { NextResponse, type NextRequest } from "next/server";
+import { homeRouteForRole } from "@/lib/home-route";
 
 // Sends an already-signed-in user straight from /login to their dashboard.
 //
@@ -28,28 +29,6 @@ function accessTokenStillValid(token: unknown): boolean {
   }
 }
 
-// Mirrors dashboardForRole() in app/(auth)/login/page.tsx — /dashboard is the
-// student root and would bounce every other role into the RoleGuard.
-function dashboardForRole(role: string | undefined): string {
-  switch ((role ?? "").toLowerCase()) {
-    case "teacher":
-      return "/teacher";
-    case "parent":
-      return "/parent";
-    case "tutor":
-      return "/tutor";
-    case "schooladmin":
-    case "school_admin":
-    case "school-admin":
-      return "/school-admin";
-    case "admin":
-    case "superuser":
-      return "/admin";
-    default:
-      return "/dashboard";
-  }
-}
-
 export async function middleware(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   if (!token || !accessTokenStillValid(token.accessToken)) return NextResponse.next();
@@ -62,7 +41,7 @@ export async function middleware(req: NextRequest) {
   const dest =
     callback && callback.startsWith("/") && callback !== "/dashboard"
       ? callback
-      : dashboardForRole(role);
+      : homeRouteForRole(role);
 
   return NextResponse.redirect(new URL(dest, req.url));
 }

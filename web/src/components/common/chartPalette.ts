@@ -1,3 +1,7 @@
+"use client";
+
+import { useTheme } from "@mui/material/styles";
+
 // Chart colour ramps, kept out of the theme's semantic palette because a chart
 // answers a different question than a control does.
 //
@@ -50,4 +54,14 @@ const COURSE_HUES_DARK = ["#3D9BD9", "#D55E00", "#00A97C", "#C06A98", "#B08000",
 export function courseColor(index: number, mode: "light" | "dark"): string {
   const hues = mode === "dark" ? COURSE_HUES_DARK : COURSE_HUES_LIGHT;
   return hues[index % hues.length];
+}
+
+// Convenience hook for the many chart pages that used to hardcode a hex per
+// series. A fixed hex cannot follow the colour scheme, and the retired
+// Chalk & Pine pine (#0F6963) sat at roughly 1.5:1 on the dark chart surface,
+// so those lines were effectively invisible for dark-OS users. Slots are
+// stable per index, matching the categorical rule above.
+export function useChartSeriesColors(): (index: number) => string {
+  const mode = useTheme().palette.mode;
+  return (index: number) => courseColor(index, mode);
 }

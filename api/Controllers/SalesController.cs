@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Aptiverse.Api.Data;
+using Aptiverse.Api.Services.Audit;
 using Aptiverse.Core.Services;
 using Aptiverse.Sales.Domain.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -10,10 +11,15 @@ namespace Aptiverse.Sales.Controllers
 {
     [ApiController]
     [Route("api/sales")]
-    public class SalesController(ApplicationDbContext db, IEmailSender emailSender, ILogger<SalesController> logger) : ControllerBase
+    public class SalesController(
+        ApplicationDbContext db,
+        IEmailSender emailSender,
+        IAuditTrail audit,
+        ILogger<SalesController> logger) : ControllerBase
     {
         private readonly ApplicationDbContext _db = db;
         private readonly IEmailSender _emailSender = emailSender;
+        private readonly IAuditTrail _audit = audit;
         private readonly ILogger<SalesController> _logger = logger;
 
         // Public — schools fill this in before they have accounts.
@@ -73,7 +79,7 @@ namespace Aptiverse.Sales.Controllers
             catch (Exception ex)
             {
                 _logger.LogWarning(ex,
-                    "School-enquiry email send failed for {SchoolName} ({Email}) — enquiry id {Id} is saved; sales can pick it up from the admin dashboard.",
+                    "School-enquiry email send failed for {SchoolName} ({Email}). Enquiry id {Id} is saved; sales can pick it up from the admin dashboard.",
                     entry.SchoolName, entry.Email, entry.Id);
             }
 
@@ -95,7 +101,7 @@ namespace Aptiverse.Sales.Controllers
             catch (Exception ex)
             {
                 _logger.LogWarning(ex,
-                    "School-enquiry acknowledgement to {Email} failed (enquiry {Id}) — non-fatal.",
+                    "School-enquiry acknowledgement to {Email} failed (enquiry {Id}); non-fatal.",
                     entry.Email, entry.Id);
             }
 
@@ -135,16 +141,38 @@ namespace Aptiverse.Sales.Controllers
             return Ok(rows);
         }
 
-        [HttpPost("school-enquiries/{id}/mark-contacted")]
+        // Mark a lead contacted, or put it back in the fresh pile.
+        //
+        // It used to be one-way: mark-contacted with no body and no route back,
+        // so a mis-click moved a live lead out of the queue permanently. The
+        // body makes it a toggle, and the change is audited because who chased
+        // which school and when is the whole point of a pipeline.
+        [HttpPut("school-enquiries/{id}/contacted")]
         [Authorize(Roles = "Admin,Superuser")]
-        public async Task<IActionResult> MarkContacted(string id)
+        public async Task<IActionResult> SetContacted(
+            string id, [FromBody] FrontendSetContactedDto body, CancellationToken ct)
         {
             if (!long.TryParse(id, out var enquiryId)) return NotFound();
-            var entry = await _db.Set<SchoolEnquiry>().FirstOrDefaultAsync(e => e.Id == enquiryId);
+            var entry = await _db.Set<SchoolEnquiry>().FirstOrDefaultAsync(e => e.Id == enquiryId, ct);
             if (entry is null) return NotFound();
-            entry.Contacted = true;
-            entry.ContactedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
+
+            var previous = entry.Contacted;
+            if (previous == body.Contacted) return NoContent();
+
+            entry.Contacted = body.Contacted;
+            entry.ContactedAt = body.Contacted ? DateTime.UtcNow : null;
+            await _db.SaveChangesAsync(ct);
+
+            await _audit.RecordAsync(new AuditEntry
+            {
+                Action = body.Contacted ? "SchoolEnquiry.Contacted" : "SchoolEnquiry.ContactReopened",
+                Category = "Sales",
+                EntityType = "SchoolEnquiry",
+                EntityId = entry.Id.ToString(),
+                OldValues = new { contacted = previous },
+                NewValues = new { contacted = body.Contacted, school = entry.SchoolName },
+            }, ct);
+
             return NoContent();
         }
 
@@ -165,6 +193,11 @@ namespace Aptiverse.Sales.Controllers
         [JsonPropertyName("learnerCount")] public string? LearnerCount { get; init; }
         [JsonPropertyName("stage")] public string? Stage { get; init; }
         [JsonPropertyName("notes")] public string? Notes { get; init; }
+    }
+
+    public record FrontendSetContactedDto
+    {
+        [JsonPropertyName("contacted")] public bool Contacted { get; init; }
     }
 
     public record FrontendSchoolEnquiryReadDto

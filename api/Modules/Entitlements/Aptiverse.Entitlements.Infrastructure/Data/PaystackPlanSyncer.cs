@@ -31,7 +31,7 @@ namespace Aptiverse.Entitlements.Infrastructure.Data
         {
             if (!paystack.IsConfigured)
             {
-                logger.LogInformation("Paystack not configured — skipping recurring plan sync.");
+                logger.LogInformation("Paystack not configured: skipping recurring plan sync.");
                 return;
             }
 
