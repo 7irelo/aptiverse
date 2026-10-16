@@ -1,36 +1,53 @@
-node_modules/
-.next/
-out/
-dist/
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-.env
-.env.*
-!.env.example
-!.env.sample
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
+.pnpm-debug.log*
 
-# TypeScript incremental build cache
-*.tsbuildinfo
-
-# Exported ad creative. Generated from src/app/(marketing)/ads/units by
-# scripts/export-ads.mjs; the code is the source of truth, not the PNGs.
-marketing/ad-exports/
-
-# Playwright / E2E artefacts
-tests/e2e/.env
-tests/e2e/.auth/
-test-results/
-playwright-report/
-.playwright/
-.features-gen/
-
-# E2E test output logs (per-suite runs land in tests/e2e/<name>-run.log)
-e2e-run.log
-tests/e2e/*.log
-
-.vercel
+# env files (can opt-in for committing if needed)
 .env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# env example is safe to commit (no real values)
+!.env.example
+
+# playwright
+/playwright-report/
+/test-results/
+/blob-report/
+/playwright/.cache/
+
+# sentry
+.env.sentry-build-plugin
