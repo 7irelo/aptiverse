@@ -1,0 +1,9 @@
+# Copy to terraform.tfvars (git ignored) to override the defaults in variables.tf.
+# Never put secrets here. Credentials come from the environment
+# (AWS via SSO or OIDC, CLOUDFLARE_API_TOKEN) and app secrets are set in
+# Secrets Manager out of band.
+
+alarm_emails = ["eric@aptiverse.co.za"]
+
+# api_hostname = "api-dev"   # if Cloudflare Advanced Certificate Manager is not enabled
+# web_origins  = ["https://dev.aptiverse.co.za", "http://localhost:3000"]

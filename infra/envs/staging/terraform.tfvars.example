@@ -1,0 +1,6 @@
+# Copy to terraform.tfvars (git ignored) to override the defaults in variables.tf.
+# Never put secrets here.
+
+alarm_emails = ["eric@aptiverse.co.za"]
+
+# api_hostname = "api-staging"   # if Cloudflare Advanced Certificate Manager is not enabled

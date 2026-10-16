@@ -1,0 +1,16 @@
+# Accepted findings, each with a reason. Review when the design changes.
+
+# Public ALB is intentional: it is the origin behind Cloudflare, and its
+# security group only admits Cloudflare edge ranges.
+AVD-AWS-0053
+AWS-0053
+
+# ECS tasks need outbound HTTPS to Anthropic, Paystack, Sentry and Grafana,
+# whose IPs are not stable. Egress is limited to port 443.
+AVD-AWS-0104
+AWS-0104
+
+# State bucket uses SSE-KMS with the AWS managed key. A CMK adds cost and a
+# key policy to manage without a meaningful gain for this single-account setup.
+AVD-AWS-0132
+AWS-0132

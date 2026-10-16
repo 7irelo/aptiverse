@@ -1,0 +1,32 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits", ":semanticCommitScope(infra)"],
+  "timezone": "Africa/Johannesburg",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "terraform": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["terraform"],
+      "matchDepTypes": ["provider", "required_provider"],
+      "groupName": "terraform providers"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions",
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "automerge": true
+    },
+    {
+      "matchManagers": ["docker-compose"],
+      "groupName": "local dev images"
+    },
+    {
+      "matchManagers": ["terraform"],
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+# Copy to terraform.tfvars (git ignored) to override the defaults in variables.tf.
+# Never put secrets here.
+
+alarm_emails = ["eric@aptiverse.co.za"]

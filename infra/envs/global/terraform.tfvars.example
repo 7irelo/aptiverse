@@ -1,0 +1,6 @@
+# Copy to terraform.tfvars only if you need to override a default.
+# No secrets belong here: Cloudflare and AWS credentials come from the environment.
+
+# domain                  = "aptiverse.co.za"
+# ses_mail_from_subdomain = "mail"
+# publish_ses_dns_records = true

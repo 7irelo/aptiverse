@@ -1,0 +1,56 @@
+name: apply
+
+# Reusable: plan and apply one stack inside a GitHub environment. The
+# environment's protection rules (required reviewers on prod and global) gate
+# the job before any AWS credentials are issued.
+
+on:
+  workflow_call:
+    inputs:
+      stack:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+      role_var:
+        description: Name of the repository or environment variable holding the infra-apply role ARN.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  apply:
+    name: apply (${{ inputs.stack }})
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: apply-${{ inputs.stack }}
+      cancel-in-progress: false
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.6
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars[inputs.role_var] }}
+          aws-region: af-south-1
+      - name: plan
+        working-directory: envs/${{ inputs.stack }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          terraform init -backend-config=backend.hcl
+          terraform plan -no-color -out=tfplan
+      - name: apply the saved plan
+        working-directory: envs/${{ inputs.stack }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: terraform apply -no-color tfplan
