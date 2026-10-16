@@ -1,19 +1,22 @@
-"use client";
+import type { ReactNode } from "react";
 
-import Box from "@mui/material/Box";
-import { TopNav } from "@/components/marketing/TopNav";
-import { Footer } from "@/components/marketing/Footer";
+import { SiteFooter } from "@/components/shell/site-footer";
+import { SiteHeader } from "@/components/shell/site-header";
 
-export default function MarketingLayout({ children }: { children: React.ReactNode }) {
+export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
-    // 100dvh: on mobile 100vh measures the viewport with the browser chrome
-    // retracted, so the page is always taller than what is actually visible.
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100dvh" }}>
-      <TopNav />
-      <Box component="main" sx={{ flex: 1 }}>
+    <>
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2"
+      >
+        Skip to content
+      </a>
+      <SiteHeader />
+      <main id="main" className="flex-1">
         {children}
-      </Box>
-      <Footer />
-    </Box>
+      </main>
+      <SiteFooter />
+    </>
   );
 }

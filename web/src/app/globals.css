@@ -1,275 +1,153 @@
-html,
-body {
-  padding: 0;
-  margin: 0;
-  height: 100%;
-}
-
-/* Stop iOS Safari inflating text when the device rotates to landscape.
- * Without this the type scale silently changes mid-session on a phone. */
-html {
-  -webkit-text-size-adjust: 100%;
-}
-
-/* Long unbroken strings (email addresses, tokens, URLs, subject codes) are
- * the single most common cause of a phone-width layout blowing out. Breaking
- * them inside their own box is always better than the page scrolling
- * sideways. `break-word` rather than `anywhere` on purpose: it does not
- * change intrinsic min-content sizing, so it cannot quietly reflow desktop
- * layouts that were tuned against the old measure. */
-body {
-  overflow-wrap: break-word;
-}
-
-/* First-paint colour scheme, OS-driven, before any JS runs.
- *
- * MUI paints one fixed theme into the SSR styles (light), and the React
- * theme only corrects to the OS preference after hydration. That left a
- * full-viewport white flash on reload for dark-OS users. These unlayered
- * rules paint the base surface correctly at first paint from the CSS media
- * query alone. Because MUI's CssBaseline lives in a lower CSS @layer
- * (enableCssLayer), unlayered declarations win, so the body background and
- * text are right immediately and stay right once the theme resolves.
- *
- * Values mirror palette.ts: light background.default / text.primary, then
- * dark background.default (#050506) / text.primary (#E9EAE6). color-scheme
- * lets native controls, the overscroll canvas, and default UI follow the OS
- * too. OS-driven only by design: there is no persisted manual choice here. */
-:root {
-  color-scheme: light dark;
-}
-
-html,
-body {
-  background-color: #f6f7f5;
-  color: #1b1d22;
-}
-
-@media (prefers-color-scheme: dark) {
-  html,
-  body {
-    background-color: #050506;
-    color: #e9eae6;
-  }
-}
-
-#__next,
-main {
-  height: 100%;
-}
-
-/* Drop the browser's default underline on every anchor — including MUI
- * components and Box/Stack rendered as component={Link}, which carry a class. */
-a {
-  text-decoration: none;
-}
-
-/* Colour is scoped to bare anchors only (next/link with no className). MUI
- * components rendered as anchors carry a class and set their own colour; MUI's
- * styles live in a lower CSS @layer (enableCssLayer), so an unlayered
- * `a { color: inherit }` would win over them regardless of specificity and
- * force button text to inherit the page colour (white-on-white / black-on-black). */
-a:not([class]) {
-  color: inherit;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-img {
-  max-width: 100%;
-  display: block;
-}
-
-/* Thin, track-less, button-less scrollbars on every scrollable element.
- * Firefox uses scrollbar-* CSS; WebKit/Blink (Chrome/Edge/Safari) uses
- * the ::-webkit-scrollbar pseudo-elements. Windows native arrow buttons
- * disappear because we explicitly display:none ::-webkit-scrollbar-button. */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
-}
-
-*::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-*::-webkit-scrollbar-track,
-*::-webkit-scrollbar-corner {
-  background: transparent;
-}
-*::-webkit-scrollbar-button {
-  display: none;
-  height: 0;
-  width: 0;
-}
-*::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.18);
-  border-radius: 999px;
-  border: 1px solid transparent;
-  background-clip: padding-box;
-}
-*::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(0, 0, 0, 0.32);
-}
-
-@media (prefers-color-scheme: dark) {
-  * {
-    scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
-  }
-  *::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.22);
-  }
-  *::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(255, 255, 255, 0.4);
-  }
-}
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "../styles/tokens.css";
 
 /*
- * Text selection. Without an explicit rule the browser default keeps each
- * element's own text colour and only tints the background, so white-on-black
- * text vanishes against a light highlight and black-on-white against a dark one.
- * Force a single legible pair everywhere, graphite ink on citron, which reads
- * in both light and dark mode regardless of the underlying text colour.
- */
-::selection {
-  background-color: #c3e84f;
-  color: #1b1d22;
-}
-::-moz-selection {
-  background-color: #c3e84f;
-  color: #1b1d22;
-}
-
-/* ------------------------------------------------------------------ touch
+ * Tailwind v4 theme. Maps the CSS variables from src/styles/tokens.css onto
+ * Tailwind utilities. No raw colour values belong here: add them to
+ * tokens.css and reference them below.
  *
- * Everything below is gated on `pointer: coarse`, so it applies to phones and
- * tablets and changes nothing on a mouse-driven desktop. These rules are
- * unlayered, which means they beat MUI's own styles (MUI ships inside a lower
- * CSS @layer via enableCssLayer) without needing !important or a theme edit.
- */
-@media (pointer: coarse) {
-  /* iOS Safari zooms the whole viewport when a focused field's text is under
-   * 16px, and then leaves the page zoomed. The theme's body1 is 15px, so every
-   * TextField in the app triggers it. Raising the control font to 16px on
-   * touch devices is the fix; the label and helper text stay at their designed
-   * sizes because only the control itself zooms. */
-  input,
-  textarea,
-  select,
-  .MuiInputBase-input {
-    font-size: 16px;
-  }
-
-  /* Touch target floor. 44px is the Apple HIG minimum and roughly the pad of a
-   * thumb. MUI's medium IconButton is 40px and its small Button is 35px, both
-   * of which mis-tap constantly on a bumpy taxi ride. min-height/min-width
-   * rather than height so nothing that is already larger shrinks. */
-  .MuiIconButton-root,
-  .MuiFab-root {
-    min-width: 44px;
-    min-height: 44px;
-  }
-
-  .MuiButton-root {
-    min-height: 44px;
-  }
-
-  /* Chips are frequently the only way to filter or pick something, and MUI's
-   * small chip is 24px tall. 32px plus the gap its row already carries clears
-   * the WCAG 2.2 target-size minimum without turning a chip row into a wall of
-   * buttons.
-   *
-   * Applied to every chip, not only the interactive ones. Sizing by
-   * interactivity is correct reasoning about touch targets and wrong about
-   * layout: chips sit in mixed rows, so on the dashboard header the linked
-   * plan chip grew to 32px while the static institution chip stayed at 24px
-   * and the two sat at visibly different heights. A row of chips has to read
-   * as one row. Static chips gaining 8px on touch costs nothing. */
-  .MuiChip-root {
-    min-height: 32px;
-  }
-
-  /* The delete affordance inside a chip is a 16px icon by default. */
-  .MuiChip-deleteIcon {
-    width: 20px;
-    height: 20px;
-  }
-}
-
-/* -------------------------------------------------------------- safe areas
- *
- * viewport-fit=cover (set in app/layout.tsx) lets the page paint under the
- * notch and the home indicator, which is what makes these insets resolve to
- * anything. Anything pinned to an edge has to pay them back or it sits under
- * system chrome.
+ * Dark mode uses Tailwind's default `dark:` variant, which follows
+ * prefers-color-scheme. Do not add a class-based dark variant.
  */
 
-/* Fixed and sticky overlays that MUI portals to <body>: drawers, dialogs,
- * menus. These are rendered outside the app tree, so a component-level fix
- * would have to be repeated at every call site. */
-.MuiDrawer-paper {
-  padding-bottom: env(safe-area-inset-bottom);
+@theme inline {
+  /* Reset Tailwind's default palette so only our honest ramps exist. */
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-white: var(--neutral-0);
+  --color-black: var(--graphite-900);
+
+  --color-graphite-50: var(--graphite-50);
+  --color-graphite-100: var(--graphite-100);
+  --color-graphite-200: var(--graphite-200);
+  --color-graphite-300: var(--graphite-300);
+  --color-graphite-400: var(--graphite-400);
+  --color-graphite-500: var(--graphite-500);
+  --color-graphite-600: var(--graphite-600);
+  --color-graphite-700: var(--graphite-700);
+  --color-graphite-800: var(--graphite-800);
+  --color-graphite-900: var(--graphite-900);
+  --color-citron-50: var(--citron-50);
+  --color-citron-100: var(--citron-100);
+  --color-citron-200: var(--citron-200);
+  --color-citron-300: var(--citron-300);
+  --color-citron-400: var(--citron-400);
+  --color-citron-500: var(--citron-500);
+  --color-citron-600: var(--citron-600);
+  --color-citron-700: var(--citron-700);
+  --color-magenta-50: var(--magenta-50);
+  --color-magenta-100: var(--magenta-100);
+  --color-magenta-200: var(--magenta-200);
+  --color-magenta-300: var(--magenta-300);
+  --color-magenta-400: var(--magenta-400);
+  --color-magenta-500: var(--magenta-500);
+  --color-magenta-600: var(--magenta-600);
+  --color-magenta-700: var(--magenta-700);
+  --color-magenta-800: var(--magenta-800);
+  --color-magenta-900: var(--magenta-900);
+  --color-amber-50: var(--amber-50);
+  --color-amber-100: var(--amber-100);
+  --color-amber-200: var(--amber-200);
+  --color-amber-300: var(--amber-300);
+  --color-amber-400: var(--amber-400);
+  --color-amber-500: var(--amber-500);
+  --color-amber-600: var(--amber-600);
+  --color-amber-700: var(--amber-700);
+  --color-amber-800: var(--amber-800);
+  --color-amber-900: var(--amber-900);
+  --color-terracotta-300: var(--terracotta-300);
+  --color-terracotta-400: var(--terracotta-400);
+  --color-terracotta-500: var(--terracotta-500);
+  --color-terracotta-600: var(--terracotta-600);
+  --color-terracotta-700: var(--terracotta-700);
+  --color-forest-300: var(--forest-300);
+  --color-forest-400: var(--forest-400);
+  --color-forest-500: var(--forest-500);
+  --color-forest-600: var(--forest-600);
+  --color-forest-700: var(--forest-700);
+  --color-rose-200: var(--rose-200);
+  --color-rose-300: var(--rose-300);
+  --color-rose-400: var(--rose-400);
+  --color-rose-500: var(--rose-500);
+  --color-rose-600: var(--rose-600);
+  --color-neutral-0: var(--neutral-0);
+  --color-neutral-50: var(--neutral-50);
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-500: var(--neutral-500);
+  --color-neutral-600: var(--neutral-600);
+  --color-neutral-700: var(--neutral-700);
+  --color-neutral-800: var(--neutral-800);
+  --color-neutral-900: var(--neutral-900);
+  --color-neutral-950: var(--neutral-950);
+  --color-neutral-1000: var(--neutral-1000);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-citron-surface: var(--citron-surface);
+  --color-citron-surface-hover: var(--citron-surface-hover);
+  --color-on-citron: var(--on-citron);
+  --color-citron-ink: var(--citron-ink);
+  --color-brand-surface: var(--brand-surface);
+  --color-on-brand-surface: var(--on-brand-surface);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-error: var(--error);
+  --color-error-foreground: var(--error-foreground);
+  --color-wellbeing: var(--wellbeing);
+  --color-wellbeing-foreground: var(--wellbeing-foreground);
+  --color-achievement: var(--achievement);
+  --color-achievement-foreground: var(--achievement-foreground);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --font-sans: var(--font-family-sans);
+  --font-mono: var(--font-family-mono);
+  --font-heading: var(--font-family-sans);
+
+  --radius-sm: calc(var(--radius) * 0.75);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) * 1.5);
+  --radius-xl: calc(var(--radius) * 2);
+  --radius-2xl: calc(var(--radius) * 2.5);
 }
 
-.MuiDrawer-paperAnchorLeft {
-  padding-left: env(safe-area-inset-left);
-}
-
-.MuiDrawer-paperAnchorRight {
-  padding-right: env(safe-area-inset-right);
-}
-
-/* Dialogs on a phone. MUI's default paper margin is 32px a side, which eats
- * 18% of a 360px screen and squeezes two-button action rows onto two lines.
- * 16px is enough separation to still read as a layer above the page, and the
- * max-height keeps the action row on screen instead of pushing it below the
- * fold where it cannot be reached. */
-@media (max-width: 599.95px) {
-  .MuiDialog-paper {
-    margin: 16px;
-    width: calc(100% - 32px);
-    max-width: calc(100% - 32px);
-    max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-
-  .MuiDialog-paperFullScreen {
-    margin: 0;
-    width: 100%;
-    max-width: 100%;
-    max-height: 100dvh;
-    padding-bottom: env(safe-area-inset-bottom);
+  html {
+    @apply font-sans;
+    -webkit-text-size-adjust: 100%;
   }
-
-  /* A dialog's actions are its point. Let them wrap and stretch rather than
-   * truncate when two long labels will not sit side by side at 328px. */
-  .MuiDialog-paper .MuiDialogActions-root {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .MuiDialog-paper .MuiDialogActions-root > :not(:first-of-type) {
-    margin-left: 0;
-  }
-}
-
-/* Popover-based surfaces (Menu, Select, Autocomplete) can otherwise render
- * their last item under the home indicator. */
-.MuiPopover-paper,
-.MuiMenu-paper {
-  max-width: calc(100vw - 16px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
+  body {
+    @apply bg-background text-foreground antialiased;
   }
 }

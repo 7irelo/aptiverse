@@ -1,0 +1,215 @@
+/*
+ * Aptiverse design tokens: Graphite & Citron.
+ *
+ * This is the ONLY file in the codebase allowed to hold raw colour values.
+ * Everything else reads these variables, either directly or through the
+ * Tailwind utilities mapped in src/app/globals.css (bg-primary,
+ * text-muted-foreground, bg-citron-surface and so on).
+ *
+ * Light and dark follow the operating system through prefers-color-scheme.
+ * There is no toggle and no JavaScript involved.
+ *
+ * Colour zones:
+ *   graphite    academic UI and default controls everywhere
+ *   citron      the one signature accent; a SURFACE, never text on light
+ *               backgrounds. Anything on top of citron is graphite ink.
+ *   magenta     wellbeing (diary, mood, psychologist): not graded, not ranked
+ *   amber       achievement: earned milestones only (badges, streaks)
+ *   terracotta  warm attention ("needs work") instead of punitive red
+ *   forest      success and "growing well"
+ *   rose        errors and genuinely destructive actions
+ *
+ * Values are ported from the previous app (web/src/theme/palette.ts), where
+ * the semantic steps were already tuned for WCAG AA contrast.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* Ramps. Raw values; prefer the semantic tokens further down. */
+  --graphite-50: #f2f3f1;
+  --graphite-100: #e3e5e1;
+  --graphite-200: #c7cac6;
+  --graphite-300: #a9ada9;
+  --graphite-400: #70746e;
+  --graphite-500: #4b4e4a;
+  --graphite-600: #1b1d22;
+  --graphite-700: #141519;
+  --graphite-800: #0e0f12;
+  --graphite-900: #08090b;
+
+  --citron-50: #f8fce8;
+  --citron-100: #eef8c2;
+  --citron-200: #e0f193;
+  --citron-300: #cfea63;
+  --citron-400: #c3e84f;
+  --citron-500: #aad22f;
+  --citron-600: #87a81f;
+  --citron-700: #617815;
+
+  --magenta-50: #fceaf2;
+  --magenta-100: #f8cde0;
+  --magenta-200: #f2a1c4;
+  --magenta-300: #ea6ba6;
+  --magenta-400: #e23e8a;
+  --magenta-500: #d42078;
+  --magenta-600: #ae1460;
+  --magenta-700: #7e0e45;
+  --magenta-800: #4e0a2b;
+  --magenta-900: #2a0618;
+
+  --amber-50: #fbf3e1;
+  --amber-100: #f4e1b4;
+  --amber-200: #ebcb80;
+  --amber-300: #e0b255;
+  --amber-400: #cf9a38;
+  --amber-500: #c0872b;
+  --amber-600: #9e6d1e;
+  --amber-700: #765014;
+  --amber-800: #4e360d;
+  --amber-900: #291c05;
+
+  --terracotta-300: #e0a08d;
+  --terracotta-400: #d07a62;
+  --terracotta-500: #c25a44;
+  --terracotta-600: #9e4433;
+  --terracotta-700: #7e3527;
+
+  --forest-300: #7bcb9d;
+  --forest-400: #5bad7e;
+  --forest-500: #3d9762;
+  --forest-600: #2c7c4e;
+  --forest-700: #20603c;
+
+  --rose-200: #d6b0b4;
+  --rose-300: #c18e94;
+  --rose-400: #a45f66;
+  --rose-500: #8b4a52;
+  --rose-600: #6e3942;
+
+  /* Cool neutrals, faintly graphite tinted. */
+  --neutral-0: #ffffff;
+  --neutral-50: #f6f7f5;
+  --neutral-100: #edeeeb;
+  --neutral-200: #e4e6e1;
+  --neutral-300: #cdcfca;
+  --neutral-400: #9a9c98;
+  --neutral-500: #6b6e73;
+  --neutral-600: #494b4e;
+  --neutral-700: #303235;
+  --neutral-800: #202124;
+  --neutral-900: #131417;
+  --neutral-950: #0f1012;
+  --neutral-1000: #050506;
+
+  /* Semantic tokens: light (default). Names follow shadcn/ui. */
+  --background: var(--neutral-50);
+  --foreground: var(--graphite-600);
+  --card: var(--neutral-0);
+  --card-foreground: var(--graphite-600);
+  --popover: var(--neutral-0);
+  --popover-foreground: var(--graphite-600);
+
+  --primary: var(--graphite-600);
+  --primary-foreground: var(--neutral-0);
+  --secondary: var(--neutral-100);
+  --secondary-foreground: var(--graphite-600);
+  --muted: var(--neutral-100);
+  --muted-foreground: var(--neutral-500);
+  --accent: var(--neutral-100);
+  --accent-foreground: var(--graphite-600);
+  --destructive: var(--rose-500);
+  --destructive-foreground: var(--neutral-0);
+
+  --border: rgb(27 29 34 / 0.16);
+  --input: rgb(27 29 34 / 0.32);
+  --ring: var(--graphite-500);
+
+  /* Citron is a surface. Text on it is always graphite. */
+  --citron-surface: var(--citron-400);
+  --citron-surface-hover: var(--citron-500);
+  --on-citron: var(--graphite-600);
+  /* The one citron step that is legal as text or an icon on light paper. */
+  --citron-ink: var(--citron-700);
+
+  /* A graphite panel that stays dark with light content in both modes. */
+  --brand-surface: var(--graphite-600);
+  --on-brand-surface: var(--graphite-50);
+
+  --success: var(--forest-600);
+  --success-foreground: var(--neutral-0);
+  --warning: var(--terracotta-600);
+  --warning-foreground: var(--neutral-0);
+  --error: var(--rose-500);
+  --error-foreground: var(--neutral-0);
+  --wellbeing: var(--magenta-500);
+  --wellbeing-foreground: var(--neutral-0);
+  --achievement: #8a5e17;
+  --achievement-foreground: var(--neutral-0);
+
+  --chart-1: var(--graphite-600);
+  --chart-2: var(--citron-600);
+  --chart-3: var(--forest-500);
+  --chart-4: var(--amber-500);
+  --chart-5: var(--magenta-500);
+
+  --radius: 0.5rem;
+
+  --font-family-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-family-mono:
+    ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: var(--neutral-1000);
+    --foreground: #e9eae6;
+    --card: var(--neutral-950);
+    --card-foreground: #e9eae6;
+    --popover: var(--neutral-950);
+    --popover-foreground: #e9eae6;
+
+    --primary: var(--graphite-100);
+    --primary-foreground: var(--graphite-800);
+    --secondary: var(--neutral-800);
+    --secondary-foreground: #e9eae6;
+    --muted: var(--neutral-900);
+    --muted-foreground: var(--neutral-400);
+    --accent: var(--neutral-800);
+    --accent-foreground: #e9eae6;
+    --destructive: var(--rose-300);
+    --destructive-foreground: var(--graphite-800);
+
+    --border: rgb(255 255 255 / 0.16);
+    --input: rgb(255 255 255 / 0.28);
+    --ring: var(--citron-400);
+
+    --citron-surface: var(--citron-400);
+    --citron-surface-hover: var(--citron-300);
+    --on-citron: #14160a;
+    /* On near-black, the bright citron reads well as an accent colour. */
+    --citron-ink: var(--citron-400);
+
+    --brand-surface: #262a31;
+    --on-brand-surface: var(--graphite-50);
+
+    --success: var(--forest-400);
+    --success-foreground: var(--graphite-800);
+    --warning: var(--terracotta-400);
+    --warning-foreground: var(--graphite-800);
+    --error: var(--rose-300);
+    --error-foreground: var(--graphite-800);
+    --wellbeing: var(--magenta-300);
+    --wellbeing-foreground: var(--magenta-900);
+    --achievement: var(--amber-400);
+    --achievement-foreground: #241804;
+
+    --chart-1: var(--graphite-100);
+    --chart-2: var(--citron-400);
+    --chart-3: var(--forest-400);
+    --chart-4: var(--amber-400);
+    --chart-5: var(--magenta-300);
+  }
+}

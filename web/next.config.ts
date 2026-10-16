@@ -1,43 +1,74 @@
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV !== "production";
+
+/**
+ * Content Security Policy without nonces, so marketing pages stay static.
+ * Next.js injects small inline scripts, which is why script-src allows
+ * 'unsafe-inline'. Moving to nonces (set in proxy.ts) is a Phase 10
+ * hardening task once most pages are dynamic anyway.
+ */
+const csp = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://va.vercel-scripts.com`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  [
+    "connect-src 'self'",
+    "https://*.ingest.sentry.io",
+    "https://*.ingest.us.sentry.io",
+    "https://*.ingest.de.sentry.io",
+    "https://vitals.vercel-insights.com",
+    isDev ? "ws: wss:" : "",
+  ]
+    .filter(Boolean)
+    .join(" "),
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+].join("; ");
+
+const securityHeaders = [
+  { key: "Content-Security-Policy", value: csp },
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=63072000; includeSubDomains; preload",
+  },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(), payment=()",
+  },
+];
+
 const nextConfig: NextConfig = {
-  reactStrictMode: true,
-  // Strip console.* from production bundles (errors kept so real failures still
-  // surface in monitoring). Smaller payload for metered mobile data.
-  compiler: {
-    removeConsole: {
-      exclude: ["error", "warn"],
+  cacheComponents: true,
+  partialPrefetching: true,
+  poweredByHeader: false,
+  turbopack: {
+    rules: {
+      "*.css": {
+        loaders: ["@tailwindcss/turbopack"],
+        as: "*.css",
+      },
     },
   },
-  experimental: {
-    // Tree-shake barrel imports so pulling two icons or one hook does not drag
-    // in the whole package. Biggest first-load win for this MUI-heavy app.
-    // Only packages that are real dependencies are listed here.
-    optimizePackageImports: [
-      "@mui/material",
-      "@mui/system",
-      "@mui/icons-material",
-      "@mui/x-charts",
-      "@mui/x-data-grid",
-      "@mui/x-date-pickers",
-      "lucide-react",
-      "@tanstack/react-query",
-      "notistack",
-    ],
-  },
-  images: {
-    // Prefer AVIF then WebP; both are far smaller than JPEG/PNG on the same
-    // quality, which matters most on mid-range Android over mobile data.
-    formats: ["image/avif", "image/webp"],
-    deviceSizes: [360, 420, 640, 750, 828, 1080, 1200, 1920],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    remotePatterns: [
-      { protocol: "https", hostname: "images.unsplash.com" },
-      { protocol: "https", hostname: "cdn.pixabay.com" },
-      { protocol: "https", hostname: "lh3.googleusercontent.com" },
-      { protocol: "https", hostname: "avatars.githubusercontent.com" },
-    ],
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
   },
 };
 
-export default nextConfig;
+// Source maps upload only when SENTRY_AUTH_TOKEN is present (CI on Vercel).
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  telemetry: false,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+});

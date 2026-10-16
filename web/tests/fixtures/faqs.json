@@ -1,0 +1,30 @@
+[
+  {
+    "id": "0192a4b0-0000-7000-8000-000000000003",
+    "question": "Can I change my subjects later?",
+    "answer": "Yes. You can add or remove subjects from your profile at any time. Your progress on a removed subject is kept in case you add it back.",
+    "category": "Getting started",
+    "sortOrder": 2
+  },
+  {
+    "id": "0192a4b0-0000-7000-8000-000000000001",
+    "question": "Who is Aptiverse for?",
+    "answer": "High school learners and university students who want structured practice and a clear picture of their progress.",
+    "category": "Getting started",
+    "sortOrder": 1
+  },
+  {
+    "id": "0192a4b0-0000-7000-8000-000000000004",
+    "question": "How are practice questions made?",
+    "answer": "Questions are generated for your subject and level, then checked against the topics you are studying.",
+    "category": "Practice",
+    "sortOrder": 10
+  },
+  {
+    "id": "0192a4b0-0000-7000-8000-000000000005",
+    "question": "How do I contact support?",
+    "answer": "Email support@aptiverse.co.za and a person will get back to you within one working day.",
+    "category": "Account and support",
+    "sortOrder": 20
+  }
+]
