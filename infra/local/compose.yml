@@ -1,0 +1,78 @@
+# Local development stack for Aptiverse v2.
+# Postgres 17 (host 5433), Mailpit (SMTP 1025, UI 8025), MinIO (API 9000, console 9001).
+# MinIO images come from the pgsty community build because upstream stopped
+# publishing public Docker images in late 2025.
+# Credentials here are local-only defaults and are not used in any cloud environment.
+name: aptiverse-local
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: aptiverse
+      POSTGRES_USER: aptiverse
+      POSTGRES_PASSWORD: aptiverse
+    command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements"]
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aptiverse -d aptiverse"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:v1.31.6
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: aptiverse
+      MINIO_ROOT_PASSWORD: aptiverse-local
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio-init:
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        mc alias set local http://minio:9000 aptiverse aptiverse-local
+        mc mb --ignore-existing local/aptiverse-uploads
+        mc anonymous set none local/aptiverse-uploads
+        echo "bucket aptiverse-uploads ready"
+
+volumes:
+  pgdata:
+  miniodata:
