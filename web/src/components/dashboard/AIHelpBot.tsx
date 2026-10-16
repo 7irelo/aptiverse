@@ -40,7 +40,7 @@ export function AIHelpBot() {
     {
       role: "assistant",
       content:
-        "I'm Aptiverse's help bot. Ask me how to do something, like \"how do I add a subject?\" or \"where do I log an SBA?\"",
+        "I'm Aptiverse's help bot. Ask me how to do something, like \"how do I log an assessment?\" or \"where do I see my marks?\"",
     },
   ]);
   const [quotaSnapshot, setQuotaSnapshot] = useState<{ used: number; limit: number } | null>(null);
@@ -124,8 +124,17 @@ export function AIHelpBot() {
           onClick={() => setOpen(true)}
           sx={{
             position: "fixed",
-            bottom: { xs: 16, sm: 24 },
-            right: { xs: 16, sm: 24 },
+            // Offset by the gesture bar, not just a flat 16px. On an iPhone
+            // with a home indicator a bare `bottom: 16` puts half the FAB
+            // under system chrome, where taps are swallowed by the OS.
+            bottom: {
+              xs: "calc(env(safe-area-inset-bottom) + 16px)",
+              sm: "calc(env(safe-area-inset-bottom) + 24px)",
+            },
+            right: {
+              xs: "calc(env(safe-area-inset-right) + 16px)",
+              sm: "calc(env(safe-area-inset-right) + 24px)",
+            },
             zIndex: (t) => t.zIndex.drawer - 1,
           }}
           aria-label="Open help bot"
@@ -138,11 +147,19 @@ export function AIHelpBot() {
         anchor="right"
         open={open}
         onClose={() => setOpen(false)}
-        PaperProps={{
-          sx: {
-            width: { xs: "100vw", sm: 420 },
-            display: "flex",
-            flexDirection: "column",
+        slotProps={{
+          paper: {
+            sx: {
+              // 100% of the drawer's own container, not 100vw. 100vw includes
+              // the scrollbar gutter, which pushes the drawer a few pixels
+              // past the right edge and gives the page a sideways scroll.
+              // dvh so the composer is not pushed under the browser chrome.
+              width: { xs: "100%", sm: 420 },
+              maxWidth: "100%",
+              height: "100dvh",
+              display: "flex",
+              flexDirection: "column",
+            },
           },
         }}
       >
@@ -210,7 +227,7 @@ export function AIHelpBot() {
         {effectiveSnapshot && effectiveSnapshot.limit < 0 && (
           <Box sx={{ px: 2, py: 1, borderBottom: 1, borderColor: "divider", bgcolor: "action.hover" }}>
             <Typography variant="caption" color="text.secondary">
-              Quick AI — unlimited on your plan ({effectiveSnapshot.used.toLocaleString()} used this month)
+              Quick AI: unlimited on your plan ({effectiveSnapshot.used.toLocaleString()} used this month)
             </Typography>
           </Box>
         )}
@@ -284,7 +301,7 @@ export function AIHelpBot() {
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                 Used {quotaError.Used} of {quotaError.Limit}. Upgrade your plan for a bigger
-                allowance — or wait for next month&apos;s reset.
+                allowance, or wait for next month&apos;s reset.
               </Typography>
               <Stack direction="row" spacing={1}>
                 <Button component={Link} href="/pricing" variant="contained" size="small">
@@ -358,9 +375,12 @@ export function AIHelpBot() {
   );
 }
 
+// Kept neutral on purpose: this bot is mounted in the shell for every role
+// (student, parent, teacher, admin) and for both education levels, so it can't
+// assume the reader has CAPS subjects and SBAs.
 const SUGGESTIONS = [
-  "How do I add a subject?",
-  "Where do I log an SBA?",
+  "How do I log an assessment?",
+  "Where do I see my marks?",
   "How do I see my mastery?",
   "What's the difference between Pro and Max?",
 ];

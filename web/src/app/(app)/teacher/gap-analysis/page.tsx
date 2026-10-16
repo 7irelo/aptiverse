@@ -14,6 +14,7 @@ import { AptiverseBarChart as BarChart } from "@/components/common/AptiverseBarC
 import { PageHeader } from "@/components/common/PageHeader";
 import { QueryStates } from "@/components/common/QueryStates";
 import { useGaps, type Gap } from "@/lib/api/queries";
+import { useChartSeriesColors } from "@/components/common/chartPalette";
 
 export default function GapAnalysisPage() {
   const query = useGaps();
@@ -41,6 +42,7 @@ export default function GapAnalysisPage() {
 }
 
 function GapAnalysisView({ gaps }: { gaps: Gap[] }) {
+  const seriesColor = useChartSeriesColors();
   return (
     <Grid container spacing={3}>
       <Grid size={12}>
@@ -54,8 +56,8 @@ function GapAnalysisView({ gaps }: { gaps: Gap[] }) {
               xAxis={[{ data: gaps.map((g) => g.topic), scaleType: "band" }]}
               yAxis={[{ min: 0, max: 100 }]}
               series={[
-                { data: gaps.map((g) => g.strugglingPct), label: "Struggling %", color: "#F25C2E" },
-                { data: gaps.map((g) => 100 - g.strugglingPct), label: "On track %", color: "#0F6963" },
+                { data: gaps.map((g) => g.strugglingPct), label: "Struggling %", color: seriesColor(1) },
+                { data: gaps.map((g) => 100 - g.strugglingPct), label: "On track %", color: seriesColor(0) },
               ]}
             />
           </CardContent>

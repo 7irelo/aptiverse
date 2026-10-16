@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { QueryStates } from "@/components/common/QueryStates";
 import { useClasses } from "@/lib/api/queries";
 import type { ClassRecord } from "@/lib/mockData";
+import { useChartSeriesColors } from "@/components/common/chartPalette";
 
 export default function TeacherAnalytics() {
   const query = useClasses();
@@ -42,6 +43,7 @@ export default function TeacherAnalytics() {
 }
 
 function AnalyticsView({ classes }: { classes: ClassRecord[] }) {
+  const seriesColor = useChartSeriesColors();
   return (
     <Grid container spacing={3}>
       <Grid size={{ xs: 12, lg: 7 }}>
@@ -74,8 +76,8 @@ function AnalyticsView({ classes }: { classes: ClassRecord[] }) {
                 },
               ]}
               series={[
-                { data: [42, 38, 56, 64, 70, 58, 52], label: "Average mastery", color: "#F25C2E" },
-                { data: [80, 65, 78, 84, 82, 75, 70], label: "Top quartile", color: "#0F6963" },
+                { data: [42, 38, 56, 64, 70, 58, 52], label: "Average mastery", color: seriesColor(1) },
+                { data: [80, 65, 78, 84, 82, 75, 70], label: "Top quartile", color: seriesColor(0) },
               ]}
             />
           </CardContent>

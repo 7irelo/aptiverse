@@ -22,6 +22,7 @@ import { LiveActivityFeed } from "@/components/dashboard/LiveActivityFeed";
 import { useClasses } from "@/lib/api/queries";
 import type { ClassRecord } from "@/lib/mockData";
 import Link from "next/link";
+import { useChartSeriesColors } from "@/components/common/chartPalette";
 
 export default function TeacherDashboard() {
   const query = useClasses();
@@ -59,6 +60,7 @@ export default function TeacherDashboard() {
 }
 
 function TeacherOverview({ classes }: { classes: ClassRecord[] }) {
+  const seriesColor = useChartSeriesColors();
   const totalStudents = classes.reduce((s, c) => s + c.studentCount, 0);
 
   return (
@@ -92,7 +94,7 @@ function TeacherOverview({ classes }: { classes: ClassRecord[] }) {
                 height={300}
                 xAxis={[{ data: classes.map((c) => c.name), scaleType: "band" }]}
                 yAxis={[{ min: 0, max: 100 }]}
-                series={[{ data: classes.map((c) => c.averageMastery), label: "Average mastery", color: "#0F6963" }]}
+                series={[{ data: classes.map((c) => c.averageMastery), label: "Average mastery", color: seriesColor(0) }]}
               />
             </CardContent>
           </Card>

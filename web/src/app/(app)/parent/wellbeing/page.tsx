@@ -5,6 +5,7 @@ import CardContent from "@mui/material/CardContent";
 import Grid from "@mui/material/Grid";
 import Typography from "@mui/material/Typography";
 import FavoriteIcon from "@mui/icons-material/FavoriteBorder";
+import { useTheme } from "@mui/material/styles";
 import { AptiverseLineChart as LineChart } from "@/components/common/AptiverseLineChart";
 import { PageHeader } from "@/components/common/PageHeader";
 import { QueryStates } from "@/components/common/QueryStates";
@@ -45,27 +46,40 @@ export default function WellbeingSummaryPage() {
 }
 
 function ChildWellbeingCard({ child: c }: { child: Child }) {
+  const mood = c.moodAvg;
+  const theme = useTheme();
   return (
     <Card>
       <CardContent sx={{ p: 3 }}>
         <Typography variant="h6" sx={{ fontWeight: 700 }}>
           {c.name}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
-          Average mood: {c.moodAvg.toFixed(1)} / 5
-        </Typography>
-        <LineChart
-          height={220}
-          xAxis={[{ data: Array.from({ length: 14 }, (_, i) => `D${i + 1}`), scaleType: "point" }]}
-          yAxis={[{ min: 1, max: 5 }]}
-          series={[
-            {
-              data: Array.from({ length: 14 }, () => Math.max(1, Math.min(5, c.moodAvg + (Math.random() - 0.5)))),
-              label: "Mood",
-              color: c.moodAvg >= 3.5 ? "#3D9762" : "#E89D14",
-            },
-          ]}
-        />
+        {mood === undefined ? (
+          <Typography variant="caption" color="text.secondary">
+            No mood check-ins yet
+          </Typography>
+        ) : (
+          <>
+            <Typography variant="caption" color="text.secondary">
+              Average mood: {mood.toFixed(1)} / 5
+            </Typography>
+            <LineChart
+              height={220}
+              xAxis={[{ data: Array.from({ length: 14 }, (_, i) => `D${i + 1}`), scaleType: "point" }]}
+              yAxis={[{ min: 1, max: 5 }]}
+              series={[
+                {
+                  data: Array.from({ length: 14 }, () => Math.max(1, Math.min(5, mood + (Math.random() - 0.5)))),
+                  label: "Mood",
+                  // Theme-derived so the line follows the colour scheme. The
+                  // previous fixed gold sat near 2.2:1 on the light chart
+                  // surface, under the 3:1 floor for a graphical object.
+                  color: mood >= 3.5 ? theme.palette.success.main : theme.palette.warning.main,
+                },
+              ]}
+            />
+          </>
+        )}
       </CardContent>
     </Card>
   );

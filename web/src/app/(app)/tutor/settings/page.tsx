@@ -81,6 +81,12 @@ function TabLoading() {
   );
 }
 
+const TUTOR_KINDS: { value: "university_student" | "graduate" | "completed_matric"; label: string }[] = [
+  { value: "university_student", label: "University student" },
+  { value: "graduate", label: "Graduate" },
+  { value: "completed_matric", label: "Completed matric" },
+];
+
 function ProfileTab() {
   const profileQuery = useTutorProfile();
   const update = useUpdateTutorProfile();
@@ -91,19 +97,45 @@ function ProfileTab() {
   const [bio, setBio] = useState("");
   const [teachingStyle, setTeachingStyle] = useState("");
   const [yearsOfExperience, setYearsOfExperience] = useState("");
+  const [tutorKind, setTutorKind] =
+    useState<"university_student" | "graduate" | "completed_matric">("university_student");
+  const [institution, setInstitution] = useState("");
+  const [studyingToward, setStudyingToward] = useState("");
+  const [matricYear, setMatricYear] = useState("");
 
+  // Depend on the primitive server values, not the query-object reference, so a
+  // background refetch or a setQueryData from any save does not re-run this and
+  // clobber the tutor's unsaved edits.
+  const p = profileQuery.data;
+  const hasProfile = p != null;
   useEffect(() => {
-    const p = profileQuery.data;
     if (!p) return;
     setQualification(p.qualification);
     setSpecialization(p.specialization);
     setBio(p.bio);
     setTeachingStyle(p.teachingStyle);
     setYearsOfExperience(p.yearsOfExperience ? String(p.yearsOfExperience) : "");
-  }, [profileQuery.data]);
+    setTutorKind(p.tutorKind ?? "university_student");
+    setInstitution(p.institution ?? "");
+    setStudyingToward(p.studyingToward ?? "");
+    setMatricYear(p.matricYear ? String(p.matricYear) : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    hasProfile,
+    p?.qualification,
+    p?.specialization,
+    p?.bio,
+    p?.teachingStyle,
+    p?.yearsOfExperience,
+    p?.tutorKind,
+    p?.institution,
+    p?.studyingToward,
+    p?.matricYear,
+  ]);
 
   const save = async () => {
     try {
+      const parsedYear = matricYear.trim() ? parseInt(matricYear, 10) : NaN;
       await update.mutateAsync({
         qualification: qualification.trim(),
         specialization: specialization.trim(),
@@ -112,6 +144,10 @@ function ProfileTab() {
         yearsOfExperience: yearsOfExperience.trim()
           ? Math.max(0, parseInt(yearsOfExperience, 10) || 0)
           : 0,
+        tutorKind,
+        institution: institution.trim(),
+        studyingToward: studyingToward.trim(),
+        matricYear: Number.isFinite(parsedYear) ? parsedYear : null,
       });
       enqueueSnackbar("Profile saved.", { variant: "success" });
     } catch (err) {
@@ -124,8 +160,78 @@ function ProfileTab() {
 
   if (profileQuery.isLoading) return <TabLoading />;
 
+  const connects = profileQuery.data?.connects;
+
   return (
     <Stack spacing={2} sx={{ maxWidth: 640 }}>
+      {connects !== undefined && (
+        <Box
+          sx={(t) => ({
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 2,
+            p: 2,
+            borderRadius: 2,
+            border: `1px solid ${t.palette.divider}`,
+            bgcolor: "action.hover",
+          })}
+        >
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              Connects balance
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Connects are spent when you propose on a listing. They top up monthly.
+            </Typography>
+          </Box>
+          <Typography variant="h5" sx={{ fontWeight: 800 }}>
+            {connects}
+          </Typography>
+        </Box>
+      )}
+      <TextField
+        select
+        label="I am a"
+        value={tutorKind}
+        onChange={(e) =>
+          setTutorKind(e.target.value as "university_student" | "graduate" | "completed_matric")
+        }
+        fullWidth
+        helperText="How you present yourself to students and parents."
+      >
+        {TUTOR_KINDS.map((k) => (
+          <MenuItem key={k.value} value={k.value}>
+            {k.label}
+          </MenuItem>
+        ))}
+      </TextField>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+        <TextField
+          label="Institution"
+          value={institution}
+          onChange={(e) => setInstitution(e.target.value)}
+          fullWidth
+          placeholder="e.g. University of Cape Town"
+        />
+        <TextField
+          label="Matric year"
+          type="number"
+          value={matricYear}
+          onChange={(e) => setMatricYear(e.target.value)}
+          sx={{ maxWidth: { sm: 180 } }}
+          placeholder="e.g. 2021"
+          slotProps={{ htmlInput: { min: 1980, max: 2100 } }}
+        />
+      </Stack>
+      <TextField
+        label="Studying toward"
+        value={studyingToward}
+        onChange={(e) => setStudyingToward(e.target.value)}
+        fullWidth
+        placeholder="e.g. BSc Computer Science"
+        helperText="Your degree or programme, if you are studying."
+      />
       <TextField
         label="Qualification"
         value={qualification}
@@ -184,14 +290,21 @@ function AvailabilityTab() {
   const [earliest, setEarliest] = useState(15);
   const [latest, setLatest] = useState(20);
 
+  // Depend on the primitive server values, not the query-object reference, so a
+  // background refetch or a setQueryData from any save does not re-run this and
+  // clobber the tutor's in-progress day toggles.
+  const hasProfile = profileQuery.data != null;
+  const serverAccepting = profileQuery.data?.acceptingStudents ?? true;
+  const serverAvailableDays = profileQuery.data?.availableDays ?? "";
+  const serverEarliest = profileQuery.data?.earliestHour ?? 15;
+  const serverLatest = profileQuery.data?.latestHour ?? 20;
   useEffect(() => {
-    const p = profileQuery.data;
-    if (!p) return;
-    setAccepting(p.acceptingStudents);
-    setDays(new Set(p.availableDays.split(",").map((d) => d.trim()).filter(Boolean)));
-    setEarliest(p.earliestHour);
-    setLatest(p.latestHour);
-  }, [profileQuery.data]);
+    if (!hasProfile) return;
+    setAccepting(serverAccepting);
+    setDays(new Set(serverAvailableDays.split(",").map((d) => d.trim()).filter(Boolean)));
+    setEarliest(serverEarliest);
+    setLatest(serverLatest);
+  }, [hasProfile, serverAccepting, serverAvailableDays, serverEarliest, serverLatest]);
 
   const toggleDay = (d: string) =>
     setDays((prev) => {
@@ -289,12 +402,18 @@ function SubjectsTab() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [topics, setTopics] = useState("");
 
+  // Initialise from server values, not the query-object reference. A background
+  // refetch (refetchOnMount) or a setQueryData from any save returns a fresh
+  // object even when the values are identical; depending on the object would
+  // re-run this effect and wipe the tutor's in-progress selections.
+  const hasProfile = profileQuery.data != null;
+  const serverSubjects = profileQuery.data?.subjects ?? "";
+  const serverSpecialization = profileQuery.data?.specialization ?? "";
   useEffect(() => {
-    const p = profileQuery.data;
-    if (!p) return;
-    setSelected(new Set(p.subjects.split(",").map((s) => s.trim()).filter(Boolean)));
-    setTopics(p.specialization);
-  }, [profileQuery.data]);
+    if (!hasProfile) return;
+    setSelected(new Set(serverSubjects.split(",").map((s) => s.trim()).filter(Boolean)));
+    setTopics(serverSpecialization);
+  }, [hasProfile, serverSubjects, serverSpecialization]);
 
   const toggle = (s: string) =>
     setSelected((prev) => {
@@ -367,13 +486,19 @@ function NotificationsTab() {
   const [onReview, setOnReview] = useState(true);
   const [weekly, setWeekly] = useState(false);
 
+  // Depend on the primitive server values, not the query-object reference, so a
+  // background refetch or a setQueryData from any save does not re-run this and
+  // clobber the tutor's unsaved toggles.
+  const hasProfile = profileQuery.data != null;
+  const serverOnConnection = profileQuery.data?.notifyOnConnection ?? true;
+  const serverOnReview = profileQuery.data?.notifyOnReview ?? true;
+  const serverWeekly = profileQuery.data?.weeklySummary ?? false;
   useEffect(() => {
-    const p = profileQuery.data;
-    if (!p) return;
-    setOnConnection(p.notifyOnConnection);
-    setOnReview(p.notifyOnReview);
-    setWeekly(p.weeklySummary);
-  }, [profileQuery.data]);
+    if (!hasProfile) return;
+    setOnConnection(serverOnConnection);
+    setOnReview(serverOnReview);
+    setWeekly(serverWeekly);
+  }, [hasProfile, serverOnConnection, serverOnReview, serverWeekly]);
 
   const save = async () => {
     try {

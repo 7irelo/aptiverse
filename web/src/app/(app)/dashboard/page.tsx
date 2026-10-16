@@ -33,6 +33,7 @@ import {
   useMoodTrend,
   useAcademicProfile,
   useCurricula,
+  useInstitutions,
   useMyEntitlements,
   useLiveActivity,
   type TermPrediction,
@@ -53,7 +54,7 @@ import {
 
 dayjs.extend(relativeTime);
 
-// Hidden hello for the matric (or curious dev) who hits F12. Fires once
+// Hidden hello for the student (or curious dev) who hits F12. Fires once
 // per session, never on subsequent mounts. Aptiverse-specific, no tech
 // reveal, graphite brand colour.
 let easterEggFired = false;
@@ -62,7 +63,7 @@ function devtoolsHello() {
   easterEggFired = true;
   // eslint-disable-next-line no-console
   console.log(
-    "%cAptiverse%c · built for the matric stretch · hello@aptiverse.app",
+    "%cAptiverse%c · built for the study stretch · hello@aptiverse.app",
     "font: 700 16px sans-serif; color: #1B1D22; letter-spacing: -0.02em;",
     "color: #5F5E58; font-size: 12px;",
   );
@@ -163,6 +164,7 @@ export default function StudentDashboardPage() {
 function QuickActionsRail() {
   const profileQuery = useAcademicProfile();
   const curriculaQuery = useCurricula();
+  const institutionsQuery = useInstitutions();
   const entitlementsQuery = useMyEntitlements();
 
   const profile = profileQuery.data;
@@ -182,10 +184,17 @@ function QuickActionsRail() {
   const curriculumName = profile?.curriculumId
     ? curriculaQuery.data?.find((c) => c.id === profile.curriculumId)?.shortName
     : undefined;
+  // Tertiary students have no grade to orient by, so name their institution
+  // instead. shortName ("UCT") reads better than the full name when present.
+  const institution = profile?.institutionId
+    ? institutionsQuery.data?.find((i) => i.id === profile.institutionId)
+    : undefined;
+  const institutionName = institution?.shortName ?? institution?.name;
   const plan = entitlementsQuery.data?.primaryPlanCode;
 
   const chips: { label: string; href?: string }[] = [];
   if (profile?.grade != null) chips.push({ label: `Grade ${profile.grade}` });
+  else if (institutionName) chips.push({ label: institutionName });
   if (curriculumName) chips.push({ label: curriculumName });
   if (plan) chips.push({ label: titleCase(plan), href: "/dashboard/billing" });
 
@@ -246,7 +255,7 @@ function QuickActionsRail() {
   );
 }
 
-// ─── Upcoming SBAs (the canonical "what next") ────────────────────────
+// ─── Upcoming assessments (the canonical "what next") ─────────────────
 
 type UpcomingItem = {
   id: string;
@@ -282,7 +291,7 @@ function UpcomingAssessmentsCard({
       <CardContent sx={{ p: { xs: 2.5, sm: 4 } }}>
         <SectionHeader
           overline="Up next"
-          title="Upcoming SBAs"
+          title="Upcoming assessments"
           mb={2.5}
           action={
             <Button
@@ -303,7 +312,7 @@ function UpcomingAssessmentsCard({
             <Skeleton variant="rounded" height={56} />
           </Stack>
         ) : isError ? (
-          <CardError onRetry={onRetry} what="your upcoming SBAs" />
+          <CardError onRetry={onRetry} what="your upcoming assessments" />
         ) : isEmpty ? (
           <Box sx={{ py: 5, textAlign: "center" }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -697,7 +706,7 @@ function SubjectPredictionRow({ p, name }: { p: TermPrediction; name: string }) 
           </Typography>
         </Stack>
       </Stack>
-      {/* Confidence — honest signal of how much evidence backs the number. */}
+      {/* Confidence: honest signal of how much evidence backs the number. */}
       <LinearProgress
         variant="determinate"
         value={Math.round(p.confidence * 100)}
@@ -875,8 +884,8 @@ function WellbeingSnapshotCard() {
         ) : noCheckins ? (
           <Box sx={{ py: 2 }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              No check-ins yet. A quick daily mood log builds a picture of how the term is
-              treating you.
+              No check-ins yet. A quick daily mood log builds a picture of how things are
+              treating you over time.
             </Typography>
             <Button
               component={Link}

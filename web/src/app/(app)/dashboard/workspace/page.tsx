@@ -59,12 +59,12 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import dayjs from "dayjs";
 
-// ─── Tab model — adapts to assessment type ────────────────────────────
+// ─── Tab model: adapts to assessment type ────────────────────────────
 // The workspace's centre column is the student's primary surface; it has
 // to fit what they're actually doing. Essay-style SBAs need a long-form
 // draft + research notes. Test/exam SBAs need practice and rough work,
 // not an essay editor that doesn't apply. Investigations and practicals
-// fall in between — notes plus a working area for observations / data.
+// fall in between: notes plus a working area for observations / data.
 
 type TabKey = "notes" | "draft" | "practice";
 
@@ -103,11 +103,11 @@ export default function WorkspacePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // A standalone practice test opened from the Practice tab (`?test=<id>`).
-  // Practice tests aren't SBAs, so they bypass the assessment workspace
-  // entirely: the runner gates itself (fresh test -> instructions, an
-  // already-taken one -> its results), and Back returns to the catalogue.
-  const directTestId = searchParams.get("test");
+  // A specific assessment opened from its detail page (`?assessment=<id>`).
+  // Without this the workspace always snapped to the soonest-due assessment,
+  // so "Open workspace" from an assessment page could land you on a different
+  // one entirely.
+  const requestedAssessmentId = searchParams.get("assessment");
 
   const assessmentsQuery = useAssessments();
   const academic = useAcademicUnits();
@@ -123,8 +123,14 @@ export default function WorkspacePage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   useEffect(() => {
     if (activeId && activeAssessments.some((a) => a.id === activeId)) return;
-    setActiveId(activeAssessments[0]?.id ?? null);
-  }, [activeAssessments, activeId]);
+    // Honour ?assessment= when it names an assessment the workspace can
+    // actually open; otherwise fall back to soonest-due as before.
+    const requested =
+      requestedAssessmentId && activeAssessments.some((a) => a.id === requestedAssessmentId)
+        ? requestedAssessmentId
+        : null;
+    setActiveId(requested ?? activeAssessments[0]?.id ?? null);
+  }, [activeAssessments, activeId, requestedAssessmentId]);
 
   const activeAssessment = activeAssessments.find((a) => a.id === activeId);
 
@@ -140,6 +146,15 @@ export default function WorkspacePage() {
   const unitName = activeAssessment
     ? (academic.nameFor(activeAssessment.subjectId) ?? prettifyUnitId(activeAssessment.subjectId))
     : undefined;
+
+  // "SBA" (School-Based Assessment) is CAPS high-school language. A university
+  // student logs plain assessments, so the noun follows education level the
+  // same way course/subject already does on the assessments page.
+  //
+  // Safe to read academic.isTertiary here: every surface that uses taskNoun
+  // renders below the `academic.isLoading` skeleton guard, so the profile has
+  // resolved and we are never branching on an undefined educationLevel.
+  const taskNoun = academic.isTertiary ? "assessment" : "SBA";
 
   // Tabs for the active assessment's type. The user's tab choice is
   // persisted to localStorage keyed by assessment id, so:
@@ -213,22 +228,6 @@ export default function WorkspacePage() {
     if (!splitEligible && viewMode === "split") setViewMode("tabbed");
   }, [splitEligible, viewMode]);
 
-  if (directTestId) {
-    return (
-      <AtmosphericBackdrop>
-        <PageHeader
-          title="Workspace"
-          description="Your timed run and results, in the workspace."
-          breadcrumbs={[
-            { label: "Dashboard", href: "/dashboard" },
-            { label: "Workspace" },
-          ]}
-        />
-        <PracticeRunner testId={directTestId} onExit={() => router.push("/dashboard/practice")} />
-      </AtmosphericBackdrop>
-    );
-  }
-
   if (assessmentsQuery.isLoading || academic.isLoading) {
     return (
       <>
@@ -251,7 +250,7 @@ export default function WorkspacePage() {
             <EmptyState
               icon={<ChecklistIcon />}
               title="Nothing to work on yet"
-              description="Log an SBA — a test, essay, investigation, project — and the workspace will open with the right tools for it."
+              description="Log a test, essay, investigation, or project and the workspace will open with the right tools for it."
               action={
                 <Button component={Link} href="/dashboard/assessments/new" variant="contained">
                   Add an assessment
@@ -287,6 +286,7 @@ export default function WorkspacePage() {
           activeId={activeId}
           assessment={activeAssessment}
           unitName={unitName}
+         
         />
       </Box>
       <Box sx={{ p: { xs: 2, sm: 3 } }}>
@@ -296,6 +296,7 @@ export default function WorkspacePage() {
           activeId={activeId}
           assessment={activeAssessment}
           unitName={unitName}
+         
         />
       </Box>
     </Box>
@@ -349,7 +350,7 @@ export default function WorkspacePage() {
       >
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="overline" color="text.secondary">
-            Active SBA
+            Active {taskNoun}
           </Typography>
           {activeAssessment ? (
             <>
@@ -403,19 +404,19 @@ export default function WorkspacePage() {
           <TextField
             select
             size="small"
-            label="Switch SBA"
+            label={`Switch ${taskNoun}`}
             value={activeId ?? ""}
             onChange={(e) => setActiveId(e.target.value)}
             sx={{ minWidth: { xs: "100%", sm: 300 }, flexShrink: 0 }}
             SelectProps={{
-              // The trigger shows just the active SBA's title — the subject
+              // The trigger shows just the active SBA's title. The subject
               // and type already sit in the hero to its left, so repeating
               // them (or worse, the raw subject key) is noise.
               renderValue: (val) => {
                 const a = activeAssessments.find((x) => x.id === val);
                 return (
                   <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
-                    {a?.title ?? "Select an SBA"}
+                    {a?.title ?? `Select an ${taskNoun}`}
                   </Typography>
                 );
               },
@@ -423,7 +424,7 @@ export default function WorkspacePage() {
             }}
           >
             {activeAssessments.map((a) => {
-              // Match on the canonical slug — Assessment.subjectId stores the
+              // Match on the canonical slug. Assessment.subjectId stores the
               // slug, which lives on Subject.subjectId, not Subject.id.
               const subjName = academic.nameFor(a.subjectId) ?? prettifyUnitId(a.subjectId);
               const days = dayjs(a.dueDate).diff(dayjs(), "day");
@@ -474,7 +475,7 @@ export default function WorkspacePage() {
           gridTemplateColumns: {
             xs: "1fr",
             // A running test collapses to a single full-width column so
-            // nothing distracts from it — this must win over focus mode, else
+            // nothing distracts from it; this must win over focus mode, else
             // the lone centre column lands in focus mode's narrow 220px track.
             // Focus mode otherwise narrows the left and drops the right rail.
             md: testInProgress ? "1fr" : focusMode ? "220px 1fr" : "300px 1fr",
@@ -658,7 +659,7 @@ function DrawerHeader({ title, onClose }: { title: string; onClose: () => void }
 }
 
 // ============================================================
-// LEFT RAIL — active SBA · pomodoro · tasks (real)
+// LEFT RAIL: active SBA · pomodoro · tasks (real)
 // ============================================================
 
 function LeftRail({
@@ -709,7 +710,7 @@ function LeftRail({
   );
 }
 
-// ─── Focus timer — Pomodoro that survives a refresh ───────────────────
+// ─── Focus timer: Pomodoro that survives a refresh ───────────────────
 //
 // State is persisted to localStorage keyed by the active SBA id. We store
 // "what was the target end time when the timer was started" rather than
@@ -862,7 +863,7 @@ function FocusTimer({
 // ============================================================
 
 // Autosave indicator. Only renders when there's something the student
-// needs to know about — a failed save. Saving / Saved / Idle states
+// needs to know about: a failed save. Saving / Saved / Idle states
 // stay silent; the student trusts that autosave works because their
 // previous keystrokes haven't disappeared. Showing a constant green
 // "Saved" badge is noise (the user flagged it).
@@ -870,7 +871,7 @@ function AutosaveBadge({ state }: { state: AutosaveState }) {
   if (state.status !== "error") return null;
   return (
     <Chip
-      label="Save failed — check your connection"
+      label="Save failed: check your connection"
       size="small"
       color="error"
       variant="outlined"
@@ -878,7 +879,7 @@ function AutosaveBadge({ state }: { state: AutosaveState }) {
   );
 }
 
-// Plain-text notes — works for any subject.
+// Plain-text notes: works for any subject.
 function NotesPanel({ assessmentId }: { assessmentId: string | null }) {
   const draft = useWorkspaceDraft(assessmentId, "notes");
   const [value, setValue] = useState(draft.initialContent);
@@ -905,7 +906,7 @@ function NotesPanel({ assessmentId }: { assessmentId: string | null }) {
   );
 }
 
-// Long-form draft — shown for essay and oral assessments. Oral reframes it
+// Long-form draft: shown for essay and oral assessments. Oral reframes it
 // as a speech script (you're writing to be spoken, not read).
 function DraftPanel({
   assessmentId,
@@ -954,7 +955,7 @@ function DraftPanel({
         minRows={14}
         placeholder={
           isOral
-            ? "Write your speech the way you'll say it — open strong, mark your pauses…"
+            ? "Write your speech the way you'll say it: open strong, mark your pauses…"
             : "Open with a hook your reader can't ignore…"
         }
         value={value}
@@ -997,7 +998,7 @@ function DraftPanel({
   );
 }
 
-// Practice tab — shown for tests/exams. Lists real practice tests filtered
+// Practice tab: shown for tests/exams. Lists real practice tests filtered
 // to the SBA's subject; "Start" runs the test inline via <PracticeRunner>
 // so the student stays in the workspace instead of routing to a separate
 // page. Results and review render in place; "Back to tests" returns here.
@@ -1013,6 +1014,12 @@ function PracticePanel({
   onRunningChange?: (running: boolean) => void;
 }) {
   const query = usePracticeTests();
+  const academic = useAcademicUnits();
+  // Falls back to the right noun when the unit name can't be resolved: a uni
+  // student studies courses, not subjects. The query is already cached by the
+  // page above, so this hook costs no extra request.
+  const thisUnit = `this ${academic.unitNoun}`;
+  const yourUnit = `your ${academic.unitNoun}`;
   const all = query.data ?? [];
   const forSubject = useMemo(
     () => all.filter((t) => t.subjectId === assessment.subjectId),
@@ -1082,10 +1089,10 @@ function PracticePanel({
           <ChecklistIcon fontSize="small" />
         </Box>
         <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
-          No practice yet for {unitName ?? "this subject"}
+          No practice yet for {unitName ?? thisUnit}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 380, mx: "auto", mb: 2 }}>
-          Generate a test for {unitName ?? "your subject"} from the Practice page, then start it right here.
+          Generate a test for {unitName ?? yourUnit} from the Practice page, then start it right here.
         </Typography>
         <Button component={Link} href="/dashboard/practice" variant="outlined" endIcon={<ArrowForwardIcon />}>
           Go to Practice
@@ -1097,7 +1104,7 @@ function PracticePanel({
   return (
     <Stack spacing={1.5}>
       <Typography variant="body2" color="text.secondary">
-        Practice for {unitName ?? "this subject"} — pick one to start a timed run here.
+        Practice for {unitName ?? thisUnit}. Pick one to start a timed run here.
       </Typography>
       {forSubject.map((p) => (
         <PracticeRow key={p.id} test={p} onStart={() => setRunningTestId(p.id)} />
@@ -1164,7 +1171,7 @@ function PracticeRow({ test, onStart }: { test: PracticeTest; onStart: () => voi
 }
 
 // ============================================================
-// RIGHT RAIL — AI tutor only
+// RIGHT RAIL: AI tutor only
 // ============================================================
 
 function RightRail({ assessment, unitName }: { assessment: Assessment; unitName: string | undefined }) {
@@ -1260,7 +1267,7 @@ function AiTutorChat({ assessment, unitName }: { assessment: Assessment; unitNam
       try {
         window.localStorage.removeItem(storageKey);
       } catch {
-        /* storage unavailable entirely — nothing more to do */
+        /* storage unavailable entirely, nothing more to do */
       }
     }
   }, [messages, storageKey]);

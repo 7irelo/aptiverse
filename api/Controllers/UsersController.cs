@@ -8,6 +8,17 @@ namespace Aptiverse.Auth.Controllers
 {
     [ApiController]
     [Route("api/users")]
+    // Authenticated by default, per the house rule: opt into [AllowAnonymous]
+    // per-action, never the other way round. This class had no class-level
+    // attribute and GetOneUser had no action-level one either, so it was
+    // reachable with no token at all: an unauthenticated GET returned 404 for
+    // an unknown id rather than 401, which means the lookup ran for anonymous
+    // callers. Anyone holding a user id could read that user's email, phone and
+    // roles off the public internet. There is no FallbackPolicy configured
+    // (Registrations.cs declares a RequireAuthenticatedUser policy but never
+    // assigns it as the fallback), so an endpoint with no attribute is open,
+    // not closed.
+    [Authorize]
     public class UsersController(IUserService userService, ILogger<UsersController> logger) : ControllerBase
     {
         private readonly IUserService _userService = userService;
@@ -40,7 +51,11 @@ namespace Aptiverse.Auth.Controllers
             }
         }
 
+        // Admin-only, matching every other action here. A student reading their
+        // own record has /api/auth/me for it; nothing in the web app or the API
+        // calls this route, so restricting it breaks no caller.
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,Superuser")]
         public async Task<IActionResult> GetOneUser(string id)
         {
             try

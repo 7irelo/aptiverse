@@ -12,18 +12,20 @@ import Alert from "@mui/material/Alert";
 import Link from "next/link";
 import { forgotPasswordSchema, type ForgotPasswordValues } from "@/lib/schemas";
 import { api } from "@/lib/api/client";
+import { useHydrated } from "@/lib/hooks/useHydrated";
 
 export default function ForgotPasswordPage() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isValid },
+    formState: { errors },
   } = useForm<ForgotPasswordValues>({
     resolver: zodResolver(forgotPasswordSchema),
     mode: "onTouched",
   });
 
   const mutation = useMutation({ mutationFn: api.forgotPassword });
+  const hydrated = useHydrated();
 
   return (
     <Stack spacing={3}>
@@ -54,7 +56,13 @@ export default function ForgotPasswordPage() {
               error={!!errors.email}
               helperText={errors.email?.message}
             />
-            <Button type="submit" variant="contained" size="large" disabled={!isValid || mutation.isPending}>
+            {/* Gated on hydration, never on `isValid`. See useHydrated. */}
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={!hydrated || mutation.isPending}
+            >
               {mutation.isPending ? "Sending…" : "Send reset link"}
             </Button>
           </Stack>

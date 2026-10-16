@@ -38,6 +38,13 @@ namespace Aptiverse.Entitlements.Application.Services
 
         // Next charge date from a subscription event — extends ValidUntil.
         public DateTime? NextPaymentDate { get; init; }
+
+        // Flat metadata as we set it at checkout and Paystack echoed it back.
+        // The lifecycle service ignores this; it exists so the controller can
+        // report a confirmed purchase to the ad platform on the webhook path,
+        // which is the path that survives a buyer closing the tab.
+        public IReadOnlyDictionary<string, string> Metadata { get; init; }
+            = new Dictionary<string, string>();
     }
 
     public record PaystackWebhookOutcome

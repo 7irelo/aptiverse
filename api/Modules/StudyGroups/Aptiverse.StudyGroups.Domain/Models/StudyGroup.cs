@@ -28,6 +28,24 @@ namespace Aptiverse.StudyGroups.Domain.Models
         // invite = only members can add others (join is blocked)
         public string Privacy { get; set; } = "open";
 
+        // Hard ceiling on membership, set by the owner. Join is refused once the
+        // roster reaches it. A small default keeps groups intimate; the owner can
+        // widen it up to the enforced maximum.
+        public int MemberCapacity { get; set; } = 12;
+
+        // ---- Group preferences (owner-set) ----
+
+        // Who may add a shared task: "everyone" (any member) or "admins" (owner
+        // + admins only).
+        public string TasksWhoCanAdd { get; set; } = "everyone";
+
+        // Notify the rest of the group in-app when a task is added.
+        public bool NotifyOnNewTask { get; set; } = true;
+
+        // Automatically drop a new dated task into every member's upcoming list,
+        // rather than leaving each member to sync it themselves.
+        public bool AutoSyncTasks { get; set; }
+
         public DateTime? NextSession { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

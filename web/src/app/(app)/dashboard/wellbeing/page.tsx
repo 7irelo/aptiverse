@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Card from "@mui/material/Card";
 import CardActionArea from "@mui/material/CardActionArea";
 import CardContent from "@mui/material/CardContent";
@@ -21,7 +21,7 @@ import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import { alpha, useTheme } from "@mui/material/styles";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { AptiverseLineChart as LineChart } from "@/components/common/AptiverseLineChart";
 import { AtmosphericBackdrop } from "@/components/common/AtmosphericBackdrop";
 import { CardError } from "@/components/common/CardError";
@@ -29,11 +29,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { useWellbeingSummary, useMoodTrend, useLogMood } from "@/lib/api/queries";
 import { enter, enterStagger } from "@/lib/motion";
 import type { MoodPoint, WellbeingSummary } from "@/lib/mockData";
-import SelfImprovementIcon from "@mui/icons-material/SelfImprovementOutlined";
-import PsychologyIcon from "@mui/icons-material/PsychologyOutlined";
-import EditNoteIcon from "@mui/icons-material/EditNoteOutlined";
-import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorderOutlined";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForwardOutlined";
+import { Heart, Wind, NotebookPen, MessagesSquare, ChevronRight } from "lucide-react";
 
 const STRESS_COPY: Record<WellbeingSummary["stressSignal"], { label: string; hint: string }> = {
   none: { label: "No signal yet", hint: "Check in to start tracking" },
@@ -57,19 +53,20 @@ export default function WellbeingPage() {
   const hardError = summaryQ.isError;
 
   const [checkInOpen, setCheckInOpen] = useState(false);
+  const [breathingOpen, setBreathingOpen] = useState(false);
   const [toast, setToast] = useState(false);
 
   return (
     <AtmosphericBackdrop>
       <PageHeader
         title="Wellbeing"
-        description="Daily check-ins, breathing tools, and people to talk to. Small habits, real signal."
+        description="Daily check-ins, a breathing exercise, and people to talk to. Small habits, real signal."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Wellbeing" }]}
         actions={
           <Button
             variant="contained"
             color="secondary"
-            startIcon={<FavoriteBorderIcon />}
+            startIcon={<Heart size={18} />}
             onClick={() => setCheckInOpen(true)}
           >
             Check in
@@ -98,8 +95,13 @@ export default function WellbeingPage() {
       )}
 
       <Box sx={{ mt: 4 }}>
-        <QuickTools onCheckIn={() => setCheckInOpen(true)} />
+        <QuickTools
+          onCheckIn={() => setCheckInOpen(true)}
+          onBreathe={() => setBreathingOpen(true)}
+        />
       </Box>
+
+      <BreathingDialog open={breathingOpen} onClose={() => setBreathingOpen(false)} />
 
       <MoodCheckInDialog
         open={checkInOpen}
@@ -285,6 +287,148 @@ function MoodCheckInDialog({
   );
 }
 
+// ─── Box breathing exercise ───────────────────────────────────────────
+// A four-phase box-breathing guide: inhale 4s, hold 4s, exhale 4s, hold 4s,
+// looping. The ring expands on the inhale and contracts on the exhale via a
+// CSS transform transition (no libraries). prefers-reduced-motion holds the
+// ring still and leans on the phase label plus the per-second countdown, which
+// update every tick regardless of motion settings.
+
+const BREATH_PHASES = [
+  { label: "Breathe in", expanded: true },
+  { label: "Hold", expanded: true },
+  { label: "Breathe out", expanded: false },
+  { label: "Hold", expanded: false },
+] as const;
+
+const PHASE_SECONDS = 4;
+const CYCLE_SECONDS = BREATH_PHASES.length * PHASE_SECONDS; // 16
+const RING_MIN = 0.55;
+const RING_MAX = 1;
+const RING_STILL = 0.82; // fixed size when motion is reduced
+
+function BreathingDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const reduceMotion = useReducedMotion();
+  const [running, setRunning] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+
+  // One tick per second drives the whole cycle; the CSS transition on the ring
+  // interpolates the scale smoothly between ticks.
+  useEffect(() => {
+    if (!running) return;
+    const id = window.setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [running]);
+
+  // Reset to a clean state whenever the dialog is dismissed.
+  useEffect(() => {
+    if (!open) {
+      setRunning(false);
+      setElapsed(0);
+    }
+  }, [open]);
+
+  const positionInCycle = elapsed % CYCLE_SECONDS;
+  const phaseIndex = Math.floor(positionInCycle / PHASE_SECONDS);
+  const phase = BREATH_PHASES[phaseIndex];
+  const secondsLeft = PHASE_SECONDS - (positionInCycle % PHASE_SECONDS);
+  const cycle = Math.floor(elapsed / CYCLE_SECONDS) + 1;
+
+  const scale = reduceMotion
+    ? RING_STILL
+    : running
+      ? phase.expanded
+        ? RING_MAX
+        : RING_MIN
+      : RING_MIN;
+
+  function stop() {
+    setRunning(false);
+    setElapsed(0);
+  }
+
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
+      <DialogTitle sx={{ fontWeight: 600 }}>Box breathing</DialogTitle>
+      <DialogContent>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          Four counts in, four to hold, four out, four to hold. Follow the ring, or just the words.
+        </Typography>
+
+        <Box sx={{ position: "relative", height: 260, display: "grid", placeItems: "center", my: 1 }}>
+          <Box
+            aria-hidden
+            sx={{
+              position: "absolute",
+              width: 220,
+              height: 220,
+              borderRadius: "50%",
+              border: 1,
+              borderColor: "divider",
+            }}
+          />
+          <Box
+            aria-hidden
+            sx={{
+              width: 220,
+              height: 220,
+              borderRadius: "50%",
+              border: 2,
+              borderColor: "wellbeing.main",
+              bgcolor: (t) => alpha(t.palette.wellbeing.main, 0.12),
+              transform: `scale(${scale})`,
+              transition: reduceMotion ? "none" : `transform ${PHASE_SECONDS}s ease-in-out`,
+              willChange: "transform",
+            }}
+          />
+          <Stack sx={{ position: "absolute", textAlign: "center", pointerEvents: "none" }} spacing={0.5}>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: "wellbeing.main" }}>
+              {running ? phase.label : "Ready"}
+            </Typography>
+            <Typography
+              variant="h4"
+              component="div"
+              sx={{ fontWeight: 600, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}
+            >
+              {running ? secondsLeft : PHASE_SECONDS}
+            </Typography>
+          </Stack>
+        </Box>
+
+        <Box
+          aria-live="polite"
+          sx={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}
+        >
+          {running ? `${phase.label}, ${secondsLeft}` : ""}
+        </Box>
+
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "center" }}>
+          {running ? `Cycle ${cycle}` : "Aim for four or five rounds."}
+        </Typography>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2.5 }}>
+        <Button onClick={onClose} color="inherit">
+          Close
+        </Button>
+        {running ? (
+          <Button onClick={stop} variant="outlined" color="secondary">
+            Stop
+          </Button>
+        ) : (
+          <Button
+            onClick={() => setRunning(true)}
+            variant="contained"
+            color="secondary"
+            startIcon={<Wind size={18} />}
+          >
+            Start
+          </Button>
+        )}
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 // ─── Populated state ──────────────────────────────────────────────────
 
 function PopulatedSummary({ summary, trend }: { summary: WellbeingSummary; trend: MoodPoint[] }) {
@@ -302,7 +446,7 @@ function PopulatedSummary({ summary, trend }: { summary: WellbeingSummary; trend
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Stat
             label="Sleep"
-            value={summary.sleepHours > 0 ? formatHours(summary.sleepHours) : "—"}
+            value={summary.sleepHours > 0 ? formatHours(summary.sleepHours) : "Not yet"}
             hint={summary.sleepHours > 0 ? "Average over 7 days" : "Log sleep on your check-in"}
           />
         </Grid>
@@ -433,7 +577,7 @@ function FirstCheckIn({ onCheckIn }: { onCheckIn: () => void }) {
               </Typography>
               <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 460 }}>
                 A daily mood log helps you (and the people who care about you) spot rough patches
-                before they pile up. No streaks to chase yet — just one honest answer.
+                before they pile up. No streaks to chase yet, just one honest answer.
               </Typography>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
                 <Button
@@ -441,7 +585,7 @@ function FirstCheckIn({ onCheckIn }: { onCheckIn: () => void }) {
                   variant="contained"
                   color="secondary"
                   size="large"
-                  startIcon={<FavoriteBorderIcon />}
+                  startIcon={<Heart size={18} />}
                 >
                   Start your first check-in
                 </Button>
@@ -543,26 +687,20 @@ function SummarySkeleton() {
 
 const TOOLS = [
   {
-    icon: <SelfImprovementIcon fontSize="small" />,
-    title: "Box breathing",
-    description: "Five minutes, slower heart, calmer head.",
-    href: "/dashboard/diary?tool=breathing",
-  },
-  {
-    icon: <EditNoteIcon fontSize="small" />,
+    icon: <NotebookPen size={18} />,
     title: "Diary",
     description: "Write it out. A longer-form space than a check-in.",
     href: "/dashboard/diary",
   },
   {
-    icon: <PsychologyIcon fontSize="small" />,
+    icon: <MessagesSquare size={18} />,
     title: "Talk to a psychologist",
     description: "Verified counsellors. Book a 30-minute session.",
     href: "/dashboard/psychologist",
   },
 ] as const;
 
-function QuickTools({ onCheckIn }: { onCheckIn: () => void }) {
+function QuickTools({ onCheckIn, onBreathe }: { onCheckIn: () => void; onBreathe: () => void }) {
   return (
     <Stack spacing={2}>
       <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: "0.08em" }}>
@@ -576,14 +714,26 @@ function QuickTools({ onCheckIn }: { onCheckIn: () => void }) {
               sx={{ px: { xs: 2, sm: 2.5 }, py: 2, borderRadius: 0, display: "block" }}
             >
               <ToolRow
-                icon={<FavoriteBorderIcon fontSize="small" />}
+                icon={<Heart size={18} />}
                 title="Daily check-in"
                 description="A 30-second mood log. The whole foundation."
               />
             </CardActionArea>
           </motion.div>
+          <motion.div {...enterStagger(1)}>
+            <CardActionArea
+              onClick={onBreathe}
+              sx={{ px: { xs: 2, sm: 2.5 }, py: 2, borderRadius: 0, display: "block" }}
+            >
+              <ToolRow
+                icon={<Wind size={18} />}
+                title="Box breathing"
+                description="Four counts in, hold, out, hold. A minute or two to settle."
+              />
+            </CardActionArea>
+          </motion.div>
           {TOOLS.map((t, i) => (
-            <motion.div key={t.title} {...enterStagger(i + 1)}>
+            <motion.div key={t.title} {...enterStagger(i + 2)}>
               <CardActionArea
                 component={Link}
                 href={t.href}
@@ -632,7 +782,9 @@ function ToolRow({
           {description}
         </Typography>
       </Box>
-      <ArrowForwardIcon sx={{ color: "text.secondary", fontSize: 18, flexShrink: 0 }} />
+      <Box sx={{ color: "text.secondary", display: "grid", placeItems: "center", flexShrink: 0 }}>
+        <ChevronRight size={18} />
+      </Box>
     </Stack>
   );
 }

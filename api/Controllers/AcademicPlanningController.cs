@@ -111,6 +111,9 @@ namespace Aptiverse.AcademicPlanning.Controllers
 
             return Ok(new FrontendAcademicProfileDto
             {
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
                 CurriculumId = user.CurriculumId,
                 Grade = user.Grade,
                 School = user.School,
@@ -164,6 +167,24 @@ namespace Aptiverse.AcademicPlanning.Controllers
             var user = await _db.Set<User>().FirstOrDefaultAsync(u => u.Id == userId);
             if (user is null) return NotFound();
 
+            // Names are the only identity fields a student may change here.
+            // Email is absent from the DTO on purpose: it identifies the account
+            // and is the password-reset channel, so swapping it without a
+            // verification round-trip would be an account-takeover primitive.
+            if (body.FirstName is not null)
+            {
+                var first = body.FirstName.Trim();
+                if (first.Length == 0) return BadRequest("First name can't be empty.");
+                if (first.Length > 100) return BadRequest("First name is too long.");
+                user.FirstName = first;
+            }
+            if (body.LastName is not null)
+            {
+                var last = body.LastName.Trim();
+                if (last.Length == 0) return BadRequest("Last name can't be empty.");
+                if (last.Length > 100) return BadRequest("Last name is too long.");
+                user.LastName = last;
+            }
             if (body.CurriculumId is not null)
             {
                 // Validate the curriculum exists so we don't store junk.
@@ -207,6 +228,9 @@ namespace Aptiverse.AcademicPlanning.Controllers
 
             return Ok(new FrontendAcademicProfileDto
             {
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
                 CurriculumId = user.CurriculumId,
                 Grade = user.Grade,
                 School = user.School,
@@ -608,6 +632,7 @@ namespace Aptiverse.AcademicPlanning.Controllers
             if (existing is not null)
             {
                 if (!string.IsNullOrWhiteSpace(body.Lecturer)) existing.Lecturer = body.Lecturer.Trim();
+                if (NormaliseLevel(body.Level) is string lvl) existing.Level = lvl;
                 await _db.SaveChangesAsync();
                 return Ok(MapCourse(existing, course));
             }
@@ -617,10 +642,35 @@ namespace Aptiverse.AcademicPlanning.Controllers
                 StudentId = userId,
                 CourseId = course.Id,
                 Lecturer = string.IsNullOrWhiteSpace(body.Lecturer) ? null : body.Lecturer.Trim(),
+                Level = NormaliseLevel(body.Level),
+                // Clamped to a sane range: a single course running past eight
+                // semesters is almost certainly a typo, not a degree.
+                DurationSemesters = body.DurationSemesters is int d && d is >= 1 and <= 8 ? d : null,
             };
             _db.Set<StudentCourse>().Add(enrolment);
             await _db.SaveChangesAsync();
             return Ok(MapCourse(enrolment, course));
+        }
+
+        // Mark a course finished, or reopen it. Finishing moves it into the
+        // analytics Past section straight away, whatever its computed end; the
+        // student is the authority on whether they are still taking it.
+        [HttpPatch("courses/{id}")]
+        public async Task<ActionResult<FrontendCourseDto>> UpdateCourse(
+            string id, [FromBody] FrontendUpdateCourseDto body, CancellationToken ct = default)
+        {
+            var userId = CurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+            if (!long.TryParse(id, out var scId)) return NotFound();
+
+            var row = await _db.Set<StudentCourse>()
+                .Include(sc => sc.Course)
+                .FirstOrDefaultAsync(sc => sc.Id == scId && sc.StudentId == userId, ct);
+            if (row is null || row.Course is null) return NotFound();
+
+            row.CompletedAt = body.Finished ? DateTime.UtcNow : null;
+            await _db.SaveChangesAsync(ct);
+            return Ok(MapCourse(row, row.Course));
         }
 
         [HttpDelete("courses/{id}")]
@@ -641,22 +691,67 @@ namespace Aptiverse.AcademicPlanning.Controllers
             return NoContent();
         }
 
-        private static FrontendCourseDto MapCourse(StudentCourse sc, Course c) => new()
+        // A South African university semester runs about six months of calendar
+        // time, so a course's end is its start plus six months per semester. This
+        // is an approximation, deliberately: it decides when a course drifts into
+        // the Past section on its own, and the student's explicit "finished" always
+        // overrides it, so it never has to be exact.
+        private const int MonthsPerSemester = 6;
+
+        private static FrontendCourseDto MapCourse(StudentCourse sc, Course c)
         {
-            Id = sc.Id.ToString(),
-            CourseId = c.Id,
-            PracticeKey = c.InstitutionId + ":" + c.Slug,
-            InstitutionId = c.InstitutionId,
-            Name = c.Name,
-            Code = c.Code,
-            Lecturer = sc.Lecturer,
-            CreatedAt = sc.CreatedAt,
-        };
+            var finishesOn = sc.DurationSemesters is int d
+                ? sc.CreatedAt.AddMonths(d * MonthsPerSemester)
+                : (DateTime?)null;
+            var isFinished = sc.CompletedAt is not null
+                || (finishesOn is DateTime end && end < DateTime.UtcNow);
+
+            return new FrontendCourseDto
+            {
+                Id = sc.Id.ToString(),
+                CourseId = c.Id,
+                PracticeKey = c.InstitutionId + ":" + c.Slug,
+                InstitutionId = c.InstitutionId,
+                Name = c.Name,
+                Code = c.Code,
+                Lecturer = sc.Lecturer,
+                CreatedAt = sc.CreatedAt,
+                Level = sc.Level,
+                DurationSemesters = sc.DurationSemesters,
+                FinishesOn = finishesOn,
+                IsFinished = isFinished,
+            };
+        }
+
+        // Study levels the generator understands. Anything else is dropped to
+        // null so a stray value never reaches the AI prompt.
+        private static readonly string[] AllowedLevels =
+            ["first_year", "second_year", "third_year", "fourth_year", "honours", "masters", "phd"];
+
+        private static string? NormaliseLevel(string? level)
+        {
+            var v = level?.Trim().ToLowerInvariant();
+            return v is not null && AllowedLevels.Contains(v) ? v : null;
+        }
 
         // --- Assessments (SBA tasks) ------------------------------------------
 
+        // The union of both education levels, because one endpoint serves both.
+        // The first seven are the CAPS set a high-school student picks from; the
+        // rest are the coursework a university semester actually runs on
+        // (mirrors TERTIARY_ASSESSMENT_TYPES in web/src/lib/mockData.ts, which
+        // deliberately drops the CAPS-only "investigation" and "oral").
+        //
+        // This list used to be the CAPS seven alone, so a tertiary student who
+        // picked "Class test", "Lab report", "Tutorial", "Assignment",
+        // "Midterm" or "Presentation" from a dropdown the app itself offered
+        // got a 400 back. Which subset is offered stays a client decision keyed
+        // off education level; the server's job is only to reject nonsense.
         private static readonly string[] AllowedTypes =
-            ["test", "essay", "investigation", "practical", "exam", "project", "oral"];
+        [
+            "test", "essay", "investigation", "practical", "exam", "project", "oral",
+            "assignment", "class_test", "tutorial", "lab_report", "midterm", "presentation",
+        ];
         private static readonly string[] AllowedStatuses =
             ["scheduled", "in_progress", "submitted", "graded"];
 
@@ -701,7 +796,13 @@ namespace Aptiverse.AcademicPlanning.Controllers
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
             if (string.IsNullOrWhiteSpace(body.Title)) return BadRequest("Title is required.");
-            if (string.IsNullOrWhiteSpace(body.SubjectId)) return BadRequest("Subject is required.");
+            // "Subject" would be wrong for half the people who hit this: the
+            // assessments endpoints are shared, and a tertiary student's
+            // SubjectId is a Course practiceKey. The server does not know the
+            // level here without an extra lookup on an error-only branch, so
+            // the message names both rather than guessing.
+            if (string.IsNullOrWhiteSpace(body.SubjectId))
+                return BadRequest("A subject or course is required.");
 
             var type = (body.Type ?? "test").ToLowerInvariant();
             if (!AllowedTypes.Contains(type)) return BadRequest($"Type must be one of: {string.Join(", ", AllowedTypes)}.");
@@ -741,7 +842,9 @@ namespace Aptiverse.AcademicPlanning.Controllers
                 }
             }
 
-            if (!enrolled) return BadRequest("You're not enrolled in that subject — add it first on the Subjects page.");
+            if (!enrolled)
+                return BadRequest(
+                    "You're not enrolled in that subject or course. Add it first on your subjects or courses page.");
 
             var a = new Assessment
             {
@@ -832,8 +935,11 @@ namespace Aptiverse.AcademicPlanning.Controllers
                     userId,
                     "celebration",
                     $"Draft submitted: {a.Title}",
-                    "Nicely done — your work is in. We'll let you know once it's marked.",
-                    $"/dashboard/academic/assessments/{a.Id}");
+                    "Nicely done, your work is in. We'll let you know once it's marked.",
+                    // The student-facing route is /dashboard/assessments/{id};
+                    // /dashboard/academic/... has never existed, so this
+                    // notification's deep link always 404'd.
+                    $"/dashboard/assessments/{a.Id}");
             }
 
             return Ok(MapToDto(a));

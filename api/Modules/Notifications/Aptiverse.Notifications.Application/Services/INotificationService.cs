@@ -24,5 +24,12 @@ namespace Aptiverse.Notifications.Application.Services
             string body,
             string? actionHref = null,
             CancellationToken ct = default);
+
+        // Remove every notification of one kind for one user. For prompts that
+        // stop being true once the user acts on them: the "confirm your email"
+        // nag goes away the moment the address is confirmed. A prompt that
+        // outlives the thing it is prompting for is worse than no prompt.
+        // Best-effort like Enqueue: returns the number removed, never throws.
+        Task<int> ClearKindAsync(string userId, string kind, CancellationToken ct = default);
     }
 }

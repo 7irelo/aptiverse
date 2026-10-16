@@ -14,7 +14,12 @@ namespace Aptiverse.Infrastructure.Data
                 "Teacher",
                 "Parent",
                 "Student",
-                "Tutor"
+                "Tutor",
+                // Affiliate-only accounts: people who joined to earn, not to
+                // study. They land on the referral dashboard and never see the
+                // student app. The programme itself is still open to every
+                // account regardless of role.
+                "Affiliate"
             };
 
             foreach (var role in roles)

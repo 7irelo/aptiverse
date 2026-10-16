@@ -35,7 +35,7 @@ namespace Aptiverse.AcademicPlanning.Application.Reminders
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             logger.LogInformation(
-                "AssessmentDueReminderService started — polling every {Interval}, reminding {Lead} day(s) ahead.",
+                "AssessmentDueReminderService started: polling every {Interval}, reminding {Lead} day(s) ahead.",
                 PollInterval, LeadDays);
 
             using var timer = new PeriodicTimer(PollInterval);
@@ -159,7 +159,7 @@ namespace Aptiverse.AcademicPlanning.Application.Reminders
                                 {
                                     ["Title"] = title,
                                     ["Due"] = dueLabel,
-                                    ["Url"] = $"https://aptiverse.co.za/dashboard/assessments/{item.Id}",
+                                    ["Url"] = Aptiverse.Api.Utilities.WebApp.Url($"/dashboard/assessments/{item.Id}"),
                                 },
                                 EnqueuedAt: DateTime.UtcNow), ct);
                         }

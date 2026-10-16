@@ -142,7 +142,7 @@ function GoalBody({
             <Box>
               <Typography variant="h6">Milestones</Typography>
               <Typography variant="body2" color="text.secondary">
-                Drag the handle to reorder — order shapes your study plan
+                Drag the handle to reorder: order shapes your study plan
               </Typography>
             </Box>
           </Stack>
@@ -152,7 +152,7 @@ function GoalBody({
             empty={{
               icon: <FlagIcon />,
               title: "No milestones yet",
-              description: "Break this goal into 3–5 milestones so progress feels real on the way to the finish.",
+              description: "Break this goal into 3 to 5 milestones so progress feels real on the way to the finish.",
               action: (
                 <Button variant="contained" color="secondary" startIcon={<AddIcon />}>
                   Add first milestone
@@ -189,7 +189,7 @@ function MilestoneSortable({ goalId, initial }: { goalId: string; initial: Miles
       // Refresh server state so subsequent reads reflect the new order
       queryClient.setQueryData(queryKeys.goalMilestones(goalId), next);
     } catch (err) {
-      enqueueSnackbar(`Couldn't save order — reverted${err instanceof Error ? `: ${err.message}` : ""}`, { variant: "error" });
+      enqueueSnackbar(`Couldn't save order. Reverted${err instanceof Error ? `: ${err.message}` : ""}`, { variant: "error" });
       setItems(initial);
     }
   };

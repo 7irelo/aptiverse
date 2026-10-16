@@ -7,6 +7,7 @@ import Divider from "@mui/material/Divider";
 import Link from "next/link";
 import MuiLink from "@mui/material/Link";
 import { Logo } from "@/components/common/Logo";
+import { openConsentPreferences } from "@/lib/analytics/consent";
 
 const SUPPORT_EMAIL = "support@aptiverse.co.za";
 
@@ -31,7 +32,7 @@ const COLUMNS: Column[] = [
     title: "Who it's for",
     links: [
       { label: "Students", href: "/for-students" },
-      { label: "Families", href: "/for-families" },
+      { label: "Parents", href: "/for-families" },
       { label: "Tutors", href: "/for-tutors" },
     ],
   },
@@ -40,6 +41,10 @@ const COLUMNS: Column[] = [
     links: [
       { label: "About", href: "/about" },
       { label: "Contact", href: "/contact" },
+      // Deliberately here rather than under "Who it's for". Someone looking to
+      // earn is not choosing which product tier suits them, and the footer is
+      // where people go looking for a programme they were told about.
+      { label: "Affiliate programme", href: "/affiliates" },
     ],
   },
   {
@@ -59,7 +64,14 @@ export function Footer() {
         borderTop: 1,
         borderColor: "divider",
         bgcolor: "background.paper",
-        py: { xs: 6, md: 9 },
+        // Tighter vertical rhythm on phones. The footer measured 624px against
+        // an 844px viewport, nearly three quarters of a screen, and almost all
+        // of that was padding and gaps rather than content: it holds only ten
+        // links. Trimming the spacing is the honest fix. Dropping links on
+        // mobile is not, since mobile is where most of these users are, and
+        // Google indexes the mobile DOM, so a link that only exists on desktop
+        // effectively does not exist.
+        py: { xs: 4.5, md: 9 },
       }}
     >
       <Box sx={{ maxWidth: 1240, mx: "auto", px: { xs: 2.5, sm: 4, lg: 6 } }}>
@@ -71,7 +83,7 @@ export function Footer() {
             // three ragged lines beside the link grid.
             gridTemplateColumns: { xs: "1fr", md: "minmax(240px, 1.2fr) 2fr" },
             columnGap: { md: 8 },
-            rowGap: { xs: 5, md: 0 },
+            rowGap: { xs: 3.5, md: 0 },
           }}
         >
           <Stack spacing={2} alignItems="flex-start">
@@ -97,7 +109,17 @@ export function Footer() {
                   color: "text.primary",
                   fontWeight: 600,
                   transition: "color 150ms",
-                  "&:hover": { color: "secondary.main" },
+                  // Citron is surface-only. As a hover text colour it scored
+                  // 1.4:1 on light paper, so the address vanished on hover.
+                  // The hover state is carried by an underline plus a citron
+                  // underline colour, keeping the ink at full contrast.
+                  textDecorationColor: "transparent",
+                  "&:hover": {
+                    textDecoration: "underline",
+                    textDecorationThickness: 2,
+                    textUnderlineOffset: 3,
+                    textDecorationColor: "secondary.main",
+                  },
                 }}
               >
                 {SUPPORT_EMAIL}
@@ -110,7 +132,7 @@ export function Footer() {
               display: "grid",
               gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(4, 1fr)" },
               columnGap: { xs: 3, sm: 4 },
-              rowGap: 4,
+              rowGap: { xs: 3, sm: 4 },
             }}
           >
             {COLUMNS.map((c) => (
@@ -138,7 +160,7 @@ export function Footer() {
           </Box>
         </Box>
 
-        <Divider sx={{ my: { xs: 4, md: 5 } }} />
+        <Divider sx={{ my: { xs: 3, md: 5 } }} />
 
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -149,9 +171,36 @@ export function Footer() {
           <Typography variant="caption" color="text.secondary">
             © {new Date().getFullYear()} Aptiverse. All rights reserved.
           </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Built in South Africa for South African students.
-          </Typography>
+          <Stack direction="row" spacing={2} alignItems="center">
+            {/* Withdrawal has to be as reachable as the original ask, which is
+                why this is a real control in the footer of every page and not
+                a paragraph in the policy telling people to clear their
+                cookies. Rendered as a button, because it opens a dialog. */}
+            <Box
+              component="button"
+              type="button"
+              onClick={() => openConsentPreferences()}
+              sx={{
+                appearance: "none",
+                background: "none",
+                border: 0,
+                p: 0,
+                cursor: "pointer",
+                font: "inherit",
+                fontSize: "0.75rem",
+                color: "text.secondary",
+                textDecoration: "underline",
+                textUnderlineOffset: 3,
+                transition: "color 150ms",
+                "&:hover": { color: "text.primary" },
+              }}
+            >
+              Privacy choices
+            </Box>
+            <Typography variant="caption" color="text.secondary">
+              Built in South Africa for South African students.
+            </Typography>
+          </Stack>
         </Stack>
       </Box>
     </Box>

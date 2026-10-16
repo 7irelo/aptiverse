@@ -36,7 +36,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   };
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default" }}>
+    <Box sx={{ display: "flex", minHeight: "100dvh", bgcolor: "background.default" }}>
       {/* Brand panel, desktop only. Restrained graphite wash with a single
           citron accent that echoes the secondary in the mark; adapts to mode. */}
       <Box

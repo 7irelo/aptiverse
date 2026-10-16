@@ -11,6 +11,12 @@ namespace Aptiverse.Application.Users.Dtos
         [DataMember(Name = "lastName")] public string? LastName { get; set; }
         [DataMember(Name = "userName")] public string? UserName { get; set; }
         [DataMember(Name = "email")] public string? Email { get; set; }
+
+        // Whether the address has been verified. Drives the soft verification
+        // gate: an unverified account can sign in, but the app bounces it to
+        // /verify-email until this is true. Login no longer blocks on it.
+        [DataMember(Name = "emailConfirmed")] public bool EmailConfirmed { get; set; }
+
         [DataMember(Name = "phoneNumber")] public string? PhoneNumber { get; set; }
         [DataMember(Name = "roles")] public IList<string>? Roles { get; set; }
 

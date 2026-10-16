@@ -12,18 +12,18 @@ import Chip from "@mui/material/Chip";
 import {
   TutorChatScene,
   MasteryForecastScene,
-  SbaCoachScene,
-  PastPaperScene,
+  PracticeScene,
+  GoalsVerifiedScene,
   EndCardScene,
 } from "./scenes";
 
 // =====================================================================
-// /ads/scenes — Editor-facing scene player. Not for public consumption.
+// /ads/scenes: Editor-facing scene player. Not for public consumption.
 //
 // Each scene re-mounts via a `playKey` bump so animations play from
 // frame 0 on demand. Wraps the active scene in a fixed-aspect container
-// (16:9 / 1:1 / 9:16) the editor switches between with the ratio chips
-// — capture them via OBS / Loom / browser screen-record at the matching
+// (16:9 / 1:1 / 9:16) the editor switches between with the ratio chips.
+// Capture them via OBS / Loom / browser screen-record at the matching
 // resolution and you have the in-product b-roll for the production
 // brief without recreating any UI in After Effects.
 //
@@ -37,31 +37,31 @@ type Ratio = "16:9" | "1:1" | "9:16";
 const SCENES = [
   {
     slug: "tutor-chat",
-    name: "Curriculum-aware AI tutor",
+    name: "A tutor that knows your courses",
     durationMs: 8000,
     Component: TutorChatScene,
-    description: "User asks, AI replies with textbook citation chip animating in last.",
+    description: "Student asks, tutor answers, then the chips show what it knows about them.",
   },
   {
     slug: "mastery",
-    name: "Mastery forecast — 54 → 75",
+    name: "Mastery, and where each course is heading",
     durationMs: 6000,
     Component: MasteryForecastScene,
-    description: "Confidence band fans out, line draws across, distinction chip lands.",
+    description: "Ring draws to 68%, strongest and focus rows land, projection slopes fan out.",
   },
   {
-    slug: "sba-coach",
-    name: "SBA Coach — inline annotations",
+    slug: "practice",
+    name: "Practice written for your weakest topics",
     durationMs: 7000,
-    Component: SbaCoachScene,
-    description: "Essay paragraph highlights bloom in, feedback rows appear below.",
+    Component: PracticeScene,
+    description: "Generator fields fill, weakest-topics toggle flips, a fresh 12-question test lands.",
   },
   {
-    slug: "past-paper",
-    name: "Past-paper walk-through",
-    durationMs: 7000,
-    Component: PastPaperScene,
-    description: "Physics question card; worked-solution steps + mark badges drop in sequentially.",
+    slug: "goals",
+    name: "Goals that get checked",
+    durationMs: 6000,
+    Component: GoalsVerifiedScene,
+    description: "Goal card fills to 100%, then the auto-checked and points chips pop in.",
   },
   {
     slug: "end-card",
@@ -82,7 +82,7 @@ export default function AdsScenesPage() {
     [activeSlug],
   );
 
-  // Hard-noindex these — the URL is shared with editors only.
+  // Hard-noindex these: the URL is shared with editors only.
   useEffect(() => {
     const meta = document.createElement("meta");
     meta.name = "robots";
@@ -104,7 +104,7 @@ export default function AdsScenesPage() {
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1, maxWidth: 760 }}>
             Pick a scene + aspect ratio, click <strong>Play</strong>, and capture with OBS /
             Loom / your browser&apos;s screen-record. The viewport below is the exact crop
-            your video editor receives — anything outside it gets cut.
+            your video editor receives. Anything outside it gets cut.
           </Typography>
         </Box>
 
@@ -186,7 +186,7 @@ export default function AdsScenesPage() {
                 hard.
               </Typography>
               <Typography component="li" variant="body2">
-                Set the source crop to the dashed-border viewport — that&apos;s the exact area your editor
+                Set the source crop to the dashed-border viewport. That&apos;s the exact area your editor
                 expects.
               </Typography>
               <Typography component="li" variant="body2">
@@ -198,7 +198,7 @@ export default function AdsScenesPage() {
                 (1:1), 1080×1920 (9:16).
               </Typography>
               <Typography component="li" variant="body2">
-                These pages are <code>noindex,nofollow</code> — safe to share the URL with freelancers,
+                These pages are <code>noindex,nofollow</code>, so it is safe to share the URL with freelancers,
                 won&apos;t leak to Google.
               </Typography>
             </Stack>

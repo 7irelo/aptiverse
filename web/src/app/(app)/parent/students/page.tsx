@@ -22,6 +22,10 @@ import PersonAddIcon from "@mui/icons-material/PersonAddAlt1Outlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForwardOutlined";
 import Diversity3Icon from "@mui/icons-material/Diversity3Outlined";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpwardOutlined";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownwardOutlined";
+import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremiumOutlined";
+import CircularProgress from "@mui/material/CircularProgress";
 import { useSnackbar } from "notistack";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useConfirm } from "@/components/common/ConfirmDialog";
@@ -29,17 +33,26 @@ import {
   useMyParentLinks,
   useInviteStudent,
   useRemoveParentLink,
+  useChildren,
+  useSetChildPlan,
   type ParentLink,
 } from "@/lib/api/queries";
+import type { Child } from "@/lib/mockData";
 import { initials } from "@/lib/format";
 
 export default function ParentStudentsPage() {
   const linksQuery = useMyParentLinks();
+  const childrenQuery = useChildren();
   const [inviteOpen, setInviteOpen] = useState(false);
 
   const links = linksQuery.data ?? [];
   const accepted = links.filter((l) => l.status === "accepted");
   const pending = links.filter((l) => l.status === "pending");
+
+  // Coverage, keyed by studentUserId, so each linked-student card can show and
+  // change the plan the parent covers that child on.
+  const childByUserId = new Map((childrenQuery.data ?? []).map((c) => [c.studentUserId, c]));
+  const coveredCount = (childrenQuery.data ?? []).filter((c) => c.covered).length;
 
   return (
     <>
@@ -74,8 +87,9 @@ export default function ParentStudentsPage() {
             No students linked yet
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5, mt: 0.5 }}>
-            Invite your child by their Aptiverse email. Once they accept from their Connections page,
-            you&apos;ll see their progress here.
+            Invite your child by email. If they don&apos;t have an account yet, they&apos;ll get an
+            email to join, and connect once they sign up. When they accept, they move onto your plan
+            and you&apos;ll see their progress here.
           </Typography>
           <Button variant="contained" startIcon={<PersonAddIcon />} onClick={() => setInviteOpen(true)}>
             Invite your first student
@@ -97,20 +111,36 @@ export default function ParentStudentsPage() {
           )}
 
           <Box>
-            {pending.length > 0 && (
-              <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: "0.08em" }}>
-                Linked students
-              </Typography>
+            {(pending.length > 0 || accepted.length > 0) && (
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="baseline"
+                justifyContent="space-between"
+                sx={{ flexWrap: "wrap", gap: 0.5 }}
+              >
+                <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: "0.08em" }}>
+                  Linked students
+                </Typography>
+                {accepted.length > 0 && (
+                  <Typography variant="caption" color="text.secondary">
+                    {coveredCount} of {accepted.length} students covered
+                  </Typography>
+                )}
+              </Stack>
             )}
             {accepted.length === 0 ? (
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 No accepted links yet. Your pending invites appear above until the student accepts.
               </Typography>
             ) : (
-              <Grid container spacing={3} sx={{ mt: pending.length > 0 ? 0 : 0 }}>
+              <Grid container spacing={3} sx={{ mt: 0.5 }}>
                 {accepted.map((l) => (
                   <Grid key={l.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-                    <LinkedStudentCard link={l} />
+                    <LinkedStudentCard
+                      link={l}
+                      child={l.studentUserId ? childByUserId.get(l.studentUserId) : undefined}
+                    />
                   </Grid>
                 ))}
               </Grid>
@@ -171,11 +201,31 @@ function PendingRow({ link }: { link: ParentLink }) {
   );
 }
 
-function LinkedStudentCard({ link }: { link: ParentLink }) {
+function LinkedStudentCard({ link, child }: { link: ParentLink; child?: Child }) {
   const { enqueueSnackbar } = useSnackbar();
   const remove = useRemoveParentLink();
+  const setPlan = useSetChildPlan();
   const { confirm, dialog } = useConfirm();
   const name = link.studentName ?? link.studentEmail;
+
+  const plan = child?.planCode ?? "none";
+  const isMax = plan === "student.max";
+  const isPro = plan === "student.pro";
+
+  const changePlan = (planCode: "student.pro" | "student.max", label: string) => {
+    if (!link.studentUserId) return;
+    setPlan.mutate(
+      { studentUserId: link.studentUserId, planCode },
+      {
+        onSuccess: () => enqueueSnackbar(`${name} is now on ${label}.`, { variant: "success" }),
+        onError: (err) =>
+          enqueueSnackbar(
+            err instanceof Error ? err.message : "Couldn't change the plan.",
+            { variant: "error" },
+          ),
+      },
+    );
+  };
 
   const unlink = async () => {
     const ok = await confirm({
@@ -215,13 +265,59 @@ function LinkedStudentCard({ link }: { link: ParentLink }) {
             </IconButton>
           </Stack>
 
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 2 }}>
+            <WorkspacePremiumIcon fontSize="small" sx={{ color: "text.secondary" }} />
+            <Chip
+              label={isMax ? "Max" : isPro ? "Pro" : "Not covered"}
+              size="small"
+              color={isMax ? "secondary" : isPro ? "primary" : "default"}
+              variant={plan === "none" ? "outlined" : "filled"}
+            />
+            {setPlan.isPending && <CircularProgress size={16} />}
+          </Stack>
+
+          <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+            {isMax ? (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<ArrowDownwardIcon />}
+                disabled={setPlan.isPending}
+                onClick={() => changePlan("student.pro", "Student Pro")}
+              >
+                Switch to Pro
+              </Button>
+            ) : (
+              <Button
+                size="small"
+                variant="outlined"
+                color="secondary"
+                startIcon={<ArrowUpwardIcon />}
+                disabled={setPlan.isPending}
+                onClick={() => changePlan("student.max", "Student Max")}
+              >
+                {isPro ? "Upgrade to Max" : "Cover with Max"}
+              </Button>
+            )}
+            {plan === "none" && (
+              <Button
+                size="small"
+                variant="text"
+                disabled={setPlan.isPending}
+                onClick={() => changePlan("student.pro", "Student Pro")}
+              >
+                Cover with Pro
+              </Button>
+            )}
+          </Stack>
+
           <Button
             component={Link}
             href={`/parent/students/${link.studentUserId}`}
             variant="outlined"
             size="small"
             endIcon={<ArrowForwardIcon />}
-            sx={{ mt: "auto", alignSelf: "flex-start", pt: 0 }}
+            sx={{ mt: 2, alignSelf: "flex-start" }}
           >
             View progress
           </Button>
@@ -282,8 +378,10 @@ function InviteDialog({
       <DialogTitle sx={{ fontWeight: 600 }}>Invite a student</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Enter the email on your child&apos;s Aptiverse account. They&apos;ll get an invite to accept
-          from their Connections page. Nothing is shared until they accept.
+          Enter your child&apos;s email. If they already have an Aptiverse account, they&apos;ll get an
+          invite to accept from their Connections page. If they don&apos;t have an account yet,
+          they&apos;ll get an email to join, and connect once they sign up. Nothing is shared, and no
+          plan changes, until they accept.
         </Typography>
         <TextField
           label="Student email"

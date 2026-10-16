@@ -18,6 +18,15 @@ namespace Aptiverse.Marketplace.Application.Frontend.Dtos
         [JsonPropertyName("rating")] public double Rating { get; init; }
         [JsonPropertyName("reviewCount")] public int ReviewCount { get; init; }
         [JsonPropertyName("verified")] public bool Verified { get; init; }
+
+        // Who the tutor is: "university_student" | "graduate" | "completed_matric",
+        // with the supporting detail, so a student can judge fit at a glance.
+        [JsonPropertyName("tutorKind")] public string TutorKind { get; init; } = "";
+        [JsonPropertyName("institution")] public string Institution { get; init; } = "";
+        [JsonPropertyName("studyingToward")] public string StudyingToward { get; init; } = "";
+        [JsonPropertyName("matricYear")] public int? MatricYear { get; init; }
+        // True when the platform has floated this tutor up the list.
+        [JsonPropertyName("featured")] public bool Featured { get; init; }
     }
 
     public record FrontendCourseDto

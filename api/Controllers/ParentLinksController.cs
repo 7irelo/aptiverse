@@ -3,7 +3,9 @@ using System.Text.Json.Serialization;
 using Aptiverse.AcademicPlanning.Domain.Models.AcademicPlanning;
 using Aptiverse.Api.Data;
 using Aptiverse.Api.Data.Email;
+using Aptiverse.Api.Utilities;
 using Aptiverse.Domain.Models;
+using Aptiverse.Entitlements.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,10 +23,16 @@ namespace Aptiverse.Api.Controllers
     [ApiController]
     [Route("api/parent-links")]
     [Authorize]
-    public class ParentLinksController(ApplicationDbContext db, EmailQueue email) : ControllerBase
+    public class ParentLinksController(
+        ApplicationDbContext db,
+        EmailQueue email,
+        IParentCoverageService coverage,
+        ILogger<ParentLinksController> logger) : ControllerBase
     {
         private readonly ApplicationDbContext _db = db;
         private readonly EmailQueue _email = email;
+        private readonly IParentCoverageService _coverage = coverage;
+        private readonly ILogger<ParentLinksController> _logger = logger;
 
         private string? CurrentUserId()
             => User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -78,7 +86,14 @@ namespace Aptiverse.Api.Controllers
                     TemplateData: new Dictionary<string, string?>
                     {
                         ["ParentName"] = parentName,
-                        ["Url"] = "https://aptiverse.co.za/dashboard/connections",
+                        // Tokenised accept URL. The public /invite/{token} landing
+                        // page resolves the invite by its token and handles every
+                        // auth state: signed in with the matching email accepts in
+                        // one click, a mismatch or a logged-out invitee is guided
+                        // to sign in / create the account the invite was sent to,
+                        // then returns here to accept. The accept endpoint still
+                        // verifies the authenticated caller owns that email.
+                        ["Url"] = WebApp.Url("/invite/" + link.Token),
                     },
                     EnqueuedAt: DateTime.UtcNow), ct);
             }
@@ -194,6 +209,28 @@ namespace Aptiverse.Api.Controllers
             return Ok(invites);
         }
 
+        // Public resolve of an invite by its token, for the /invite/{token}
+        // landing page an invitee opens straight from the email (possibly while
+        // logged out). Returns only what the page needs to set context, the
+        // inviter's display name, the invited email, and the status, and never
+        // leaks anything else about either party. Returns the row even when it
+        // is no longer pending so the page can say "already accepted/declined".
+        [HttpGet("invites/token/{token}")]
+        [AllowAnonymous]
+        public async Task<ActionResult<InviteByTokenDto>> ByToken(string token, CancellationToken ct)
+        {
+            var link = await _db.Set<ParentLink>().AsNoTracking()
+                .FirstOrDefaultAsync(l => l.Token == token, ct);
+            if (link is null) return NotFound();
+
+            return Ok(new InviteByTokenDto
+            {
+                ParentName = link.ParentName,
+                StudentEmail = link.StudentEmail,
+                Status = link.Status,
+            });
+        }
+
         [HttpPost("invites/{token}/accept")]
         public async Task<IActionResult> Accept(string token, CancellationToken ct)
             => await Respond(token, accept: true, ct);
@@ -219,6 +256,45 @@ namespace Aptiverse.Api.Controllers
             link.StudentUserId = accept ? uid : link.StudentUserId;
             link.RespondedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync(ct);
+
+            // On accept, the student is put on the parent's plan: the parent
+            // covers them with a Student Pro coverage subscription. Idempotent —
+            // a re-accept (or an existing coverage sub) is a no-op.
+            //
+            // Coverage only happens when the parent actually holds a paid
+            // parent.* plan with a free seat. Provisioning it unconditionally
+            // made Student Pro free for anyone willing to register a second
+            // address and invite themselves. Linking is still allowed without a
+            // parent plan: the consent relationship and the read-only overview
+            // are the point, and the plan is the upsell on top of it.
+            //
+            // Coverage is a side effect of consent, not part of it. The link is
+            // already committed as accepted above, so a coverage failure must not
+            // fail the request and leave the student unable to retry (the link is
+            // no longer pending). Log it and let a later reconcile pick it up.
+            if (accept)
+            {
+                try
+                {
+                    if (await _coverage.CanCoverAsync(link.ParentUserId, uid, ct))
+                    {
+                        await _coverage.EnsureCoverageAsync(link.ParentUserId, uid, "student.pro", ct);
+                    }
+                    else
+                    {
+                        _logger.LogInformation(
+                            "Parent-link {LinkId} accepted without coverage: parent {ParentId} has no parent plan capacity for student {StudentId}",
+                            link.Id, link.ParentUserId, uid);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Parent-link {LinkId} accepted but coverage provisioning failed for parent {ParentId} / student {StudentId}",
+                        link.Id, link.ParentUserId, uid);
+                }
+            }
+
             return NoContent();
         }
 
@@ -310,6 +386,15 @@ namespace Aptiverse.Api.Controllers
         [JsonPropertyName("token")] public string Token { get; init; } = "";
         [JsonPropertyName("parentName")] public string ParentName { get; init; } = "";
         [JsonPropertyName("invitedAt")] public DateTime InvitedAt { get; init; }
+    }
+
+    // Public projection for the /invite/{token} landing page. Deliberately
+    // minimal: inviter display name, invited email, and status only.
+    public record InviteByTokenDto
+    {
+        [JsonPropertyName("parentName")] public string ParentName { get; init; } = "";
+        [JsonPropertyName("studentEmail")] public string StudentEmail { get; init; } = "";
+        [JsonPropertyName("status")] public string Status { get; init; } = "";
     }
 
     public record OverviewAssessmentDto

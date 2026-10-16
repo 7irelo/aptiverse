@@ -12,6 +12,7 @@ namespace Aptiverse.Entitlements.Application
         {
             services.AddScoped<IEntitlementService, EntitlementService>();
             services.AddScoped<IUsageMeter, UsageMeter>();
+            services.AddScoped<IParentCoverageService, ParentCoverageService>();
 
             // AI client uses HttpClient — let the factory manage the pool.
             // Timeout is generous: the tutor's deep mode runs Opus 4.8 with

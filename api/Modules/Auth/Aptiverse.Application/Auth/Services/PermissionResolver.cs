@@ -17,6 +17,7 @@ namespace Aptiverse.Application.Auth.Services
             "Parent" => "parent",
             "Student" => "student",
             "Tutor" => "tutor",
+            "Affiliate" => "affiliate",
             _ => identityRole.ToLowerInvariant(),
         };
 
@@ -32,6 +33,9 @@ namespace Aptiverse.Application.Auth.Services
                 ["Tutor"] = 50,
                 ["Parent"] = 40,
                 ["Student"] = 30,
+                // Lowest rank: an affiliate is the most basic persona, and if
+                // an account somehow held both, the richer role should lead.
+                ["Affiliate"] = 10,
             };
             var best = identityRoles
                 .Where(r => rank.ContainsKey(r))
@@ -96,16 +100,23 @@ namespace Aptiverse.Application.Auth.Services
             "subscriptions.read", "subscriptions.write", "subscriptions.manage",
             "payments.read", "payments.refund", "payments.manage",
             "billing.read", "billing.write", "billing.manage",
-            "content.read", "content.moderate",
             "audit.read",
-            "flags.read", "flags.write",
             "system.read",
         ];
 
+        // content.read / content.moderate and flags.read / flags.write are
+        // gone: they gated a moderation queue with no content-report pipeline
+        // behind it and a feature-flag screen no flag consumer reads. A
+        // permission that grants access to nothing is a claim about a
+        // capability that does not exist.
+        //
+        // users.impersonate went with the impersonation page. There is no
+        // endpoint that mints a session as another user, so the permission
+        // authorised nothing and the button behind it did nothing.
         private static readonly string[] SuperAdminPerms =
         [
             .. AdminPerms,
-            "users.delete", "users.impersonate",
+            "users.delete",
             "system.manage",
         ];
 
@@ -118,6 +129,10 @@ namespace Aptiverse.Application.Auth.Services
             "tutor" => TutorPerms,
             "admin" => AdminPerms,
             "super_admin" => SuperAdminPerms,
+            // An affiliate holds no RBAC permissions. The referral endpoints are
+            // [Authorize] and scope to the caller's own id, so being signed in
+            // is the whole entitlement; there is nothing here to grant.
+            "affiliate" => [],
             _ => [],
         };
     }

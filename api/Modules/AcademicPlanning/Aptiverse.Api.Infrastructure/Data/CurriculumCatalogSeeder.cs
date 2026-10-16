@@ -172,7 +172,7 @@ namespace Aptiverse.AcademicPlanning.Infrastructure.Data
                     Id = "cambridge",
                     Name = "Cambridge International (CIE)",
                     ShortName = "CIE",
-                    Description = "International qualification used by a handful of South African independent schools. Students typically sit IGCSE in Grade 10–11, AS-Level in Grade 11–12, and A-Level in Grade 12+.",
+                    Description = "International qualification used by a handful of South African independent schools. Students typically sit IGCSE in Grade 10 to 11, AS-Level in Grade 11 to 12, and A-Level in Grade 12+.",
                 },
             };
 
@@ -244,11 +244,11 @@ namespace Aptiverse.AcademicPlanning.Infrastructure.Data
             new() { Id = "nbl_hl",    Code = "NBL HL",  Name = "isiNdebele Home Language", Category = "language", LanguageType = "home" },
 
             // Cambridge languages — different framing (First / Second Language)
-            new() { Id = "cie_eng_first",  Code = "CIE ENG 1L",  Name = "English – First Language",  Category = "language", LanguageType = "home",             Description = "Cambridge IGCSE / AS / A-Level English as a first language." },
-            new() { Id = "cie_eng_second", Code = "CIE ENG 2L",  Name = "English – Second Language", Category = "language", LanguageType = "first_additional", Description = "Cambridge IGCSE English as a second language." },
+            new() { Id = "cie_eng_first",  Code = "CIE ENG 1L",  Name = "English (First Language)",  Category = "language", LanguageType = "home",             Description = "Cambridge IGCSE / AS / A-Level English as a first language." },
+            new() { Id = "cie_eng_second", Code = "CIE ENG 2L",  Name = "English (Second Language)", Category = "language", LanguageType = "first_additional", Description = "Cambridge IGCSE English as a second language." },
             new() { Id = "cie_eng_lit",    Code = "CIE ENG LIT", Name = "English Literature",        Category = "language", Description = "Cambridge IGCSE / AS / A-Level English Literature." },
-            new() { Id = "cie_afr_second", Code = "CIE AFR 2L",  Name = "Afrikaans – Second Language", Category = "language", LanguageType = "first_additional", Description = "Cambridge IGCSE Afrikaans as a second language." },
-            new() { Id = "cie_zul_first",  Code = "CIE ZUL 1L",  Name = "isiZulu – First Language",  Category = "language", LanguageType = "home",             Description = "Cambridge IGCSE isiZulu as a first language." },
+            new() { Id = "cie_afr_second", Code = "CIE AFR 2L",  Name = "Afrikaans (Second Language)", Category = "language", LanguageType = "first_additional", Description = "Cambridge IGCSE Afrikaans as a second language." },
+            new() { Id = "cie_zul_first",  Code = "CIE ZUL 1L",  Name = "isiZulu (First Language)",  Category = "language", LanguageType = "home",             Description = "Cambridge IGCSE isiZulu as a first language." },
             new() { Id = "french",         Code = "FREN",        Name = "French (Foreign Language)", Category = "language", LanguageType = "second_additional" },
             new() { Id = "german",         Code = "GERM",        Name = "German (Foreign Language)", Category = "language", LanguageType = "second_additional" },
             new() { Id = "spanish",        Code = "SPAN",        Name = "Spanish (Foreign Language)", Category = "language", LanguageType = "second_additional" },
@@ -301,7 +301,7 @@ namespace Aptiverse.AcademicPlanning.Infrastructure.Data
             new() { Id = "agri_mgmt",  Code = "AMP",   Name = "Agricultural Management Practices", Category = "technical" },
             new() { Id = "agri_tech",  Code = "ATEC",  Name = "Agricultural Technology", Category = "technical" },
             new() { Id = "compsci",    Code = "CS",    Name = "Computer Science",        Category = "technical", Description = "Cambridge IGCSE / AS / A-Level programming + theory." },
-            new() { Id = "ict",        Code = "ICT",   Name = "Information & Communication Technology", Category = "technical", Description = "Cambridge IGCSE / AS ICT — office apps + intro to systems." },
+            new() { Id = "ict",        Code = "ICT",   Name = "Information & Communication Technology", Category = "technical", Description = "Cambridge IGCSE / AS ICT: office apps + intro to systems." },
             new() { Id = "design_tech", Code = "DT",   Name = "Design & Technology",     Category = "technical", Description = "Cambridge IGCSE / AS / A-Level product / systems design." },
 
             // Arts

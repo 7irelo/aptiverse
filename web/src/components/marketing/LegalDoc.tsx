@@ -3,9 +3,18 @@
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import Button from "@mui/material/Button";
 import { GradientBackdrop } from "@/components/common/GradientBackdrop";
 
-export type LegalBlock = { type: "p"; text: string } | { type: "ul"; items: string[] };
+export type LegalBlock =
+  | { type: "p"; text: string }
+  | { type: "ul"; items: string[] }
+  // A real control, inline in the prose. Added so the privacy policy can offer
+  // the actual withdraw-consent button at the point where it describes what
+  // consent was given for. A policy that says "you may withdraw at any time"
+  // and then makes you go and find the button is technically true and
+  // practically useless.
+  | { type: "action"; label: string; onClick: () => void };
 export type LegalSection = { heading: string; blocks: LegalBlock[] };
 
 // Clean, readable legal prose. A single narrow column, numbered sections,
@@ -57,6 +66,12 @@ export function LegalDoc({
                       <Typography key={j} variant="body1" color="text.secondary" sx={{ lineHeight: 1.75 }}>
                         {b.text}
                       </Typography>
+                    ) : b.type === "action" ? (
+                      <Box key={j}>
+                        <Button variant="outlined" color="primary" onClick={b.onClick}>
+                          {b.label}
+                        </Button>
+                      </Box>
                     ) : (
                       <Stack key={j} component="ul" spacing={1} sx={{ pl: 0, m: 0, listStyle: "none" }}>
                         {b.items.map((it) => (

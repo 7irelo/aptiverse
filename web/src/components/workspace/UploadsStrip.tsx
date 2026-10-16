@@ -358,6 +358,18 @@ function UploadTile({
                 : "rgba(255,255,255,0.95)",
           },
           "&:focus-visible": { opacity: 1 },
+          // Touch has no hover, so this would otherwise be an invisible and
+          // permanently unreachable way to remove an upload. The explicit
+          // min sizes override the global 44px touch floor: this control
+          // floats over a small thumbnail, and 44px would cover the image it
+          // belongs to. 28px plus the icon still clears WCAG 2.2 target size.
+          "@media (hover: none)": {
+            opacity: 1,
+            width: 28,
+            height: 28,
+            minWidth: 28,
+            minHeight: 28,
+          },
         }}
       >
         <CloseIcon sx={{ fontSize: 14 }} />

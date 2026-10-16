@@ -99,7 +99,7 @@ export function FeatureGuard({
             Available on the {planLabel} plan
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            This feature is part of Aptiverse {planLabel}. Upgrade to unlock — you can switch back any time.
+            This feature is part of Aptiverse {planLabel}. Upgrade to unlock. You can switch back any time.
           </Typography>
           <Stack direction="row" spacing={1.5}>
             <Button component={Link} href={upgradeHref} variant="contained">

@@ -22,6 +22,7 @@ import {
   useInstitutions,
 } from "@/lib/api/queries";
 import { CubeSpinner } from "@/components/common/CubeSpinner";
+import { track } from "@/lib/analytics/events";
 
 // A focused, post-signup step that collects the student's academic profile.
 // Reached after email or Google signup (or any time the profile is
@@ -67,7 +68,12 @@ export default function OnboardingPage() {
       level === "tertiary"
         ? { educationLevel: "tertiary" as const, institutionId }
         : { educationLevel: "highschool" as const, curriculumId, grade: Number(grade) };
-    update.mutate(input, { onSuccess: () => router.replace("/dashboard") });
+    update.mutate(input, {
+      onSuccess: () => {
+        track("onboarding_completed", { educationLevel: input.educationLevel });
+        router.replace("/dashboard");
+      },
+    });
   }
 
   if (status === "loading" || profileQuery.isLoading) {

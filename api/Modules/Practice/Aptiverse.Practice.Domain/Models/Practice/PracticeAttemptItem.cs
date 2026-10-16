@@ -45,8 +45,29 @@ namespace Aptiverse.Practice.Domain.Models.Practice
         public string? GivenAnswerText { get; set; }
         public string? ExpectedAnswerText { get; set; }
 
-        // Resolved correctness.
+        // Resolved correctness. On a marked exam question this is derived from
+        // the marks (full marks = correct), because per-topic mastery counts
+        // questions rather than marks and still needs an answer.
         public bool IsCorrect { get; set; }
+
+        // ---- Marked written answers --------------------------------------
+        // Null on everything that predates exam papers, and on any question
+        // scored by answer key rather than by an examiner.
+
+        // Marks awarded and marks on offer for this question.
+        //
+        // A bool cannot describe an exam. "Explain why the reaction is
+        // exothermic (5)" answered with three of the five points is not correct
+        // and it is certainly not wrong, and the difference is most of what a
+        // student wants to know. IsCorrect above survives for mastery, which
+        // counts questions, while these carry what the paper is actually out of.
+        public int? MarksAwarded { get; set; }
+        public int? MarksAvailable { get; set; }
+
+        // The examiner's comment on this answer: where the marks went and what
+        // was missing. The most valuable thing on the page, and the reason a
+        // marked paper beats a score out of ten.
+        public string? Feedback { get; set; }
 
         // Time spent on the question in milliseconds (mirrored from the
         // submission for convenient querying alongside correctness).

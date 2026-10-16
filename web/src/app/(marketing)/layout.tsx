@@ -6,7 +6,9 @@ import { Footer } from "@/components/marketing/Footer";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+    // 100dvh: on mobile 100vh measures the viewport with the browser chrome
+    // retracted, so the page is always taller than what is actually visible.
+    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100dvh" }}>
       <TopNav />
       <Box component="main" sx={{ flex: 1 }}>
         {children}

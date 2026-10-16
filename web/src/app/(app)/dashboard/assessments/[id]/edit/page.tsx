@@ -69,7 +69,7 @@ export default function EditAssessmentPage({ params }: { params: Promise<{ id: s
         empty={{
           icon: <AssignmentIcon />,
           title: "Assessment not found",
-          description: "This SBA doesn't exist or has been removed.",
+          description: "This assessment doesn't exist or has been removed.",
           action: (
             <Button component={Link} href="/dashboard/assessments" variant="outlined">
               All assessments

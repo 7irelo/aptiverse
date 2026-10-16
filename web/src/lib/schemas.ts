@@ -18,6 +18,13 @@ export const registerStep2Schema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Enter a valid email"),
   password,
+  // Acceptance of the Terms and the Privacy Policy. Starts false and the
+  // user has to tick it themselves: a pre-ticked box is not consent. This
+  // validation is for a clear inline error only. The API rejects a
+  // registration without acceptance regardless of what the form does.
+  acceptedTerms: z.boolean().refine((v) => v === true, {
+    message: "Please accept the Terms and Privacy Policy to continue",
+  }),
 });
 export type RegisterValues = z.infer<typeof registerStep2Schema>;
 

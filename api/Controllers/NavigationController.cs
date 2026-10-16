@@ -60,6 +60,9 @@ namespace Aptiverse.Api.Controllers
             {
                 var items = sec.Items
                     .Where(i => i.RequiredFeature is null || features is null || features.Contains(i.RequiredFeature))
+                    // Past papers is the NSC (matric) archive, which is a high-school
+                    // exam. It means nothing to a university student, so drop it.
+                    .Where(i => !(isTertiaryStudent && i.Href == "/dashboard/past-papers"))
                     .Select(i => isTertiaryStudent && i.Href == "/dashboard/subjects"
                         ? new NavItemDto { Label = "Courses", Href = "/dashboard/courses", Icon = "school", Badge = i.Badge }
                         : new NavItemDto
@@ -86,6 +89,11 @@ namespace Aptiverse.Api.Controllers
             if (User.IsInRole("Teacher")) return TeacherNav;
             if (User.IsInRole("Tutor")) return TutorNav;
             if (User.IsInRole("Parent")) return ParentNav;
+            // Affiliate-only accounts. Checked before the Student fallback: an
+            // affiliate holds none of the roles above, so without this they
+            // dropped through to the student menu, which is what put a learning
+            // sidebar in front of someone who joined to earn.
+            if (User.IsInRole("Affiliate")) return AffiliateNav;
             return StudentNav;
         }
 
@@ -124,7 +132,12 @@ namespace Aptiverse.Api.Controllers
             ]),
             new("Future",
             [
-                new("Career navigator", "/dashboard/career", "lightbulb", "career_navigator"),
+                // No required feature, deliberately. Admission and progression
+                // targets live here, and a student who cannot afford a plan is
+                // exactly the student who most needs to know they are 12 marks
+                // short of the degree they want. Gating it would sell the map
+                // to the people already holding one.
+                new("Career navigator", "/dashboard/career", "lightbulb"),
             ]),
             new("Community",
             [
@@ -137,6 +150,11 @@ namespace Aptiverse.Api.Controllers
             [
                 new("Calendar", "/dashboard/calendar", "calendar"),
                 new("Notifications", "/dashboard/notifications", "bell"),
+                // No required feature. The referral programme is open to every
+                // account by design, including free ones: a student on the free
+                // plan sharing a link with their class group is exactly who it
+                // is for.
+                new("Refer and earn", "/refer", "refer"),
                 new("Billing", "/dashboard/billing", "payments"),
                 new("Settings", "/dashboard/settings", "settings"),
                 new("Help", "/dashboard/help", "help"),
@@ -154,6 +172,7 @@ namespace Aptiverse.Api.Controllers
             ]),
             new("Account",
             [
+                new("Refer and earn", "/refer", "refer"),
                 new("Billing", "/parent/billing", "payments"),
                 new("Settings", "/parent/settings", "settings"),
             ]),
@@ -217,8 +236,23 @@ namespace Aptiverse.Api.Controllers
             ]),
             new("Account",
             [
+                new("Refer and earn", "/refer", "refer"),
                 new("Billing", "/tutor/billing", "payments"),
                 new("Settings", "/tutor/settings", "settings"),
+            ]),
+        ];
+
+        // Affiliate-only accounts see just their earnings dashboard. No student
+        // app, no billing of their own. Mirrors AFFILIATE_NAV on the client.
+        private static readonly NavSection[] AffiliateNav =
+        [
+            new("Earn",
+            [
+                new("Referrals", "/refer", "groups"),
+                new("Earnings", "/refer/earnings", "wallet"),
+                new("Payments", "/refer/payments", "payments"),
+                new("Get paid", "/refer/get-paid", "verified"),
+                new("Tax statement", "/refer/tax", "assignment"),
             ]),
         ];
 
@@ -230,28 +264,25 @@ namespace Aptiverse.Api.Controllers
                 new("System health", "/admin/system", "hub"),
                 new("Audit log", "/admin/audit", "verified"),
             ]),
-            new("Users & schools",
+            // Schools, Impersonate, Moderation queue, Payments & refunds,
+            // Invoices, Feature flags and platform Settings are gone from this
+            // menu because the pages behind them are gone. Each was a facade
+            // over data the platform does not hold: there is no schools
+            // registry, no impersonation mechanism, no content-report pipeline,
+            // no charge ledger, no invoicing, no flag consumer, and no
+            // persisted platform settings. Nav entries that lead to invented
+            // rows are worse than no entry at all.
+            new("People",
             [
                 new("Users", "/admin/users", "groups"),
-                new("Schools", "/admin/schools", "school"),
                 new("School enquiries", "/admin/school-enquiries", "volunteer"),
                 new("Tutors", "/admin/tutors", "groups"),
-                new("Impersonate", "/admin/impersonate", "swap"),
-            ]),
-            new("Content",
-            [
-                new("Moderation queue", "/admin/moderation", "forum"),
             ]),
             new("Money",
             [
                 new("Subscriptions", "/admin/subscriptions", "payments"),
-                new("Payments & refunds", "/admin/payments", "payments"),
-                new("Invoices", "/admin/invoices", "assignment"),
-            ]),
-            new("Platform",
-            [
-                new("Feature flags", "/admin/flags", "tune"),
-                new("Settings", "/admin/settings", "settings"),
+                new("Paystack", "/admin/paystack", "wallet", "payments.read"),
+                new("Referral programme", "/admin/affiliates", "affiliates"),
             ]),
         ];
     }

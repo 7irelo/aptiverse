@@ -364,6 +364,7 @@ namespace Aptiverse.Entitlements.Infrastructure.Paystack
                     CardLast4 = last4,
                     CardExpMonth = em,
                     CardExpYear = ey,
+                    CardSignature = ReadCardSignature(d),
                 };
             }
             catch (Exception ex)
@@ -445,6 +446,7 @@ namespace Aptiverse.Entitlements.Infrastructure.Paystack
 
                 long? localId = null;
                 string? planCode = null;
+                var metadata = new Dictionary<string, string>(StringComparer.Ordinal);
                 if (d.TryGetProperty("metadata", out var meta) && meta.ValueKind == JsonValueKind.Object)
                 {
                     if (meta.TryGetProperty("subscription_id", out var sid))
@@ -454,6 +456,23 @@ namespace Aptiverse.Entitlements.Infrastructure.Paystack
                         if (long.TryParse(sidStr, out var parsed)) localId = parsed;
                     }
                     if (meta.TryGetProperty("plan_code", out var pc)) planCode = pc.GetString();
+
+                    // Flat scalars only. Paystack lets a merchant put arbitrary
+                    // JSON in metadata, and nothing downstream should have to
+                    // cope with a nested object arriving where a string was
+                    // expected.
+                    foreach (var prop in meta.EnumerateObject())
+                    {
+                        var value = prop.Value.ValueKind switch
+                        {
+                            JsonValueKind.String => prop.Value.GetString(),
+                            JsonValueKind.Number => prop.Value.GetRawText(),
+                            JsonValueKind.True => "true",
+                            JsonValueKind.False => "false",
+                            _ => null,
+                        };
+                        if (!string.IsNullOrEmpty(value)) metadata[prop.Name] = value;
+                    }
                 }
 
                 var (brand, last4, em2, ey2, authCode) = ReadAuthorization(d);
@@ -468,11 +487,13 @@ namespace Aptiverse.Entitlements.Infrastructure.Paystack
                     Email = email,
                     LocalSubscriptionId = localId,
                     PlanCode = planCode,
+                    Metadata = metadata,
                     AuthorizationCode = authCode,
                     CardBrand = brand,
                     CardLast4 = last4,
                     CardExpMonth = em2,
                     CardExpYear = ey2,
+                    CardSignature = ReadCardSignature(d),
                 };
             }
             catch (Exception ex)
@@ -589,6 +610,289 @@ namespace Aptiverse.Entitlements.Infrastructure.Paystack
             }
             return (brand, last4, em, ey, authCode);
         }
+
+        // Paystack's card fingerprint. The same physical card produces the
+        // same `signature` across different customers, which makes it the one
+        // genuinely useful signal for spotting somebody paying for their own
+        // referral. Read separately from ReadAuthorization so the existing
+        // tuple shape, and every caller of it, is left alone.
+        private static string? ReadCardSignature(JsonElement d)
+        {
+            if (d.TryGetProperty("authorization", out var au)
+                && au.ValueKind == JsonValueKind.Object
+                && au.TryGetProperty("signature", out var sig)
+                && sig.ValueKind == JsonValueKind.String)
+            {
+                return sig.GetString();
+            }
+            return null;
+        }
+
+        // ================= Admin cockpit =================================
+
+        public async Task<IReadOnlyList<PaystackBalance>> GetBalanceAsync(CancellationToken ct = default)
+        {
+            if (!IsConfigured) return [];
+            var raw = await SendGetAsync("/balance", ct);
+            if (raw is null) return [];
+
+            var list = new List<PaystackBalance>();
+            try
+            {
+                using var doc = JsonDocument.Parse(raw);
+                if (doc.RootElement.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var b in data.EnumerateArray())
+                    {
+                        list.Add(new PaystackBalance
+                        {
+                            Currency = b.TryGetProperty("currency", out var c) ? c.GetString() ?? "ZAR" : "ZAR",
+                            AvailableMinor = ReadMinor(b, "balance"),
+                            // Paystack does not always return a pending figure on
+                            // /balance; the pending pot is derived elsewhere. Zero
+                            // is the honest default rather than a fabricated split.
+                            PendingMinor = ReadMinor(b, "pending"),
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Paystack balance parse failed.");
+            }
+            return list;
+        }
+
+        public async Task<PaystackTransactionPage> ListRecentTransactionsAsync(
+            int page = 1, int perPage = 50, string? status = null,
+            DateTime? from = null, DateTime? to = null, CancellationToken ct = default)
+        {
+            if (!IsConfigured) return new PaystackTransactionPage { Page = page };
+
+            var q = new StringBuilder($"/transaction?perPage={Clamp(perPage, 1, 100)}&page={Math.Max(1, page)}");
+            if (!string.IsNullOrWhiteSpace(status)) q.Append($"&status={Uri.EscapeDataString(status)}");
+            if (from is not null) q.Append($"&from={from:yyyy-MM-dd}");
+            if (to is not null) q.Append($"&to={to:yyyy-MM-dd}");
+
+            var raw = await SendGetAsync(q.ToString(), ct);
+            if (raw is null) return new PaystackTransactionPage { Page = page };
+
+            var rows = new List<PaystackTransactionRow>();
+            int total = 0, pageCount = 1;
+            try
+            {
+                using var doc = JsonDocument.Parse(raw);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array)
+                    foreach (var t in data.EnumerateArray()) rows.Add(ReadTransactionRow(t));
+
+                if (root.TryGetProperty("meta", out var meta) && meta.ValueKind == JsonValueKind.Object)
+                {
+                    if (meta.TryGetProperty("total", out var tt) && tt.ValueKind == JsonValueKind.Number)
+                        total = tt.GetInt32();
+                    if (meta.TryGetProperty("pageCount", out var pc) && pc.ValueKind == JsonValueKind.Number)
+                        pageCount = pc.GetInt32();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Paystack list-recent-transactions parse failed.");
+            }
+            return new PaystackTransactionPage { Rows = rows, Page = Math.Max(1, page), PageCount = pageCount, Total = total };
+        }
+
+        public async Task<PaystackSettlementPage> ListSettlementsAsync(
+            int page = 1, int perPage = 50, CancellationToken ct = default)
+        {
+            if (!IsConfigured) return new PaystackSettlementPage { Page = page };
+
+            var raw = await SendGetAsync(
+                $"/settlement?perPage={Clamp(perPage, 1, 100)}&page={Math.Max(1, page)}", ct);
+            if (raw is null) return new PaystackSettlementPage { Page = page };
+
+            var rows = new List<PaystackSettlementRow>();
+            int total = 0, pageCount = 1;
+            try
+            {
+                using var doc = JsonDocument.Parse(raw);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var s in data.EnumerateArray())
+                    {
+                        string? bankName = null, acctLast4 = null;
+                        if (s.TryGetProperty("settlement_bank", out var sb) && sb.ValueKind == JsonValueKind.String)
+                            bankName = sb.GetString();
+                        else if (s.TryGetProperty("subaccount", out var sub) && sub.ValueKind == JsonValueKind.Object
+                                 && sub.TryGetProperty("settlement_bank", out var sbb))
+                            bankName = sbb.GetString();
+                        if (s.TryGetProperty("account_number", out var an) && an.ValueKind == JsonValueKind.String)
+                        {
+                            var num = an.GetString();
+                            if (!string.IsNullOrEmpty(num) && num.Length >= 4) acctLast4 = num[^4..];
+                        }
+
+                        DateTime? settled = null;
+                        if (s.TryGetProperty("settled_at", out var sa) && sa.ValueKind == JsonValueKind.String
+                            && DateTime.TryParse(sa.GetString(), out var sd)) settled = sd.ToUniversalTime();
+
+                        rows.Add(new PaystackSettlementRow
+                        {
+                            Id = s.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number ? id.GetInt64() : 0,
+                            AmountMinor = ReadMinor(s, "amount"),
+                            Currency = s.TryGetProperty("currency", out var c) ? c.GetString() ?? "ZAR" : "ZAR",
+                            Status = s.TryGetProperty("status", out var st) ? st.GetString() : null,
+                            SettledAt = settled,
+                            BankName = bankName,
+                            AccountLast4 = acctLast4,
+                        });
+                    }
+                }
+                if (root.TryGetProperty("meta", out var meta) && meta.ValueKind == JsonValueKind.Object)
+                {
+                    if (meta.TryGetProperty("total", out var tt) && tt.ValueKind == JsonValueKind.Number) total = tt.GetInt32();
+                    if (meta.TryGetProperty("pageCount", out var pc) && pc.ValueKind == JsonValueKind.Number) pageCount = pc.GetInt32();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Paystack list-settlements parse failed.");
+            }
+            return new PaystackSettlementPage { Rows = rows, Page = Math.Max(1, page), PageCount = pageCount, Total = total };
+        }
+
+        public async Task<PaystackCustomerInfo?> FetchCustomerAsync(
+            string emailOrCode, CancellationToken ct = default)
+        {
+            if (!IsConfigured || string.IsNullOrWhiteSpace(emailOrCode)) return null;
+
+            // /customer/{code_or_email} takes either an email or a CUS_ code.
+            var raw = await SendGetAsync($"/customer/{Uri.EscapeDataString(emailOrCode.Trim())}", ct);
+            if (raw is null) return null;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(raw);
+                if (!doc.RootElement.TryGetProperty("data", out var d) || d.ValueKind != JsonValueKind.Object)
+                    return null;
+
+                var txns = new List<PaystackTransactionRow>();
+                if (d.TryGetProperty("transactions", out var ts) && ts.ValueKind == JsonValueKind.Array)
+                    foreach (var t in ts.EnumerateArray()) txns.Add(ReadTransactionRow(t));
+
+                return new PaystackCustomerInfo
+                {
+                    CustomerCode = d.TryGetProperty("customer_code", out var cc) ? cc.GetString() ?? "" : "",
+                    Email = d.TryGetProperty("email", out var e) ? e.GetString() : null,
+                    FirstName = d.TryGetProperty("first_name", out var fn) ? fn.GetString() : null,
+                    LastName = d.TryGetProperty("last_name", out var ln) ? ln.GetString() : null,
+                    CustomerId = d.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number ? id.GetInt64() : null,
+                    Transactions = txns,
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Paystack fetch-customer parse failed.");
+                return null;
+            }
+        }
+
+        public async Task<PaystackRefundResult> RefundTransactionAsync(
+            string reference, long? amountMinor = null, CancellationToken ct = default)
+        {
+            if (!IsConfigured)
+                return new PaystackRefundResult { Success = false, Error = "Paystack is not configured." };
+            if (string.IsNullOrWhiteSpace(reference))
+                return new PaystackRefundResult { Success = false, Error = "A transaction reference is required." };
+
+            using var msg = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/refund");
+            msg.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _secretKey);
+            msg.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            // transaction takes the reference; amount is optional (full refund
+            // when omitted) and is in minor units.
+            var payload = new Dictionary<string, object> { ["transaction"] = reference };
+            if (amountMinor is > 0) payload["amount"] = amountMinor.Value;
+            msg.Content = JsonContent.Create(payload, options: JsonOpts);
+
+            HttpResponseMessage res;
+            string raw;
+            try
+            {
+                res = await _http.SendAsync(msg, ct);
+                raw = await res.Content.ReadAsStringAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Paystack refund request failed (network) for {Reference}.", reference);
+                return new PaystackRefundResult { Success = false, Error = "Could not reach Paystack." };
+            }
+
+            if (!res.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Paystack refund {Status} for {Reference}: {Body}", (int)res.StatusCode, reference, raw);
+                return new PaystackRefundResult { Success = false, Error = TrySummariseError(raw) };
+            }
+
+            try
+            {
+                using var doc = JsonDocument.Parse(raw);
+                var root = doc.RootElement;
+                var ok = root.TryGetProperty("status", out var stp)
+                    && stp.ValueKind == JsonValueKind.True;
+                if (!root.TryGetProperty("data", out var d) || d.ValueKind != JsonValueKind.Object)
+                    return new PaystackRefundResult { Success = ok, Error = ok ? null : "Unexpected response." };
+
+                return new PaystackRefundResult
+                {
+                    Success = ok,
+                    Status = d.TryGetProperty("status", out var rs) ? rs.GetString() : null,
+                    RefundedAmountMinor = ReadMinor(d, "amount"),
+                    Currency = d.TryGetProperty("currency", out var c) ? c.GetString() : null,
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Paystack refund parse failed for {Reference}.", reference);
+                return new PaystackRefundResult { Success = false, Error = "Could not read Paystack's response." };
+            }
+        }
+
+        // --- shared readers for the cockpit ---
+
+        private static PaystackTransactionRow ReadTransactionRow(JsonElement t)
+        {
+            string? email = null, brand = null, last4 = null;
+            if (t.TryGetProperty("customer", out var cu) && cu.ValueKind == JsonValueKind.Object
+                && cu.TryGetProperty("email", out var ce)) email = ce.GetString();
+            if (t.TryGetProperty("authorization", out var au) && au.ValueKind == JsonValueKind.Object)
+            {
+                if (au.TryGetProperty("brand", out var b)) brand = b.GetString();
+                if (au.TryGetProperty("last4", out var l)) last4 = l.GetString();
+            }
+            DateTime? paid = null;
+            if (t.TryGetProperty("paid_at", out var pa) && pa.ValueKind == JsonValueKind.String
+                && DateTime.TryParse(pa.GetString(), out var pd)) paid = pd.ToUniversalTime();
+            else if (t.TryGetProperty("created_at", out var cr) && cr.ValueKind == JsonValueKind.String
+                     && DateTime.TryParse(cr.GetString(), out var crd)) paid = crd.ToUniversalTime();
+
+            return new PaystackTransactionRow
+            {
+                Reference = t.TryGetProperty("reference", out var r) ? r.GetString() ?? "" : "",
+                AmountMinor = ReadMinor(t, "amount"),
+                Currency = t.TryGetProperty("currency", out var c) ? c.GetString() ?? "ZAR" : "ZAR",
+                Status = t.TryGetProperty("status", out var s) ? s.GetString() : null,
+                PaidAt = paid,
+                CustomerEmail = email,
+                Channel = t.TryGetProperty("channel", out var ch) ? ch.GetString() : null,
+                CardBrand = brand,
+                CardLast4 = last4,
+            };
+        }
+
+        private static long ReadMinor(JsonElement el, string prop) =>
+            el.TryGetProperty(prop, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetInt64() : 0;
+
+        private static int Clamp(int v, int lo, int hi) => v < lo ? lo : v > hi ? hi : v;
 
         public bool VerifySignature(string rawBody, string? signatureHeader)
         {

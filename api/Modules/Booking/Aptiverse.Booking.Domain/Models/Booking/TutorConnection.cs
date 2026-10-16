@@ -24,8 +24,16 @@ namespace Aptiverse.Booking.Domain.Models.Booking
         // Free-form subject the connection is about (e.g. "Mathematics").
         public string Subject { get; set; } = "";
 
-        // active | paused
-        public string Status { get; set; } = "active";
+        // pending  = student asked, tutor has not answered
+        // active   = tutor accepted; academic context is shared
+        // paused   = tutor paused an active connection
+        // declined = tutor turned the request down (student may ask again)
+        public string Status { get; set; } = "pending";
+
+        // How the connection came to be:
+        //   "student"  = student reached out to the tutor directly
+        //   "proposal" = student accepted a tutor's proposal on their listing
+        public string InitiatedBy { get; set; } = "student";
 
         public DateTime ConnectedAt { get; set; } = DateTime.UtcNow;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

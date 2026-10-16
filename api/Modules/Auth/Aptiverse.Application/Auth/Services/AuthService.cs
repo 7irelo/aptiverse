@@ -64,6 +64,7 @@ namespace Aptiverse.Application.Auth.Services
                     Id = user.Id,
                     UserName = user.UserName,
                     Email = user.Email,
+                    EmailConfirmed = user.EmailConfirmed,
                     PhoneNumber = user.PhoneNumber,
                     FirstName = user.FirstName,
                     LastName = user.LastName,
@@ -92,7 +93,16 @@ namespace Aptiverse.Application.Auth.Services
             "Student",
             "Parent",
             "Tutor",
+            // Affiliate-only sign-up, from the public /affiliates/join page.
+            // No academic profile and no onboarding: they exist to earn.
+            "Affiliate",
         };
+
+        // Stable identifiers for the documents a signup consents to. They are
+        // versioned independently in configuration, so a privacy-policy update
+        // does not have to pretend the terms changed too.
+        private const string TermsDocument = "terms";
+        private const string PrivacyDocument = "privacy";
 
         public async Task RegisterUserAsync(RegisterDto registerDto)
         {
@@ -100,7 +110,16 @@ namespace Aptiverse.Application.Auth.Services
             {
                 throw new UserRegistrationException(
                     $"Role '{registerDto.Role}' isn't available for self sign-up. " +
-                    $"Schools onboard via sales — teachers are invited by their school admin.");
+                    $"Schools onboard via sales; teachers are invited by their school admin.");
+            }
+
+            // The real gate. The signup form has a checkbox, but a checkbox is
+            // only a UI affordance: this endpoint is public, so acceptance has
+            // to be enforced here or it is not enforced at all.
+            if (!registerDto.AcceptedTerms)
+            {
+                throw new UserRegistrationException(
+                    "You must accept the Terms of Service and the Privacy Policy to create an account.");
             }
 
             var user = _mapper.Map<User>(registerDto);
@@ -130,6 +149,15 @@ namespace Aptiverse.Application.Auth.Services
 
             if (!result.Succeeded)
             {
+                // A duplicate is the common, benign case, and Identity reports
+                // it with stable error codes. Surface it as "you already have an
+                // account" rather than the raw "Username/Email is already taken"
+                // string, which reads as a fault and exposes that username==email.
+                if (result.Errors.Any(e =>
+                        e.Code is "DuplicateUserName" or "DuplicateEmail"))
+                {
+                    throw new DuplicateAccountException(registerDto.Email);
+                }
                 throw new UserRegistrationException($"User creation failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
             }
 
@@ -155,6 +183,24 @@ namespace Aptiverse.Application.Auth.Services
                     $"Role assignment failed for '{registerDto.Role}'", ex);
             }
 
+            // Durable legal record of the acceptance, written as its own rows
+            // in identity.user_consents (one per document). This is the point
+            // of the whole feature, so unlike the welcome email it is NOT
+            // best-effort: if it cannot be written we roll the account back
+            // rather than end up with an account whose consent we cannot
+            // evidence.
+            try
+            {
+                await RecordSignupConsentAsync(user.Id);
+            }
+            catch (Exception ex)
+            {
+                await _userManager.DeleteAsync(user);
+                _logger.LogError(ex, "Consent record write failed for {Email}; registration rolled back.", user.Email);
+                throw new UserRegistrationException(
+                    "Could not record your acceptance of the Terms and Privacy Policy. Please try again.", ex);
+            }
+
             // Welcome notification. EnqueueAsync swallows its own failures,
             // so this can't break registration even if the notifications
             // table is unhappy. Deep-links to the dashboard so a fresh user
@@ -163,7 +209,9 @@ namespace Aptiverse.Application.Auth.Services
                 ? "/parent"
                 : registerDto.Role.Equals("Tutor", StringComparison.OrdinalIgnoreCase)
                     ? "/tutor"
-                    : "/dashboard";
+                    : registerDto.Role.Equals("Affiliate", StringComparison.OrdinalIgnoreCase)
+                        ? "/refer"
+                        : "/dashboard";
 
             await _notifications.EnqueueAsync(
                 user.Id,
@@ -182,7 +230,7 @@ namespace Aptiverse.Application.Auth.Services
                 var emailConfirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
                 // /verify-email is the actual frontend route — the email
                 // template previously pointed at /confirm-email which 404s.
-                var confirmationLink = $"https://aptiverse.co.za/verify-email?userId={user.Id}&token={Uri.EscapeDataString(emailConfirmationToken)}";
+                var confirmationLink = Aptiverse.Api.Utilities.WebApp.Url($"/verify-email?userId={user.Id}&token={Uri.EscapeDataString(emailConfirmationToken)}");
 
                 var templateData = new
                 {
@@ -196,16 +244,76 @@ namespace Aptiverse.Application.Auth.Services
 
                 await _emailSender.SendTemplateEmailAsync(
                     user.Email ?? string.Empty,
-                    "Confirm Your Email - Aptiverse",
+                    "Confirm your email address",
                     "email_confirmation",
                     templateData);
+
+                // The same prompt in the app, because email is the channel most
+                // likely to fail: filtered, mistyped or simply never opened. The
+                // in-app row is the one the user cannot miss, and it deletes
+                // itself the moment the address is confirmed (see ConfirmEmail).
+                await _notifications.EnqueueAsync(
+                    user.Id,
+                    VerifyEmailNotificationKind,
+                    "Confirm your email address",
+                    $"We sent a confirmation link to {user.Email}. Confirm it so we can reach you about your account. This clears once you confirm.",
+                    "/verify-email");
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex,
-                    "Confirmation email send failed for {Email} — registration succeeded; user can log in but email is unconfirmed.",
+                    "Confirmation email send failed for {Email}. Registration succeeded; user can log in but email is unconfirmed.",
                     user.Email);
             }
+        }
+
+        // Kind on the in-app "confirm your email" prompt. Matched on exactly
+        // when clearing it, so it must not be reused by another producer.
+        public const string VerifyEmailNotificationKind = "verify_email";
+
+        // Writes one append-only row per legal document the signup covered.
+        // Two documents are recorded rather than one combined "accepted"
+        // marker because Terms and Privacy Policy version independently, and
+        // the record has to be able to say exactly which text of each was on
+        // screen. Nothing here is ever updated later: a re-acceptance after a
+        // version bump adds rows, it does not overwrite these.
+        private async Task RecordSignupConsentAsync(string userId)
+        {
+            var acceptedAt = DateTime.UtcNow;
+            var http = _httpContextAccessor.HttpContext;
+            // UseForwardedHeaders is configured in Program.cs, so behind
+            // Cloudflare this is already the real client address.
+            var ip = http?.Connection.RemoteIpAddress?.ToString();
+            var userAgent = http?.Request.Headers.UserAgent.ToString();
+            if (string.IsNullOrWhiteSpace(userAgent)) userAgent = null;
+            if (userAgent is { Length: > 512 }) userAgent = userAgent[..512];
+
+            var termsVersion = _config["Legal:TermsVersion"] ?? "unversioned";
+            var privacyVersion = _config["Legal:PrivacyVersion"] ?? "unversioned";
+
+            _dbContext.Set<UserConsent>().AddRange(
+                new UserConsent
+                {
+                    UserId = userId,
+                    DocumentType = TermsDocument,
+                    DocumentVersion = termsVersion,
+                    AcceptedAtUtc = acceptedAt,
+                    Source = "signup",
+                    IpAddress = ip,
+                    UserAgent = userAgent,
+                },
+                new UserConsent
+                {
+                    UserId = userId,
+                    DocumentType = PrivacyDocument,
+                    DocumentVersion = privacyVersion,
+                    AcceptedAtUtc = acceptedAt,
+                    Source = "signup",
+                    IpAddress = ip,
+                    UserAgent = userAgent,
+                });
+
+            await _dbContext.SaveChangesAsync();
         }
         #endregion
 
@@ -221,19 +329,30 @@ namespace Aptiverse.Application.Auth.Services
                 throw new AuthenticationException("Invalid email or password");
             }
 
+            // Verification is a SOFT gate: an unverified account may sign in,
+            // but the app bounces it to /verify-email until the address is
+            // confirmed (the client reads EmailConfirmed on the user below).
+            // Blocking login here instead would break the sign-up flow, whose
+            // very next step is an auto-login on an account that is, by
+            // definition, not yet verified — and it would strand a paid signup
+            // before checkout could start.
             var roles = await _userManager.GetRolesAsync(user);
             var entitlements = await _entitlements.GetEntitlementsAsync(user.Id);
             var token = await _tokenProvider.GenerateJwtTokenAsync(user, roles, entitlements.Features);
+            var (refreshToken, refreshExpiry) = await IssueRefreshTokenAsync(user.Id);
 
             return new TokenDto<UserDto>
             {
                 Token = token.ToString(),
                 Expires = DateTime.Now.AddHours(Convert.ToDouble(_config["Jwt:ExpireHours"] ?? "4")),
+                RefreshToken = refreshToken,
+                RefreshTokenExpires = refreshExpiry,
                 User = new UserDto
                 {
                     Id = user.Id,
                     UserName = user.UserName,
                     Email = user.Email,
+                    EmailConfirmed = user.EmailConfirmed,
                     FirstName = user.FirstName,
                     LastName = user.LastName,
                     Roles = [.. roles],
@@ -285,6 +404,7 @@ namespace Aptiverse.Application.Auth.Services
                         Id = user.Id,
                         UserName = user.UserName,
                         Email = user.Email,
+                        EmailConfirmed = user.EmailConfirmed,
                         FirstName = user.FirstName,
                         LastName = user.LastName,
                         DisplayName = $"{user.FirstName} {user.LastName}".Trim(),
@@ -297,6 +417,112 @@ namespace Aptiverse.Application.Auth.Services
             catch (Exception ex) when (ex is not TokenRefreshException)
             {
                 throw new TokenRefreshException("Failed to generate new token", ex);
+            }
+        }
+        #endregion
+
+        #region Refresh Token (anonymous, rotating)
+        // How long a refresh token lives. Thirty days by default, matched to the
+        // next-auth session cookie so the two halves of the session never
+        // disagree about when it is over: a cookie that outlives the refresh
+        // token strands a user in a session that cannot renew, and the reverse
+        // wastes a valid credential.
+        private double RefreshLifetimeDays =>
+            double.TryParse(_config["Jwt:RefreshExpireDays"], out var d) && d > 0 ? d : 30d;
+
+        // Mints one refresh token and records it (hashed, with a TTL) against
+        // the user. The returned string is the ONLY copy in the clear and is
+        // never logged.
+        private async Task<(string Token, DateTime Expiry)> IssueRefreshTokenAsync(string userId)
+        {
+            var secret = _tokenProvider.GenerateRefreshToken();
+            var composite = RefreshTokens.Compose(userId, secret);
+            var expiry = DateTime.UtcNow.AddDays(RefreshLifetimeDays);
+
+            await _tokenStorageService.StoreTokenAsync(userId, composite, expiry);
+            return (composite, expiry);
+        }
+
+        /// <summary>
+        /// Exchanges a refresh token for a new access token. Does NOT require an
+        /// access token — that is the whole point: the access token this
+        /// replaces has usually already expired, which is exactly when a session
+        /// used to die.
+        ///
+        /// Single use. The presented token is revoked before a new one is
+        /// issued, so replaying it fails. A legitimate client and a thief cannot
+        /// both keep using the same token; the second presentation is rejected.
+        /// </summary>
+        public async Task<TokenDto<UserDto>> RefreshAccessTokenAsync(string refreshToken)
+        {
+            // Uniform failure for every rejection path below. Nothing about the
+            // token, and nothing about whether the user exists, leaks back.
+            if (!RefreshTokens.TryParseUserId(refreshToken, out var userId))
+            {
+                throw new TokenRefreshException("Invalid or expired refresh token");
+            }
+
+            var stillValid = await _tokenStorageService.IsTokenValidAsync(userId, refreshToken);
+            if (!stillValid)
+            {
+                // Unknown, already-rotated, revoked or past its TTL — Redis
+                // cannot tell these apart and neither should the caller.
+                _logger.LogInformation("Refresh rejected for user {UserId}: token not present in store", userId);
+                throw new TokenRefreshException("Invalid or expired refresh token");
+            }
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user is null)
+            {
+                // Account deleted since the token was issued. Clear the whole
+                // set so the rest of its tokens die with it.
+                await _tokenStorageService.RevokeAllUserTokensAsync(userId);
+                throw new TokenRefreshException("Invalid or expired refresh token");
+            }
+
+            // Rotate first. If anything below fails the session ends cleanly —
+            // the caller is signed out — rather than leaving a consumed token
+            // still usable.
+            await _tokenStorageService.RevokeTokenAsync(userId, refreshToken);
+
+            try
+            {
+                var roles = await _userManager.GetRolesAsync(user);
+                // Same enrichment the login path does, so a plan bought since
+                // sign-in takes effect on the very next refresh instead of
+                // waiting for a re-login.
+                var entitlements = await _entitlements.GetEntitlementsAsync(user.Id);
+                var accessToken = await _tokenProvider.GenerateJwtTokenAsync(user, roles, entitlements.Features);
+                var (nextRefreshToken, nextRefreshExpiry) = await IssueRefreshTokenAsync(user.Id);
+
+                return new TokenDto<UserDto>
+                {
+                    Token = accessToken,
+                    Expires = DateTime.Now.AddHours(Convert.ToDouble(_config["Jwt:ExpireHours"] ?? "4")),
+                    RefreshToken = nextRefreshToken,
+                    RefreshTokenExpires = nextRefreshExpiry,
+                    User = new UserDto
+                    {
+                        Id = user.Id,
+                        UserName = user.UserName,
+                        Email = user.Email,
+                        EmailConfirmed = user.EmailConfirmed,
+                        FirstName = user.FirstName,
+                        LastName = user.LastName,
+                        Roles = [.. roles],
+                        Role = PermissionResolver.PrimaryRole(roles),
+                        Permissions = PermissionResolver.PermissionsFor(roles),
+                        DisplayName = $"{user.FirstName} {user.LastName}".Trim(),
+                        Features = entitlements.Features.ToList(),
+                        PlanCode = entitlements.PrimaryPlanCode,
+                    },
+                    Message = "Token Refresh Successful"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Refresh failed after rotation for user {UserId}; session ended", userId);
+                throw new TokenRefreshException("Could not refresh the session", ex);
             }
         }
         #endregion
@@ -433,19 +659,46 @@ namespace Aptiverse.Application.Auth.Services
             {
                 var token = await _userManager.GeneratePasswordResetTokenAsync(user);
 
-                _logger.LogInformation("Password reset token generated for user {UserId}", user.Id);
+                // The reset link has to carry the same pair the reset page reads
+                // back off the query string (/reset-password?userId=&token=), the
+                // same shape the verification link uses.
+                var resetLink = Aptiverse.Api.Utilities.WebApp.Url(
+                    $"/reset-password?userId={user.Id}&token={Uri.EscapeDataString(token)}");
 
-                return new
+                var templateData = new
                 {
-                    message = "If the email exists, a password reset link has been sent",
-                    resetToken = token,
-                    userId = user.Id
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    ConfirmationLink = resetLink
                 };
+
+                await _emailSender.SendTemplateEmailAsync(
+                    user.Email ?? string.Empty,
+                    "Reset Your Password - Aptiverse",
+                    "password_reset",
+                    templateData);
+
+                _logger.LogInformation("Password reset email queued for user {UserId}", user.Id);
             }
             catch (Exception ex)
             {
-                throw new PasswordResetException("Failed to generate password reset token", ex);
+                // Swallow, exactly like resend-verification does. Surfacing this
+                // would turn the uniform response below into an oracle: a caller
+                // could tell a real address from an unknown one by whether the
+                // request failed. Support can grep this warning when someone
+                // reports never receiving the mail.
+                _logger.LogWarning(ex, "Password reset email failed for {Email}.", forgotPasswordDto.Email);
             }
+
+            // Always the same body, whether or not the address exists, and never
+            // the token itself. This used to return resetToken and userId to the
+            // caller, which meant anyone who knew an email address could POST
+            // here, read a valid reset token straight out of the response and
+            // take the account over without ever seeing the inbox. The token is
+            // now only ever delivered to the mailbox it belongs to.
+            return new { message = "If the email exists, a password reset link has been sent" };
         }
         #endregion
 
@@ -517,7 +770,7 @@ namespace Aptiverse.Application.Auth.Services
         #endregion
 
         #region Logout User
-        public async Task<object> LogoutUserAsync(ClaimsPrincipal loggedInUser)
+        public async Task<object> LogoutUserAsync(ClaimsPrincipal loggedInUser, string? refreshToken = null)
         {
             if (loggedInUser?.Identity?.IsAuthenticated != true)
             {
@@ -544,6 +797,22 @@ namespace Aptiverse.Application.Auth.Services
 
                 var userId = _tokenProvider.GetUserIdFromToken(token);
                 await _tokenStorageService.RevokeTokenAsync(userId, token);
+
+                // Kill the refresh token this device is holding, so signing out
+                // actually ends the session instead of leaving a credential that
+                // can mint access tokens for another month. Only the one this
+                // caller presents: other devices keep their own sessions.
+                //
+                // The ownership check is the important part — a refresh token
+                // whose user id half does not match the bearer of the access
+                // token is somebody else's, and revoking it would hand any
+                // signed-in user a way to sign everyone else out.
+                if (!string.IsNullOrWhiteSpace(refreshToken)
+                    && RefreshTokens.TryParseUserId(refreshToken, out var refreshUserId)
+                    && string.Equals(refreshUserId, userId, StringComparison.Ordinal))
+                {
+                    await _tokenStorageService.RevokeTokenAsync(userId, refreshToken);
+                }
 
                 if (_logger.IsEnabled(LogLevel.Information))
                 {
@@ -588,19 +857,38 @@ namespace Aptiverse.Application.Auth.Services
             }
         }
 
-        public async Task ConfirmEmail(string userId, string token)
+        public async Task<ConfirmEmailResult> ConfirmEmail(string userId, string token)
         {
             var user = await _userManager.FindByIdAsync(userId) ?? throw new Exception("User not found");
             var decodedToken = Uri.UnescapeDataString(token);
 
+            IdentityResult result;
             try
             {
-                await _userManager.ConfirmEmailAsync(user, decodedToken);
+                result = await _userManager.ConfirmEmailAsync(user, decodedToken);
             }
             catch (Exception ex)
             {
                 throw new Exception("Email confirmation failed", ex);
             }
+
+            // ConfirmEmailAsync reports a bad or expired token in the RESULT,
+            // not by throwing. The previous code ignored the result, so an
+            // invalid token returned 200 and the caller was told the address
+            // was confirmed when it was not.
+            if (!result.Succeeded)
+            {
+                var reason = string.Join("; ", result.Errors.Select(e => e.Description));
+                _logger.LogWarning(
+                    "Email confirmation rejected for {UserId}: {Reason}", userId, reason);
+                throw new Exception($"Email confirmation failed: {reason}");
+            }
+
+            // The prompt has done its job. Remove it rather than leaving a
+            // nag that outlives the thing it was nagging about.
+            await _notifications.ClearKindAsync(user.Id, VerifyEmailNotificationKind);
+
+            return new ConfirmEmailResult(user.Id, user.Email ?? "", user.FirstName ?? "");
         }
 
         // Issues a fresh email-confirmation token and re-sends the
@@ -621,19 +909,19 @@ namespace Aptiverse.Application.Auth.Services
             var user = await _userManager.FindByEmailAsync(email);
             if (user is null)
             {
-                _logger.LogInformation("Resend-verification: no account for '{Email}' — silently OK.", email);
+                _logger.LogInformation("Resend-verification: no account for '{Email}'; silently OK.", email);
                 return;
             }
             if (user.EmailConfirmed)
             {
-                _logger.LogInformation("Resend-verification: '{Email}' is already confirmed — silently OK.", email);
+                _logger.LogInformation("Resend-verification: '{Email}' is already confirmed; silently OK.", email);
                 return;
             }
 
             try
             {
                 var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                var confirmationLink = $"https://aptiverse.co.za/verify-email?userId={user.Id}&token={Uri.EscapeDataString(token)}";
+                var confirmationLink = Aptiverse.Api.Utilities.WebApp.Url($"/verify-email?userId={user.Id}&token={Uri.EscapeDataString(token)}");
                 var templateData = new
                 {
                     FirstName = user.FirstName,

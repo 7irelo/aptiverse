@@ -16,11 +16,14 @@ import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
 import VerifiedIcon from "@mui/icons-material/VerifiedOutlined";
 import SchoolIcon from "@mui/icons-material/SchoolOutlined";
+import StarIcon from "@mui/icons-material/StarRounded";
+import CampaignIcon from "@mui/icons-material/CampaignOutlined";
 import { PageHeader } from "@/components/common/PageHeader";
 import { QueryStates } from "@/components/common/QueryStates";
 import { AtmosphericBackdrop } from "@/components/common/AtmosphericBackdrop";
 import { initials } from "@/lib/format";
 import { useTutors } from "@/lib/api/queries";
+import { tutorKindLabel } from "@/lib/tutoring-labels";
 import type { Tutor } from "@/lib/mockData";
 
 type SortKey = "rating" | "experience" | "name";
@@ -34,6 +37,17 @@ export default function TutorsPage() {
         title="Find a tutor"
         description="Browse tutors, connect with the ones who fit, and arrange the tutoring directly. Aptiverse doesn't take a cut."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Tutors" }]}
+        actions={
+          <Button
+            component={Link}
+            href="/dashboard/tutors/listings"
+            variant="contained"
+            color="secondary"
+            startIcon={<CampaignIcon fontSize="small" />}
+          >
+            Post a request
+          </Button>
+        }
       />
       <QueryStates
         query={query}
@@ -139,9 +153,36 @@ function TutorsList({ tutors }: { tutors: Tutor[] }) {
 }
 
 function TutorCard({ tutor: t }: { tutor: Tutor }) {
+  const identity = [
+    t.tutorKind ? tutorKindLabel(t.tutorKind) : null,
+    t.institution ? `at ${t.institution}` : null,
+    t.studyingToward ? `studying ${t.studyingToward}` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+    <Card
+      sx={(theme) => ({
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        ...(t.featured && {
+          borderColor: "secondary.main",
+          boxShadow: `0 0 0 1px ${theme.palette.secondary.main}`,
+        }),
+      })}
+    >
       <CardContent sx={{ p: 3, display: "flex", flexDirection: "column", gap: 1.5, flex: 1 }}>
+        {t.featured && (
+          <Chip
+            icon={<StarIcon sx={{ fontSize: 15 }} />}
+            label="Featured"
+            size="small"
+            color="secondary"
+            sx={{ alignSelf: "flex-start", fontWeight: 700 }}
+          />
+        )}
         <Stack direction="row" spacing={2} alignItems="center">
           <Avatar sx={{ width: 52, height: 52, bgcolor: "primary.main", fontWeight: 700 }}>
             {initials(t.name)}
@@ -156,6 +197,11 @@ function TutorCard({ tutor: t }: { tutor: Tutor }) {
             {t.qualification && (
               <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
                 {t.qualification}
+              </Typography>
+            )}
+            {identity && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                {identity}
               </Typography>
             )}
           </Box>

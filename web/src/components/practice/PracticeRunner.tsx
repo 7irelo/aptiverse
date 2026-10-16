@@ -26,6 +26,7 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
+  CircleDot,
   XCircle,
   Printer,
   Clock,
@@ -59,6 +60,19 @@ function fmt(sec: number): string {
   const m = Math.floor(Math.max(0, sec) / 60);
   const s = Math.max(0, sec) % 60;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+// A question the student types an answer to rather than picks one.
+//
+// "long" arrived with exam papers and behaves like "short" everywhere in the
+// taking UI: a text box, answered when non-blank, submitted as textAnswer. The
+// difference is invisible here and total at the other end, where "short" on a
+// normal test is marked by string match and both kinds on an exam are marked by
+// the server's examiner against a memo. One predicate rather than
+// `kind === "short" || kind === "long"` at five call sites, because the fifth
+// one is the one somebody forgets.
+function isTyped(kind: string | undefined): boolean {
+  return kind === "short" || kind === "long";
 }
 
 // The interactive test-taking surface: shows the ground rules, runs a timed
@@ -147,7 +161,7 @@ export function PracticeRunner({
     const extra: Record<string, number> = {};
     if (cur) extra[cur.id] = Math.max(0, Date.now() - shownAtRef.current);
     const answerItems: PracticeAnswerItem[] = questions.map((question) => {
-      const isShort = question.kind === "short";
+      const isShort = isTyped(question.kind);
       return {
         questionId: question.id,
         selectedIdx: isShort ? -1 : (answers[question.id] ?? -1),
@@ -310,7 +324,7 @@ export function PracticeRunner({
   }
 
   const answeredCount = questions.filter((qq) =>
-    qq.kind === "short"
+    isTyped(qq.kind)
       ? !!textAnswers[qq.id]?.trim()
       : answers[qq.id] != null && answers[qq.id] >= 0,
   ).length;
@@ -325,7 +339,7 @@ export function PracticeRunner({
         total={questions.length}
         answeredCount={answeredCount}
         selected={q ? answers[q.id] : undefined}
-        textValue={q?.kind === "short" ? (textAnswers[q.id] ?? "") : ""}
+        textValue={isTyped(q?.kind) ? (textAnswers[q.id] ?? "") : ""}
         onSelect={(idx) => q && setAnswers((prev) => ({ ...prev, [q.id]: idx }))}
         onText={(v) => q && setTextAnswers((prev) => ({ ...prev, [q.id]: v }))}
         onPrev={() => goTo(Math.max(0, current - 1))}
@@ -449,11 +463,13 @@ function InstructionsView({
 }) {
   const timed = durationMin > 0;
   const formatBody =
-    format === "short_answer"
-      ? "Short answer. Type a brief response to each; move back and forth and edit freely before you submit."
-      : format === "reading"
-        ? "Read the passage, then answer its questions (some multiple choice, some short answer). Move back and forth freely before you submit."
-        : "Multiple choice. Move back and forth and change answers freely before you submit.";
+    format === "exam"
+      ? "A full paper: multiple choice in Section A, short answers in Section B, and an extended question in Section C. Each question shows what it is out of, so you can budget the time the way you would in the hall. Your written answers are marked by an examiner against a memo, with part marks."
+      : format === "short_answer"
+        ? "Short answer. Type a brief response to each; move back and forth and edit freely before you submit."
+        : format === "reading"
+          ? "Read the passage, then answer its questions (some multiple choice, some short answer). Move back and forth freely before you submit."
+          : "Multiple choice. Move back and forth and change answers freely before you submit.";
   const rules: { icon: typeof Clock; title: string; body: string }[] = [
     {
       icon: Clock,
@@ -692,19 +708,42 @@ function RunnerView({
               </Box>
             )}
 
-            {q.topic && <Chip label={q.topic} size="small" variant="outlined" sx={{ mb: 2 }} />}
+            {/*
+              An exam shows its section and what the question is out of, the way
+              a printed paper does, and deliberately does NOT show the topic.
+              The topic chip is a help on a practice drill and a giveaway on a
+              paper: "Figures of speech" sitting above a question that asks you
+              to name the figure of speech is the answer to half of it. Real
+              papers never label their questions.
+            */}
+            {q.section != null ? (
+              <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                <Chip label={`Section ${q.section}`} size="small" variant="outlined" />
+                <Chip
+                  label={`${q.marks ?? 1} ${q.marks === 1 ? "mark" : "marks"}`}
+                  size="small"
+                  variant="outlined"
+                  sx={{ fontWeight: 700 }}
+                />
+              </Stack>
+            ) : (
+              q.topic && <Chip label={q.topic} size="small" variant="outlined" sx={{ mb: 2 }} />
+            )}
 
             <Typography variant="h6" component="div" sx={{ mb: 3, fontWeight: 600, lineHeight: 1.4 }}>
               <MathText text={q.question} />
             </Typography>
 
-            {q.kind === "short" ? (
+            {isTyped(q.kind) ? (
               <TextField
                 fullWidth
                 multiline
-                minRows={2}
-                maxRows={6}
-                placeholder="Type your answer…"
+                // An extended question is worth a paragraph or more, so the box
+                // has to look like it expects one. A 2-row box on a 10-mark
+                // question tells the student to write two lines.
+                minRows={q.kind === "long" ? 8 : 2}
+                maxRows={q.kind === "long" ? 20 : 6}
+                placeholder={q.kind === "long" ? "Write your full answer…" : "Type your answer…"}
                 value={textValue}
                 onChange={(e) => onText(e.target.value)}
                 autoComplete="off"
@@ -856,6 +895,13 @@ function ResultsView({
   const summary = result.summary!;
   const theme = useTheme();
   const pct = summary.scorePercent;
+
+  // The marked script, by question id. Empty on anything that is not an exam,
+  // which is what makes every branch below degrade to the old behaviour.
+  const marked = useMemo(
+    () => new Map((summary.markedAnswers ?? []).map((m) => [m.questionId, m])),
+    [summary.markedAnswers],
+  );
   const ringColor: "success" | "primary" | "warning" =
     pct >= 80 ? "success" : pct >= 50 ? "primary" : "warning";
   const band = pct >= 80 ? "Strong result" : pct >= 50 ? "Solid start" : "Room to grow";
@@ -886,6 +932,25 @@ function ResultsView({
             <Stack direction="row" spacing={2.5} alignItems="center">
               <ProgressRing value={pct} size={132} thickness={11} color={ringColor} caption={band} />
               <Stack spacing={1.25}>
+                {/*
+                  On a marked paper the marks lead, because "14/32" is what the
+                  real paper will say and what a student compares against. The
+                  ring still shows the percentage: it is the same number, and it
+                  is what mastery and goals read.
+                */}
+                {summary.marksTotal != null && (
+                  <Box sx={{ mb: 0.5 }}>
+                    <Typography
+                      variant="h5"
+                      sx={{ fontWeight: 700, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}
+                    >
+                      {summary.marksAwarded}/{summary.marksTotal}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      marks
+                    </Typography>
+                  </Box>
+                )}
                 {breakdown.map((b) => (
                   <Stack key={b.key} direction="row" spacing={1} alignItems="center">
                     <Box sx={{ width: 9, height: 9, borderRadius: "50%", bgcolor: b.color, flexShrink: 0 }} />
@@ -1003,23 +1068,64 @@ function ResultsView({
           </Typography>
           <Stack spacing={2.5}>
             {questions.map((q, i) => {
-              const isShort = q.kind === "short";
+              const isShort = isTyped(q.kind);
               const given = textAnswers?.[q.id] ?? "";
               const chosen = answers[q.id];
-              const correct = isShort ? shortCorrect(given, q) : chosen === q.answerIdx;
+
+              // On an exam the server's examiner owns the mark. Never re-derive
+              // it here: shortCorrect below is a string compare, and running it
+              // over an answer a marker gave 3 of 5 for would contradict the
+              // examiner on the same screen.
+              const mark = marked.get(q.id);
+              const isMarked = mark?.marksAwarded != null && mark?.marksAvailable != null;
+              const correct = isMarked
+                ? mark!.marksAwarded! >= mark!.marksAvailable!
+                : isShort
+                  ? shortCorrect(given, q)
+                  : chosen === q.answerIdx;
+              // Partial credit is neither a tick nor a cross.
+              const partial = isMarked && mark!.marksAwarded! > 0 && mark!.marksAwarded! < mark!.marksAvailable!;
+
               return (
                 <Box key={q.id}>
                   <Stack direction="row" spacing={1} alignItems="flex-start">
                     {correct ? (
                       <Box component={CheckCircle2} sx={{ color: "success.main", width: 20, height: 20, mt: 0.25, flexShrink: 0 }} />
+                    ) : partial ? (
+                      <Box component={CircleDot} sx={{ color: "warning.main", width: 20, height: 20, mt: 0.25, flexShrink: 0 }} />
                     ) : (
                       <Box component={XCircle} sx={{ color: "warning.main", width: 20, height: 20, mt: 0.25, flexShrink: 0 }} />
                     )}
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="subtitle2" component="div" sx={{ fontWeight: 600 }}>
-                        {i + 1}. <MathText text={q.question} />
-                      </Typography>
-                      {isShort ? (
+                      <Stack direction="row" spacing={1} alignItems="baseline" sx={{ flexWrap: "wrap" }}>
+                        <Typography variant="subtitle2" component="div" sx={{ fontWeight: 600, flex: 1, minWidth: 0 }}>
+                          {i + 1}. <MathText text={q.question} />
+                        </Typography>
+                        {isMarked && (
+                          <Chip
+                            size="small"
+                            label={`${mark!.marksAwarded}/${mark!.marksAvailable}`}
+                            sx={{ fontWeight: 700, flexShrink: 0 }}
+                          />
+                        )}
+                      </Stack>
+
+                      {/* The examiner's comment: the reason a marked paper beats a score. */}
+                      {mark?.feedback && (
+                        <Typography
+                          variant="body2"
+                          component="div"
+                          sx={{ mt: 0.75, p: 1.25, borderRadius: 1.5, bgcolor: "action.hover" }}
+                        >
+                          <MathText text={mark.feedback} />
+                        </Typography>
+                      )}
+
+                      {isMarked ? (
+                        <Typography variant="body2" component="div" color="text.secondary" sx={{ mt: 0.75 }}>
+                          You wrote: {given.trim() ? <MathText text={given} /> : "(blank)"}
+                        </Typography>
+                      ) : isShort ? (
                         <>
                           <Typography variant="body2" component="div" sx={{ mt: 0.5 }}>
                             Expected:{" "}
@@ -1028,7 +1134,7 @@ function ResultsView({
                             </Box>
                           </Typography>
                           <Typography variant="body2" component="div" color="text.secondary">
-                            You wrote: {given.trim() ? <MathText text={given} /> : "— blank —"}
+                            You wrote: {given.trim() ? <MathText text={given} /> : "(blank)"}
                           </Typography>
                         </>
                       ) : (
@@ -1042,7 +1148,7 @@ function ResultsView({
                           {!correct && (
                             <Typography variant="body2" component="div" color="text.secondary">
                               You chose:{" "}
-                              {chosen != null && chosen >= 0 ? <MathText text={q.options[chosen]} /> : "— skipped —"}
+                              {chosen != null && chosen >= 0 ? <MathText text={q.options[chosen]} /> : "(skipped)"}
                             </Typography>
                           )}
                         </>

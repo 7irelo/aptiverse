@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient, openEventStream, ApiError } from "@/lib/api/fetcher";
+import { studyVocabulary } from "@/lib/study-vocabulary";
+import { track } from "@/lib/analytics/events";
 import {
   type Assessment,
   type Goal,
@@ -15,14 +17,23 @@ import {
   type DiaryEntry,
   type WellbeingSummary,
   type MoodPoint,
+  type GoalKind,
+  type StudentPoints,
+  type PointsEntry,
+  type Achievement,
   type Reward,
+  type Grant,
+  type GoalBaseline,
   type Career,
   type StudyGroup,
+  type StudyGroupMember,
+  type StudyGroupTask,
   type Curriculum,
   type CatalogSubject,
   type AcademicProfile,
   type Institution,
   type EnrolledCourse,
+  type CourseLevel,
 } from "@/lib/mockData";
 
 export type Counsellor = {
@@ -77,32 +88,39 @@ export type Milestone = {
   rewardPoints: number;
 };
 
+// Mirrors api/Modules/Audit/.../FrontendDtos.cs. One row of the append-only
+// trail in audit.audit_logs.
 export type AuditLog = {
   id: string;
   ts: string;
+  actorId: string;
   actor: string;
+  actorEmail: string;
+  actorRole: string;
   action: string;
+  category: string;
+  severity: string;
+  entityType: string;
+  entityId: string;
   resource: string;
+  oldValues: string | null;
+  newValues: string | null;
   ip: string;
-  severity: string;
+  service: string;
+  correlationId: string;
 };
 
-export type ModerationFlag = {
-  id: string;
-  reason: string;
-  target: string;
-  reporter: string;
-  excerpt: string;
-  severity: string;
-  createdAt: string;
+export type AuditLogPage = {
+  items: AuditLog[];
+  total: number;
+  skip: number;
+  take: number;
 };
 
-export type FeatureFlag = {
-  key: string;
-  description: string;
-  enabled: boolean;
-  rollout: number;
-  env: string;
+export type AuditAction = {
+  name: string;
+  category: string;
+  severity: string;
 };
 
 export type SchoolEnquiry = {
@@ -148,7 +166,17 @@ export const queryKeys = {
   pastPapers: () => ["past-papers"] as const,
   diary: () => ["diary"] as const,
   counsellors: () => ["counsellors"] as const,
-  rewards: () => ["rewards"] as const,
+  points: () => ["goals", "points"] as const,
+  pointsLedger: () => ["goals", "points", "ledger"] as const,
+  achievements: () => ["goals", "achievements"] as const,
+  rewards: () => ["goals", "rewards"] as const,
+  activeGrants: () => ["goals", "rewards", "active"] as const,
+  goalBaseline: (
+    kind: string,
+    subjectId?: string | null,
+    topicFilter?: string | null,
+    targetValue?: number | null,
+  ) => ["goals", "baseline", kind, subjectId ?? "", topicFilter ?? "", targetValue ?? 0] as const,
   careers: () => ["careers"] as const,
   tutorConversations: () => ["ai", "conversations"] as const,
   tutorConversation: (id: string) => ["ai", "conversation", id] as const,
@@ -159,8 +187,19 @@ export const queryKeys = {
   verifications: () => ["verifications"] as const,
   goalMilestones: (goalId: string) => ["goal-milestones", goalId] as const,
   auditLogs: () => ["audit-logs"] as const,
-  moderationQueue: () => ["moderation-queue"] as const,
-  featureFlags: () => ["feature-flags"] as const,
+  auditActions: () => ["audit-actions"] as const,
+  adminOverview: () => ["admin", "overview"] as const,
+  adminUsers: () => ["admin", "users"] as const,
+  adminUser: (id: string) => ["admin", "user", id] as const,
+  adminRoles: () => ["admin", "roles"] as const,
+  adminSubscriptions: () => ["admin", "subscriptions"] as const,
+  adminTutors: () => ["admin", "tutors"] as const,
+  adminSystem: () => ["admin", "system"] as const,
+  paystackStatus: () => ["admin", "paystack", "status"] as const,
+  paystackBalance: () => ["admin", "paystack", "balance"] as const,
+  paystackTransactions: () => ["admin", "paystack", "transactions"] as const,
+  paystackSettlements: () => ["admin", "paystack", "settlements"] as const,
+  paystackCustomer: (q: string) => ["admin", "paystack", "customer", q] as const,
   curricula: () => ["curricula"] as const,
   curriculumSubjects: (curriculumId: string) => ["curriculum-subjects", curriculumId] as const,
   academicProfile: () => ["academic-profile"] as const,
@@ -196,6 +235,7 @@ export const useCurricula = () =>
   useQuery<Curriculum[]>({
     queryKey: queryKeys.curricula(),
     queryFn: () => apiClient.get<Curriculum[]>("/api/academic-planning/curricula"),
+    staleTime: 1000 * 60 * 60, // curriculum catalog is static within a session
   });
 
 export const useCurriculumSubjects = (curriculumId: string | null | undefined) =>
@@ -204,6 +244,7 @@ export const useCurriculumSubjects = (curriculumId: string | null | undefined) =
     queryFn: () =>
       apiClient.get<CatalogSubject[]>(`/api/academic-planning/curricula/${curriculumId}/subjects`),
     enabled: !!curriculumId,
+    staleTime: 1000 * 60 * 60, // catalog subjects are static within a session
   });
 
 export const useAcademicProfile = () =>
@@ -212,7 +253,11 @@ export const useAcademicProfile = () =>
     queryFn: () => apiClient.get<AcademicProfile>("/api/academic-planning/me/profile"),
   });
 
+// No `email`: the API rejects it by omission, and changing an account's
+// identity / reset channel needs a verification round-trip, not a form field.
 export type UpdateAcademicProfileInput = {
+  firstName?: string;
+  lastName?: string;
   curriculumId?: string;
   grade?: number;
   school?: string;
@@ -251,13 +296,18 @@ export const useAddSubject = () => {
 
 // --- Institutions + courses (tertiary) ---------------------------------
 
-export const useInstitutions = (type?: string) =>
+// `enabled` lets a caller that only needs the catalog for tertiary students
+// skip the request entirely for high-school ones, the same way
+// useAcademicUnits gates subjects vs courses. Defaults to on so existing
+// callers are unchanged.
+export const useInstitutions = (type?: string, options?: { enabled?: boolean }) =>
   useQuery<Institution[]>({
     queryKey: queryKeys.institutions(type),
     queryFn: () =>
       apiClient.get<Institution[]>(
         `/api/academic-planning/institutions${type ? `?type=${encodeURIComponent(type)}` : ""}`,
       ),
+    enabled: options?.enabled ?? true,
     staleTime: 1000 * 60 * 60, // institution catalog is static within a session
   });
 
@@ -293,7 +343,8 @@ export type AcademicUnit = {
 
 export function useAcademicUnits() {
   const profileQuery = useAcademicProfile();
-  const isTertiary = profileQuery.data?.educationLevel === "tertiary";
+  const vocabulary = studyVocabulary(profileQuery.data?.educationLevel);
+  const isTertiary = vocabulary.isTertiary;
 
   const subjectsQuery = useQuery<Subject[]>({
     queryKey: queryKeys.subjects(),
@@ -329,10 +380,13 @@ export function useAcademicUnits() {
   return {
     units,
     isTertiary,
-    // Singular/plural nouns + the page to add more, so shared UI reads correctly.
-    unitNoun: isTertiary ? "course" : "subject",
-    unitNounPlural: isTertiary ? "courses" : "subjects",
-    addHref: isTertiary ? "/dashboard/courses" : "/dashboard/subjects",
+    // Singular/plural nouns + the page to add more, so shared UI reads
+    // correctly. Sourced from the shared study vocabulary rather than spelled
+    // out here, so these nouns and the ones useStudyVocabulary hands to copy
+    // can never drift apart.
+    unitNoun: vocabulary.unitSingular,
+    unitNounPlural: vocabulary.unitPlural,
+    addHref: vocabulary.unitsHref,
     isLoading: profileQuery.isLoading || (isTertiary ? coursesQuery.isLoading : subjectsQuery.isLoading),
     isReady: profileQuery.isSuccess && (isTertiary ? coursesQuery.isSuccess : subjectsQuery.isSuccess),
     nameFor: (id: string | null | undefined) =>
@@ -404,12 +458,33 @@ export function useAcademicSignals() {
   };
 }
 
-export type AddCourseInput = { name: string; code?: string; lecturer?: string };
+export type AddCourseInput = {
+  name: string;
+  code?: string;
+  lecturer?: string;
+  // Study level, so AI practice is pitched at the right year.
+  level?: CourseLevel;
+  // How many semesters the course runs. Optional: omitted reads as ongoing.
+  durationSemesters?: number;
+};
 
 export const useAddCourse = () => {
   const qc = useQueryClient();
   return useMutation<EnrolledCourse, ApiError, AddCourseInput>({
     mutationFn: (input) => apiClient.post<EnrolledCourse>("/api/academic-planning/courses", input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.courses() });
+    },
+  });
+};
+
+// Mark a course finished (or reopen it). Moves it into the analytics Past
+// section immediately, whatever its computed end.
+export const useSetCourseFinished = () => {
+  const qc = useQueryClient();
+  return useMutation<EnrolledCourse, ApiError, { id: string; finished: boolean }>({
+    mutationFn: ({ id, finished }) =>
+      apiClient.patch<EnrolledCourse>(`/api/academic-planning/courses/${id}`, { finished }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.courses() });
     },
@@ -437,13 +512,17 @@ export const useSchoolEnquiries = (contacted?: boolean) =>
     },
   });
 
-export const useMarkEnquiryContacted = () => {
+// Contacted is a toggle, not a one-way door: a mis-click used to bury a live
+// lead in the Contacted tab with no way back.
+export const useSetEnquiryContacted = () => {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiClient.post<void>(`/api/sales/school-enquiries/${id}/mark-contacted`),
+  return useMutation<void, ApiError, { id: string; contacted: boolean }>({
+    mutationFn: ({ id, contacted }) =>
+      apiClient.put<void>(`/api/sales/school-enquiries/${id}/contacted`, { contacted }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["school-enquiries"] });
+      void qc.invalidateQueries({ queryKey: ["audit-logs"] });
+      void qc.invalidateQueries({ queryKey: ["admin", "overview"] });
     },
   });
 };
@@ -542,9 +621,8 @@ export const useUploadAssessmentFile = (assessmentId: string) => {
   const qc = useQueryClient();
   return useMutation<AssessmentUpload, Error, File>({
     mutationFn: async (file) => {
-      const { getSession } = await import("next-auth/react");
-      const session = await getSession();
-      const token = (session as { accessToken?: string } | null)?.accessToken;
+      const { getAccessToken } = await import("@/lib/api/token");
+      const token = await getAccessToken();
       const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5100";
 
       const fd = new FormData();
@@ -615,11 +693,28 @@ export const useGoals = () =>
 export type CreateGoalInput = {
   title: string;
   description?: string;
-  target?: string;
   category?: Goal["category"];
   subjectId?: string | null;
   reward?: string;
   dueDate?: string;
+
+  /** Defaults to "custom" server-side. Anything else requires targetValue. */
+  kind?: GoalKind;
+  targetValue?: number | null;
+  /** Only meaningful for topic_mastery: narrows the goal to one topic. */
+  topicFilter?: string | null;
+  /**
+   * The assessment this goal is preparing for. Links the goal to the thing
+   * that actually motivated it, so it reads "for your Maths SBA on the 14th"
+   * instead of floating free.
+   */
+  assessmentId?: number | null;
+  /**
+   * Free-text "what done looks like", used only for custom goals. Every
+   * measurable kind generates its own label server-side so the card and the
+   * check can't drift apart, and anything sent here is ignored.
+   */
+  target?: string;
 };
 
 export const useCreateGoal = () => {
@@ -688,7 +783,10 @@ export const usePracticeTest = (id: string) =>
 // (per-topic correctness) server-side, which is exactly what the Mastery
 // engine reads — so a submitted attempt feeds topic-mastery + predictions.
 
-export type PracticeQuestionKind = "mc" | "short" | "flashcard";
+// "long" is an exam paper's extended-response question. Like "short" it is
+// typed rather than picked, but it is marked by the server's examiner against a
+// memo, never by the client.
+export type PracticeQuestionKind = "mc" | "short" | "long" | "flashcard";
 
 export type PracticeQuestion = {
   id: string;
@@ -696,6 +794,10 @@ export type PracticeQuestion = {
   // How the question is taken + marked. Absent/"mc" is multiple choice.
   kind?: PracticeQuestionKind;
   options: string[];
+  // The answer key. Withheld by the API until this student has a submitted
+  // attempt, because the same endpoint renders the test while they are taking
+  // it: answerIdx reads -1 and the rest are null/empty until then. Do not
+  // reintroduce any UI that assumes these are present before submit.
   answerIdx: number;
   // Short-answer key (typed answer marked by normalized match).
   expectedAnswer?: string | null;
@@ -704,6 +806,11 @@ export type PracticeQuestion = {
   back?: string | null;
   explanation?: string | null;
   topic?: string | null;
+  // Exam papers: what the question is out of, and which section it sits in.
+  // 1 and null on every other format. Safe before submit, and shown while
+  // taking, because the marks are how a student budgets the time.
+  marks?: number;
+  section?: string | null;
 };
 
 export type PracticeTopicScore = {
@@ -711,6 +818,19 @@ export type PracticeTopicScore = {
   correct: number;
   total: number;
   percent: number;
+};
+
+// One question as the examiner left it. Exam papers only.
+export type PracticeMarkedAnswer = {
+  questionId: string;
+  // Null when the question could not be marked (the marker was unavailable).
+  // That is not the same as zero, and must not be rendered as zero.
+  marksAwarded?: number | null;
+  marksAvailable?: number | null;
+  // Where the marks went and what was missing. The most useful thing on the
+  // page: it is why a marked paper beats a percentage.
+  feedback?: string | null;
+  givenAnswerText?: string | null;
 };
 
 export type PracticeScoreSummary = {
@@ -721,6 +841,11 @@ export type PracticeScoreSummary = {
   scorePercent: number;
   totalTimeMs: number;
   perTopic: PracticeTopicScore[];
+  // Exam papers only; null elsewhere. "14/32" is what a student recognises
+  // from a real paper; scorePercent is the same number for mastery and goals.
+  marksAwarded?: number | null;
+  marksTotal?: number | null;
+  markedAnswers?: PracticeMarkedAnswer[];
 };
 
 export type PracticeAnswerItem = {
@@ -742,6 +867,13 @@ export type PracticeAttemptResult = {
   answers: number[];
   answerItems: PracticeAnswerItem[];
   summary?: PracticeScoreSummary | null;
+  // True only on the response to the submit that was this student's FIRST ever
+  // submitted attempt. The API decides it, not the browser, because "have you
+  // ever practised" is a fact about an account and not about a device: a
+  // localStorage flag would re-fire on a second phone, in a private window, and
+  // for anyone who cleared their storage. This is the campaign optimisation
+  // target, so it is the one flag that has to be right.
+  firstSubmittedAttempt?: boolean;
 };
 
 export const usePracticeQuestions = (testId: string) =>
@@ -772,10 +904,17 @@ export const useSubmitAttempt = () => {
         answerItems,
         focusLossCount: focusLossCount ?? 0,
       }),
-    onSuccess: () => {
+    onSuccess: (result) => {
       // A scored attempt moves practice best-scores, mastery, and predictions.
       void qc.invalidateQueries({ queryKey: queryKeys.practiceTests() });
       void qc.invalidateQueries({ queryKey: ["mastery"] });
+      // Instrumented here rather than in PracticeRunner so every submit path
+      // is covered by construction, including the auto-submit on a timer
+      // expiry, which is the one a component-level hook would miss.
+      track("practice_attempt_submitted", { score: result.score ?? -1 });
+      if (result.firstSubmittedAttempt) {
+        track("first_practice_attempt", { score: result.score ?? -1 });
+      }
     },
   });
 };
@@ -805,33 +944,111 @@ export const useLatestAttempt = (testId: string, enabled = true) =>
 // the student's weakest (from useTopicMastery) to target them, or omit for a
 // general test. Metered server-side by the practice.generate quota; a 402
 // ApiError means the monthly allowance is spent.
+//
+// Generation is a QUEUED JOB, not a request. POST /tests/generate validates,
+// meters and returns 202 with a job; the API runs the model calls on a
+// background worker (one at a time, because production is a 1 GiB burstable
+// instance) and the client polls /generations/{id} until it settles. See
+// usePracticeGeneration for the polling, backoff and timeout policy.
 export type PracticeFormat =
   | "multiple_choice"
   | "short_answer"
   | "reading"
   | "flashcards"
-  | "essay";
+  | "essay"
+  // A full paper: sections, mark allocations, and written answers marked by an
+  // examiner against a memo. Sized by totalMarks, not questionCount.
+  | "exam";
 
 export type GenerateTestInput = {
-  subjectId: string;
+  // The assessment to practise for. Required: the API reads the subject off the
+  // assessment, so there is no way to generate for something you have not
+  // logged.
+  assessmentId: string;
   topics?: string[];
   difficulty?: "foundation" | "core" | "challenge";
   questionCount?: number;
   format?: PracticeFormat;
+  // Exam papers only: what the paper is out of. Ignored by every other format,
+  // which are sized by question count. The API clamps to 20..150 and times the
+  // paper at roughly a minute a mark.
+  totalMarks?: number;
 };
 
-export const useGenerateTest = () => {
-  const qc = useQueryClient();
-  return useMutation<PracticeTest, ApiError, GenerateTestInput>({
-    mutationFn: (input) =>
-      apiClient.post<PracticeTest>("/api/practice/tests/generate", input),
-    onSuccess: (test) => {
-      void qc.invalidateQueries({ queryKey: queryKeys.practiceTests() });
-      // The generated test is immediately fetchable by id in the runner.
-      qc.setQueryData(queryKeys.practiceTest(String(test.id)), test);
-    },
-  });
+// A queued generation, as the API reports it.
+export type GenerationJobStatus = "queued" | "running" | "succeeded" | "failed";
+
+export type GenerationJob = {
+  id: string;
+  status: GenerationJobStatus;
+  format: PracticeFormat;
+  // The finished test. Null until the job succeeds.
+  practiceTestId: string | null;
+  // A real message on failure. Null otherwise.
+  error: string | null;
+  attempts: number;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
 };
+
+export const generationKeys = {
+  job: (id: string) => ["practice-generation", id] as const,
+  active: () => ["practice-generation", "active"] as const,
+};
+
+// Queue a generation. Returns immediately with the job to poll — the model
+// calls have not started yet.
+export const useStartGeneration = () =>
+  useMutation<GenerationJob, ApiError, GenerateTestInput>({
+    mutationFn: (input) =>
+      apiClient.post<GenerationJob>("/api/practice/tests/generate", input),
+  });
+
+// Poll one job. Backs off as it goes: a multiple-choice test is usually done
+// inside ten seconds, an exam paper takes a minute or more, and hammering the
+// API every second for that whole minute is exactly the load this change
+// exists to remove.
+function pollDelay(polls: number) {
+  if (polls < 4) return 1500;
+  if (polls < 10) return 3000;
+  return 6000;
+}
+
+export const useGenerationJob = (jobId: string | null) =>
+  useQuery<GenerationJob>({
+    queryKey: generationKeys.job(jobId ?? ""),
+    queryFn: () => apiClient.get<GenerationJob>(`/api/practice/generations/${jobId}`),
+    enabled: !!jobId,
+    // A settled job never changes again, so stop polling the moment it does.
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (status === "succeeded" || status === "failed") return false;
+      return pollDelay(query.state.dataUpdateCount);
+    },
+    refetchIntervalInBackground: false,
+    staleTime: 0,
+    retry: 1,
+  });
+
+// The student's most recent unfinished generation, straight from the API.
+//
+// This is what makes closing the tab safe: the job lives in the database, not
+// in this browser, so coming back to the practice page picks it up again even
+// on a different device.
+export const useActiveGeneration = (enabled = true) =>
+  useQuery<GenerationJob | null>({
+    queryKey: generationKeys.active(),
+    queryFn: async () => {
+      const job = await apiClient.get<GenerationJob | null>("/api/practice/generations/active");
+      // 204 comes back as undefined from the fetcher; normalise to null so
+      // TanStack does not treat it as a failed query.
+      return job ?? null;
+    },
+    enabled,
+    staleTime: 0,
+    retry: false,
+  });
 
 // Mastery — computed on read by the API from real practice + graded-SBA
 // signals (no ML, no fake fields). Both return [] until the student has
@@ -891,13 +1108,41 @@ export const useTutorReviewsById = (id: string) =>
 // The reshaped tutor track: Aptiverse does not facilitate paid sessions or take
 // commission. A tutor showcases a profile, connects with students/parents, and
 // collects reviews; the tutoring arrangement happens directly, off-platform.
+export type ConnectionStatus = "pending" | "active" | "paused" | "declined";
+
 export type TutorConnection = {
   id: string;
   studentId: string;
   student: string;
   subject: string;
-  status: "active" | "paused";
+  status: ConnectionStatus;
   connectedAt: string;
+};
+
+// A read-only snapshot of a linked student's academics, shown to the tutor on
+// an active connection so they can prepare. Server-scoped to that connection.
+export type TutorStudentContext = {
+  studentId: string;
+  studentName: string;
+  subject: string;
+  units: { name: string; detail: string }[];
+  assessments: {
+    title: string;
+    type: string;
+    subject: string;
+    weight: number;
+    dueDate: string;
+    status: string;
+    predictedMark: number | null;
+  }[];
+  goals: {
+    title: string;
+    target: string;
+    progress: number;
+    status: string;
+    category: string;
+    dueDate: string;
+  }[];
 };
 
 export type TutorReview = {
@@ -918,6 +1163,30 @@ export const useTutorReviews = () =>
   useQuery<TutorReview[]>({
     queryKey: queryKeys.tutorReviews(),
     queryFn: () => apiClient.get<TutorReview[]>("/api/marketplace/tutor/reviews"),
+  });
+
+// Tutor moves a connection through its lifecycle: accept/decline a request, or
+// pause/resume a student.
+export const useUpdateTutorConnection = () => {
+  const qc = useQueryClient();
+  return useMutation<TutorConnection, ApiError, { id: string; status: ConnectionStatus }>({
+    mutationFn: ({ id, status }) =>
+      apiClient.patch<TutorConnection>(`/api/booking/connections/${id}`, { status }),
+    onSuccess: (_d, { id }) => {
+      void qc.invalidateQueries({ queryKey: queryKeys.tutorConnections() });
+      void qc.invalidateQueries({ queryKey: ["tutor", "student-context", id] });
+    },
+  });
+};
+
+// The linked student's academic context, for the tutor's student detail page.
+// Only resolves on an active connection (the server forbids otherwise).
+export const useTutorStudentContext = (connectionId: string, enabled = true) =>
+  useQuery<TutorStudentContext>({
+    queryKey: ["tutor", "student-context", connectionId],
+    queryFn: () =>
+      apiClient.get<TutorStudentContext>(`/api/booking/connections/${connectionId}/student-context`),
+    enabled: enabled && !!connectionId,
   });
 
 // Student/parent actions on a tutor. Both notify the tutor server-side (in-app
@@ -945,6 +1214,164 @@ export const useCreateTutorReview = () => {
   });
 };
 
+// ---- Tutoring marketplace (listings, proposals, connects) ----------------
+// A student (or a parent for their child) posts a listing describing the help
+// they need; tutors spend connects to propose; the poster picks one. Mirrors
+// /api/tutoring on the backend.
+
+export type ListingMode = "online" | "in_person" | "either";
+export type ListingStatus = "open" | "filled" | "closed";
+
+export type TutorListing = {
+  id: string;
+  learnerId: string;
+  learnerName: string;
+  postedByRole: "student" | "parent";
+  title: string;
+  subject: string;
+  level: string;
+  details: string;
+  mode: ListingMode;
+  status: ListingStatus;
+  proposals: number;
+  isMine: boolean;
+  alreadyProposed: boolean;
+  createdAt: string;
+};
+
+export type ProposalStatus = "submitted" | "accepted" | "declined" | "withdrawn";
+
+// A proposal seen by the poster reviewing bids on their listing.
+export type ListingProposal = {
+  id: string;
+  listingId: string;
+  tutorId: string;
+  tutorName: string;
+  message: string;
+  status: ProposalStatus;
+  createdAt: string;
+  tutorRating: number;
+  tutorReviews: number;
+  tutorVerified: boolean;
+  tutorQualification: string;
+};
+
+// A proposal seen by the tutor who submitted it, with its listing context.
+export type MyProposal = {
+  id: string;
+  listingId: string;
+  listingTitle: string;
+  subject: string;
+  learnerName: string;
+  message: string;
+  status: ProposalStatus;
+  connectsSpent: number;
+  createdAt: string;
+};
+
+export type ConnectsBalance = {
+  balance: number;
+  proposalCost: number;
+  monthlyGrant: number;
+};
+
+export type CreateListingInput = {
+  learnerId?: string;
+  title: string;
+  subject: string;
+  level?: string;
+  details?: string;
+  mode?: ListingMode;
+};
+
+// Listings the caller posted or that were posted for them.
+export const useMyListings = () =>
+  useQuery<TutorListing[]>({
+    queryKey: ["tutoring", "listings", "mine"],
+    queryFn: () => apiClient.get<TutorListing[]>("/api/tutoring/listings/mine"),
+  });
+
+// Open listings a tutor can bid on, optionally filtered by a search term.
+export const useOpenListings = (q?: string) =>
+  useQuery<TutorListing[]>({
+    queryKey: ["tutoring", "listings", "open", q ?? ""],
+    queryFn: () =>
+      apiClient.get<TutorListing[]>(
+        `/api/tutoring/listings/open${q ? `?q=${encodeURIComponent(q)}` : ""}`,
+      ),
+  });
+
+// Proposals submitted against one of the caller's listings.
+export const useListingProposals = (listingId: string, enabled = true) =>
+  useQuery<ListingProposal[]>({
+    queryKey: ["tutoring", "listings", listingId, "proposals"],
+    queryFn: () =>
+      apiClient.get<ListingProposal[]>(`/api/tutoring/listings/${listingId}/proposals`),
+    enabled: enabled && !!listingId,
+  });
+
+export const useCreateListing = () => {
+  const qc = useQueryClient();
+  return useMutation<TutorListing, ApiError, CreateListingInput>({
+    mutationFn: (body) => apiClient.post<TutorListing>("/api/tutoring/listings", body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["tutoring", "listings", "mine"] });
+    },
+  });
+};
+
+export const useAcceptProposal = () => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, { proposalId: string; listingId: string }>({
+    mutationFn: ({ proposalId }) =>
+      apiClient.post<void>(`/api/tutoring/proposals/${proposalId}/accept`, {}),
+    onSuccess: (_data, { listingId }) => {
+      void qc.invalidateQueries({ queryKey: ["tutoring", "listings", "mine"] });
+      void qc.invalidateQueries({ queryKey: ["tutoring", "listings", listingId, "proposals"] });
+      void qc.invalidateQueries({ queryKey: queryKeys.tutorConnections() });
+    },
+  });
+};
+
+export const useCloseListing = () => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, { listingId: string }>({
+    mutationFn: ({ listingId }) =>
+      apiClient.post<void>(`/api/tutoring/listings/${listingId}/close`, {}),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["tutoring", "listings", "mine"] });
+    },
+  });
+};
+
+// Tutor submits a proposal, spending connects.
+export const useProposeOnListing = () => {
+  const qc = useQueryClient();
+  return useMutation<ListingProposal, ApiError, { listingId: string; message: string }>({
+    mutationFn: ({ listingId, message }) =>
+      apiClient.post<ListingProposal>(`/api/tutoring/listings/${listingId}/propose`, { message }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["tutoring", "listings", "open"] });
+      void qc.invalidateQueries({ queryKey: ["tutoring", "proposals", "mine"] });
+      void qc.invalidateQueries({ queryKey: ["tutoring", "connects"] });
+    },
+  });
+};
+
+// The tutor's own proposals.
+export const useMyProposals = () =>
+  useQuery<MyProposal[]>({
+    queryKey: ["tutoring", "proposals", "mine"],
+    queryFn: () => apiClient.get<MyProposal[]>("/api/tutoring/proposals/mine"),
+  });
+
+// The tutor's connect balance (tops up for the month on read).
+export const useConnects = () =>
+  useQuery<ConnectsBalance>({
+    queryKey: ["tutoring", "connects"],
+    queryFn: () => apiClient.get<ConnectsBalance>("/api/tutoring/connects"),
+  });
+
 export type TutorProfile = {
   id: string;
   qualification: string;
@@ -963,6 +1390,12 @@ export type TutorProfile = {
   notifyOnConnection: boolean;
   notifyOnReview: boolean;
   weeklySummary: boolean;
+  // Identity, so the tutor can present who they are, plus their connect balance.
+  tutorKind: "university_student" | "graduate" | "completed_matric";
+  institution: string;
+  studyingToward: string;
+  matricYear: number | null;
+  connects: number;
 };
 
 // The tutor's own public profile. 404s until they set one up; the profile page
@@ -994,6 +1427,10 @@ export type UpdateTutorProfileInput = {
   notifyOnConnection?: boolean;
   notifyOnReview?: boolean;
   weeklySummary?: boolean;
+  tutorKind?: "university_student" | "graduate" | "completed_matric";
+  institution?: string;
+  studyingToward?: string;
+  matricYear?: number | null;
 };
 
 // Upsert the tutor's public profile and settings. Rating, review count and
@@ -1084,10 +1521,104 @@ export const useLogDiary = () => {
   });
 };
 
+// ── Points, achievements and rewards ──────────────────────────────────
+//
+// The rewards catalogue used to be a shop of tutor hours and masterclasses
+// that nothing could deliver, with a Redeem button wired to nothing. It is
+// back, but every entry is now a quota the meter already enforces, raised for
+// a fixed window, so redeeming one genuinely changes what the student can do.
+
+/**
+ * Balance, level, rank and streaks. The server re-evaluates every measurable
+ * goal before answering, so this reflects work done since the last page load.
+ */
+export const useStudentPoints = () =>
+  useQuery<StudentPoints>({
+    queryKey: queryKeys.points(),
+    queryFn: () => apiClient.get<StudentPoints>("/api/goals/points/me"),
+  });
+
+export const usePointsLedger = () =>
+  useQuery<PointsEntry[]>({
+    queryKey: queryKeys.pointsLedger(),
+    queryFn: () => apiClient.get<PointsEntry[]>("/api/goals/points/ledger"),
+  });
+
+export const useAchievements = () =>
+  useQuery<Achievement[]>({
+    queryKey: queryKeys.achievements(),
+    queryFn: () => apiClient.get<Achievement[]>("/api/goals/achievements"),
+  });
+
+/**
+ * What points can buy: time-boxed top-ups on metered features. `affordable` is
+ * computed server-side against the live balance, so the button and the API
+ * cannot disagree about what the student can have.
+ */
 export const useRewards = () =>
   useQuery<Reward[]>({
     queryKey: queryKeys.rewards(),
     queryFn: () => apiClient.get<Reward[]>("/api/goals/rewards"),
+  });
+
+/** Top-ups the student is holding right now, soonest to expire first. */
+export const useActiveGrants = () =>
+  useQuery<Grant[]>({
+    queryKey: queryKeys.activeGrants(),
+    queryFn: () => apiClient.get<Grant[]>("/api/goals/rewards/active"),
+  });
+
+/**
+ * Spend points on a reward. The server debits and grants in one transaction,
+ * so there is no state where the points are gone and the top-up never arrived.
+ * The new grant raises the real usage limit immediately, which is why the
+ * usage query is invalidated alongside the points.
+ */
+export const useRedeemReward = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (code: string) => apiClient.post<Grant>(`/api/goals/rewards/${code}/redeem`, {}),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.activeGrants() });
+      // Balance changed, so affordability did too.
+      void qc.invalidateQueries({ queryKey: queryKeys.rewards() });
+      void qc.invalidateQueries({ queryKey: queryKeys.points() });
+      void qc.invalidateQueries({ queryKey: queryKeys.pointsLedger() });
+      // Prefix-matches ["entitlements","me"] and ["entitlements","me","usage"]:
+      // the grant raises the real limit, so the meter is stale the moment this
+      // returns.
+      void qc.invalidateQueries({ queryKey: ["entitlements", "me"] });
+      invalidateNotifications(qc);
+    },
+  });
+};
+
+/**
+ * Where the student stands before they pick a target, and what that target
+ * would pay.
+ *
+ * Creating a rewarded goal at or below the baseline is rejected outright, so
+ * the dialog asks this first and shows the number next to the input. Pricing
+ * stays server-side deliberately: re-deriving the curve here would quote a
+ * figure that drifts from the one actually paid.
+ */
+export const useGoalBaseline = (
+  kind: GoalKind,
+  subjectId?: string | null,
+  topicFilter?: string | null,
+  targetValue?: number | null,
+  enabled = true,
+) =>
+  useQuery<GoalBaseline>({
+    queryKey: queryKeys.goalBaseline(kind, subjectId, topicFilter, targetValue),
+    queryFn: () => {
+      const params = new URLSearchParams({ kind });
+      if (subjectId) params.set("subjectId", subjectId);
+      if (topicFilter) params.set("topicFilter", topicFilter);
+      if (targetValue && targetValue > 0) params.set("targetValue", String(targetValue));
+      return apiClient.get<GoalBaseline>(`/api/goals/baseline?${params.toString()}`);
+    },
+    enabled,
   });
 
 // ── AI tutor (the /dashboard/chatbot academic assistant) ───────────────
@@ -1201,6 +1732,7 @@ export const useCareers = () =>
   useQuery<Career[]>({
     queryKey: queryKeys.careers(),
     queryFn: () => apiClient.get<Career[]>("/api/careers"),
+    staleTime: 1000 * 60 * 60, // careers catalog is static within a session
   });
 
 export const useChildren = () =>
@@ -1208,6 +1740,21 @@ export const useChildren = () =>
     queryKey: queryKeys.children(),
     queryFn: () => apiClient.get<Child[]>("/api/entitlements/children"),
   });
+
+// Parent sets a linked child's coverage plan (student.pro | student.max).
+// A 409 surfaces the capacity message ("Your plan covers N students...").
+export const useSetChildPlan = () => {
+  const qc = useQueryClient();
+  return useMutation<
+    void,
+    ApiError,
+    { studentUserId: string; planCode: "student.pro" | "student.max" }
+  >({
+    mutationFn: ({ studentUserId, planCode }) =>
+      apiClient.put<void>(`/api/entitlements/children/${studentUserId}/plan`, { planCode }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: queryKeys.children() }),
+  });
+};
 
 // --- Parent <-> student links -------------------------------------------
 // A parent invites a student by email; the student accepts from their
@@ -1307,6 +1854,61 @@ export const useUnlinkParent = () => {
   return useMutation<void, ApiError, string>({
     mutationFn: (id) => apiClient.delete<void>(`/api/parent-links/parents/${id}`),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["parent-links", "parents"] }),
+  });
+};
+
+// --- Tokenised invite accept (public landing page) ----------------------
+// The /invite/{token} page an invitee opens from the email. Resolving the
+// token is anonymous (the page is reachable while logged out), so this GET
+// must not require a bearer token: apiClient omits the Authorization header
+// when there is no session, and the endpoint is [AllowAnonymous], exactly like
+// the public /pricing plans query. Accept / decline stay authenticated; the
+// server still verifies the caller owns the invited email.
+
+export type InviteByToken = {
+  parentName: string;
+  studentEmail: string;
+  status: string;
+};
+
+// Returns null for an unknown token (404) so the page can render the calm
+// "not valid / already used" state; other failures surface as query errors.
+export const useInviteByToken = (token: string) =>
+  useQuery<InviteByToken | null>({
+    queryKey: ["parent-links", "invite-by-token", token],
+    queryFn: async () => {
+      try {
+        return await apiClient.get<InviteByToken>(`/api/parent-links/invites/token/${token}`);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) return null;
+        throw err;
+      }
+    },
+    enabled: !!token,
+    retry: false,
+    staleTime: 30_000,
+  });
+
+export const useAcceptInvite = (token: string) => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, void>({
+    mutationFn: () => apiClient.post<void>(`/api/parent-links/invites/${token}/accept`, {}),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["parent-links", "invite-by-token", token] });
+      void qc.invalidateQueries({ queryKey: ["parent-links", "incoming"] });
+      void qc.invalidateQueries({ queryKey: ["parent-links", "parents"] });
+    },
+  });
+};
+
+export const useDeclineInvite = (token: string) => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, void>({
+    mutationFn: () => apiClient.post<void>(`/api/parent-links/invites/${token}/decline`, {}),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["parent-links", "invite-by-token", token] });
+      void qc.invalidateQueries({ queryKey: ["parent-links", "incoming"] });
+    },
   });
 };
 
@@ -1417,11 +2019,21 @@ export const useStudyGroups = () =>
     queryFn: () => apiClient.get<StudyGroup[]>("/api/study-groups"),
   });
 
+// A single group's detail, for the group workspace page. Open groups resolve
+// even for a non-member (so they can preview before joining).
+export const useStudyGroup = (id: string, enabled = true) =>
+  useQuery<StudyGroup>({
+    queryKey: ["study-groups", id, "detail"],
+    queryFn: () => apiClient.get<StudyGroup>(`/api/study-groups/${id}`),
+    enabled: enabled && !!id,
+  });
+
 export type CreateStudyGroupInput = {
   name: string;
   subjectId: string;
   description?: string;
   privacy: "open" | "invite";
+  memberCapacity?: number;
 };
 
 export const useCreateStudyGroup = () => {
@@ -1432,11 +2044,43 @@ export const useCreateStudyGroup = () => {
   });
 };
 
+export type UpdateStudyGroupInput = {
+  name?: string;
+  description?: string;
+  privacy?: "open" | "invite";
+  memberCapacity?: number;
+  tasksWhoCanAdd?: "everyone" | "admins";
+  notifyOnNewTask?: boolean;
+  autoSyncTasks?: boolean;
+};
+
+export const useUpdateStudyGroup = (id: string) => {
+  const qc = useQueryClient();
+  return useMutation<StudyGroup, ApiError, UpdateStudyGroupInput>({
+    mutationFn: (body) => apiClient.patch<StudyGroup>(`/api/study-groups/${id}`, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["study-groups", id, "detail"] });
+      void qc.invalidateQueries({ queryKey: queryKeys.studyGroups() });
+    },
+  });
+};
+
+export const useDeleteStudyGroup = () => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (id) => apiClient.delete<void>(`/api/study-groups/${id}`),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: queryKeys.studyGroups() }),
+  });
+};
+
 export const useJoinStudyGroup = () => {
   const qc = useQueryClient();
   return useMutation<void, ApiError, string>({
     mutationFn: (id) => apiClient.post<void>(`/api/study-groups/${id}/join`, {}),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: queryKeys.studyGroups() }),
+    onSuccess: (_d, id) => {
+      void qc.invalidateQueries({ queryKey: queryKeys.studyGroups() });
+      void qc.invalidateQueries({ queryKey: ["study-groups", id, "detail"] });
+    },
   });
 };
 
@@ -1444,7 +2088,99 @@ export const useLeaveStudyGroup = () => {
   const qc = useQueryClient();
   return useMutation<void, ApiError, string>({
     mutationFn: (id) => apiClient.post<void>(`/api/study-groups/${id}/leave`, {}),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: queryKeys.studyGroups() }),
+    onSuccess: (_d, id) => {
+      void qc.invalidateQueries({ queryKey: queryKeys.studyGroups() });
+      void qc.invalidateQueries({ queryKey: ["study-groups", id, "detail"] });
+    },
+  });
+};
+
+// ---- Group roster / moderation ----
+
+export const useStudyGroupMembers = (groupId: string, enabled = true) =>
+  useQuery<StudyGroupMember[]>({
+    queryKey: ["study-groups", groupId, "members"],
+    queryFn: () => apiClient.get<StudyGroupMember[]>(`/api/study-groups/${groupId}/members`),
+    enabled: enabled && !!groupId,
+  });
+
+export const useRemoveStudyGroupMember = (groupId: string) => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (userId) => apiClient.delete<void>(`/api/study-groups/${groupId}/members/${userId}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["study-groups", groupId, "members"] });
+      void qc.invalidateQueries({ queryKey: ["study-groups", groupId, "detail"] });
+      void qc.invalidateQueries({ queryKey: queryKeys.studyGroups() });
+    },
+  });
+};
+
+export const useSetStudyGroupMemberRole = (groupId: string) => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, { userId: string; role: "admin" | "member" | "owner" }>({
+    mutationFn: ({ userId, role }) =>
+      apiClient.post<void>(`/api/study-groups/${groupId}/members/${userId}/role`, { role }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["study-groups", groupId, "members"] });
+      void qc.invalidateQueries({ queryKey: ["study-groups", groupId, "detail"] });
+    },
+  });
+};
+
+// ---- Shared tasks ----
+
+const invalidateTasks = (qc: ReturnType<typeof useQueryClient>, groupId: string) => {
+  void qc.invalidateQueries({ queryKey: ["study-groups", groupId, "tasks"] });
+  void qc.invalidateQueries({ queryKey: ["study-groups", groupId, "detail"] });
+  void qc.invalidateQueries({ queryKey: queryKeys.studyGroups() });
+};
+
+export const useStudyGroupTasks = (groupId: string, enabled = true) =>
+  useQuery<StudyGroupTask[]>({
+    queryKey: ["study-groups", groupId, "tasks"],
+    queryFn: () => apiClient.get<StudyGroupTask[]>(`/api/study-groups/${groupId}/tasks`),
+    enabled: enabled && !!groupId,
+  });
+
+export type AddStudyGroupTaskInput = { title: string; notes?: string; dueDate?: string | null };
+
+export const useAddStudyGroupTask = (groupId: string) => {
+  const qc = useQueryClient();
+  return useMutation<StudyGroupTask, ApiError, AddStudyGroupTaskInput>({
+    mutationFn: (body) => apiClient.post<StudyGroupTask>(`/api/study-groups/${groupId}/tasks`, body),
+    onSuccess: () => invalidateTasks(qc, groupId),
+  });
+};
+
+export const useToggleStudyGroupTask = (groupId: string) => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, { taskId: string; done: boolean }>({
+    mutationFn: ({ taskId, done }) =>
+      apiClient.patch<void>(`/api/study-groups/${groupId}/tasks/${taskId}`, { done }),
+    onSuccess: () => invalidateTasks(qc, groupId),
+  });
+};
+
+export const useDeleteStudyGroupTask = (groupId: string) => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (taskId) => apiClient.delete<void>(`/api/study-groups/${groupId}/tasks/${taskId}`),
+    onSuccess: () => invalidateTasks(qc, groupId),
+  });
+};
+
+// Pull a dated task onto the caller's own calendar, or take it back off.
+export const useSyncStudyGroupTask = (groupId: string) => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, { taskId: string; synced: boolean }>({
+    mutationFn: ({ taskId, synced }) =>
+      synced
+        ? apiClient.delete<void>(`/api/study-groups/${groupId}/tasks/${taskId}/sync`)
+        : apiClient.post<void>(`/api/study-groups/${groupId}/tasks/${taskId}/sync`, {}),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["study-groups", groupId, "tasks"] });
+    },
   });
 };
 
@@ -1558,22 +2294,420 @@ export const useGoalMilestones = (goalId: string) =>
 export const reorderGoalMilestones = (goalId: string, milestoneIds: string[]) =>
   apiClient.patch(`/api/goals/${goalId}/milestones/order`, { milestoneIds });
 
-export const useAuditLogs = (take = 60) =>
-  useQuery<AuditLog[]>({
-    queryKey: [...queryKeys.auditLogs(), take],
-    queryFn: () => apiClient.get<AuditLog[]>(`/api/audit/logs?take=${take}`),
+// --- Admin: audit trail -------------------------------------------------
+//
+// GET /api/audit/logs is a real, filtered read over audit.audit_logs. It
+// returned a hardcoded empty array until the writer (Services/Audit) and this
+// endpoint landed together, so an admin page that rendered "no audit events
+// yet" was telling them nothing about the platform.
+
+export type AuditLogFilters = {
+  userId?: string;
+  action?: string;
+  entityType?: string;
+  severity?: string;
+  q?: string;
+  from?: string;
+  to?: string;
+  take?: number;
+  skip?: number;
+};
+
+const auditQueryString = (f: AuditLogFilters) => {
+  const params = new URLSearchParams();
+  if (f.userId) params.set("userId", f.userId);
+  if (f.action) params.set("action", f.action);
+  if (f.entityType) params.set("entityType", f.entityType);
+  if (f.severity) params.set("severity", f.severity);
+  if (f.q) params.set("q", f.q);
+  if (f.from) params.set("from", f.from);
+  if (f.to) params.set("to", f.to);
+  params.set("take", String(f.take ?? 50));
+  params.set("skip", String(f.skip ?? 0));
+  return params.toString();
+};
+
+export const useAuditLogs = (filters: AuditLogFilters = {}) =>
+  useQuery<AuditLogPage>({
+    queryKey: [...queryKeys.auditLogs(), filters],
+    queryFn: () => apiClient.get<AuditLogPage>(`/api/audit/logs?${auditQueryString(filters)}`),
   });
 
-export const useModerationQueue = () =>
-  useQuery<ModerationFlag[]>({
-    queryKey: queryKeys.moderationQueue(),
-    queryFn: () => apiClient.get<ModerationFlag[]>("/api/moderation/queue"),
+export const useAuditActions = () =>
+  useQuery<AuditAction[]>({
+    queryKey: queryKeys.auditActions(),
+    queryFn: () => apiClient.get<AuditAction[]>("/api/audit/actions"),
+    staleTime: 1000 * 60 * 60, // audit action reference list is static within a session
   });
 
-export const useFeatureFlags = () =>
-  useQuery<FeatureFlag[]>({
-    queryKey: queryKeys.featureFlags(),
-    queryFn: () => apiClient.get<FeatureFlag[]>("/api/feature-flags/flags"),
+// --- Admin: back office -------------------------------------------------
+// Mirrors api/Controllers/AdminController.cs.
+
+export type AdminOverview = {
+  users: number;
+  usersByRole: Record<string, number>;
+  subscriptionsLive: number;
+  subscriptionsPastDue: number;
+  subscriptionsCancelled: number;
+  monthlyRecurringRevenueZar: number;
+  schoolEnquiries: number;
+  schoolEnquiriesUncontacted: number;
+  outboxPending: number;
+  auditEventsLast24h: number;
+  tutors: number;
+  tutorsUnverified: number;
+};
+
+export type AdminUserRow = {
+  id: string;
+  name: string;
+  email: string;
+  emailConfirmed: boolean;
+  phoneNumber: string | null;
+  school: string | null;
+  grade: number | null;
+  educationLevel: string;
+  roles: string[];
+  role: string;
+  planCodes: string[];
+  createdAt: string;
+  lockedOut: boolean;
+};
+
+export type AdminUserPage = {
+  items: AdminUserRow[];
+  total: number;
+  skip: number;
+  take: number;
+};
+
+export type AdminSubscription = {
+  id: string;
+  planCode: string;
+  planName: string;
+  name: string | null;
+  ownerUserId: string;
+  ownerName: string;
+  ownerEmail: string;
+  status: string;
+  billing: string;
+  memberCount: number | null;
+  startedAt: string;
+  validUntil: string | null;
+  cancelledAt: string | null;
+  lastChargeAt: string | null;
+  renewalFailureCount: number;
+  pendingPlanCode: string | null;
+  cardBrand: string | null;
+  cardLast4: string | null;
+  billingEmail: string | null;
+  paid: boolean;
+};
+
+export type AdminMembership = {
+  subscriptionId: string;
+  planCode: string;
+  planName: string;
+  status: string;
+  role: string;
+  joinedAt: string;
+  isOwner: boolean;
+};
+
+export type AdminUserAudit = {
+  id: string;
+  action: string;
+  resource: string;
+  ts: string;
+};
+
+export type AdminUserDetail = {
+  id: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  emailConfirmed: boolean;
+  phoneNumber: string | null;
+  school: string | null;
+  grade: number | null;
+  curriculumId: string | null;
+  educationLevel: string;
+  institutionId: string | null;
+  roles: string[];
+  role: string;
+  createdAt: string;
+  updatedAt: string | null;
+  lockedOut: boolean;
+  subscriptions: AdminSubscription[];
+  memberships: AdminMembership[];
+  recentAudit: AdminUserAudit[];
+};
+
+export type AdminRole = {
+  name: string;
+  label: string;
+  privileged: boolean;
+};
+
+export type AdminTutor = {
+  userId: string;
+  name: string;
+  email: string;
+  qualification: string;
+  subjects: string[];
+  rating: number;
+  reviewCount: number;
+  yearsOfExperience: number;
+  verified: boolean;
+  acceptingStudents: boolean;
+  tutorKind: string;
+  institution: string;
+  createdAt: string;
+};
+
+export type AdminSystem = {
+  databaseOk: boolean;
+  databaseLatencyMs: number;
+  outboxPending: number;
+  outboxProcessed: number;
+  oldestPendingOccurredAt: string | null;
+  environment: string;
+  serverTimeUtc: string;
+  uptimeSeconds: number;
+  dotnetVersion: string;
+};
+
+export const useAdminOverview = () =>
+  useQuery<AdminOverview>({
+    queryKey: queryKeys.adminOverview(),
+    queryFn: () => apiClient.get<AdminOverview>("/api/admin/overview"),
+  });
+
+export const useAdminUsers = (opts: { q?: string; role?: string; take?: number; skip?: number } = {}) =>
+  useQuery<AdminUserPage>({
+    queryKey: [...queryKeys.adminUsers(), opts],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (opts.q) params.set("q", opts.q);
+      if (opts.role) params.set("role", opts.role);
+      params.set("take", String(opts.take ?? 100));
+      params.set("skip", String(opts.skip ?? 0));
+      return apiClient.get<AdminUserPage>(`/api/admin/users?${params.toString()}`);
+    },
+  });
+
+export const useAdminUser = (id: string | null) =>
+  useQuery<AdminUserDetail>({
+    queryKey: queryKeys.adminUser(id ?? ""),
+    queryFn: () => apiClient.get<AdminUserDetail>(`/api/admin/users/${id}`),
+    enabled: !!id,
+  });
+
+export const useAdminRoles = () =>
+  useQuery<AdminRole[]>({
+    queryKey: queryKeys.adminRoles(),
+    queryFn: () => apiClient.get<AdminRole[]>("/api/admin/roles"),
+    staleTime: 10 * 60_000,
+  });
+
+export const useSetUserRoles = () => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, { id: string; roles: string[] }>({
+    mutationFn: ({ id, roles }) => apiClient.put<void>(`/api/admin/users/${id}/roles`, { roles }),
+    onSuccess: (_data, { id }) => {
+      void qc.invalidateQueries({ queryKey: queryKeys.adminUsers() });
+      void qc.invalidateQueries({ queryKey: queryKeys.adminUser(id) });
+      void qc.invalidateQueries({ queryKey: queryKeys.auditLogs() });
+      void qc.invalidateQueries({ queryKey: queryKeys.adminOverview() });
+    },
+  });
+};
+
+export const useAdminSubscriptions = (opts: { status?: string; planCode?: string } = {}) =>
+  useQuery<AdminSubscription[]>({
+    queryKey: [...queryKeys.adminSubscriptions(), opts],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (opts.status) params.set("status", opts.status);
+      if (opts.planCode) params.set("planCode", opts.planCode);
+      const qs = params.toString();
+      return apiClient.get<AdminSubscription[]>(`/api/admin/subscriptions${qs ? `?${qs}` : ""}`);
+    },
+  });
+
+export const useAdminTutors = () =>
+  useQuery<AdminTutor[]>({
+    queryKey: queryKeys.adminTutors(),
+    queryFn: () => apiClient.get<AdminTutor[]>("/api/admin/tutors"),
+  });
+
+export const useSetTutorVerification = () => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, { userId: string; verified: boolean }>({
+    mutationFn: ({ userId, verified }) =>
+      apiClient.post<void>(`/api/admin/tutors/${userId}/verification`, { verified }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.adminTutors() });
+      void qc.invalidateQueries({ queryKey: queryKeys.tutors() });
+      void qc.invalidateQueries({ queryKey: queryKeys.auditLogs() });
+      void qc.invalidateQueries({ queryKey: queryKeys.adminOverview() });
+    },
+  });
+};
+
+export const useAdminSystem = () =>
+  useQuery<AdminSystem>({
+    queryKey: queryKeys.adminSystem(),
+    queryFn: () => apiClient.get<AdminSystem>("/api/admin/system"),
+    // Health is only useful if it is current. Cheap query, short window.
+    refetchInterval: 15_000,
+  });
+
+// ---- Paystack cockpit ------------------------------------------------------
+// Reads and writes against the live Paystack account, so an operator does not
+// have to sign in to Paystack's own dashboard. Every hook degrades on a missing
+// key: the status hook is checked first and the page shows a connect prompt
+// rather than a wall of failed requests.
+
+export type PaystackStatus = { configured: boolean };
+export type PaystackBalance = { currency: string; available: number; pending: number };
+export type PaystackTransaction = {
+  reference: string;
+  amount: number;
+  currency: string;
+  status: string | null;
+  paidAt: string | null;
+  customerEmail: string | null;
+  channel: string | null;
+  card: string | null;
+  refundable: boolean;
+};
+export type PaystackTransactionPage = {
+  rows: PaystackTransaction[];
+  page: number;
+  pageCount: number;
+  total: number;
+};
+export type PaystackSettlement = {
+  id: number;
+  amount: number;
+  currency: string;
+  status: string | null;
+  settledAt: string | null;
+  bankName: string | null;
+  accountLast4: string | null;
+};
+export type PaystackSettlementPage = {
+  rows: PaystackSettlement[];
+  page: number;
+  pageCount: number;
+  total: number;
+};
+export type PaystackCustomer = {
+  customerCode: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  transactions: PaystackTransaction[];
+};
+
+export const usePaystackStatus = () =>
+  useQuery<PaystackStatus>({
+    queryKey: queryKeys.paystackStatus(),
+    queryFn: () => apiClient.get<PaystackStatus>("/api/admin/paystack/status"),
+    staleTime: 5 * 60_000,
+  });
+
+export const usePaystackBalance = (enabled: boolean) =>
+  useQuery<PaystackBalance[]>({
+    queryKey: queryKeys.paystackBalance(),
+    queryFn: () => apiClient.get<PaystackBalance[]>("/api/admin/paystack/balance"),
+    enabled,
+    refetchInterval: 60_000,
+  });
+
+export const usePaystackTransactions = (
+  opts: { page?: number; status?: string } = {},
+  enabled = true,
+) =>
+  useQuery<PaystackTransactionPage>({
+    queryKey: [...queryKeys.paystackTransactions(), opts],
+    queryFn: () => {
+      const p = new URLSearchParams();
+      if (opts.page) p.set("page", String(opts.page));
+      if (opts.status) p.set("status", opts.status);
+      const qs = p.toString();
+      return apiClient.get<PaystackTransactionPage>(
+        `/api/admin/paystack/transactions${qs ? `?${qs}` : ""}`,
+      );
+    },
+    enabled,
+  });
+
+export const usePaystackSettlements = (enabled: boolean) =>
+  useQuery<PaystackSettlementPage>({
+    queryKey: queryKeys.paystackSettlements(),
+    queryFn: () => apiClient.get<PaystackSettlementPage>("/api/admin/paystack/settlements"),
+    enabled,
+  });
+
+// On-demand customer lookup. Not auto-run: only fires once a query string is
+// entered and the caller flips `enabled`.
+export const usePaystackCustomer = (query: string, enabled: boolean) =>
+  useQuery<PaystackCustomer>({
+    queryKey: queryKeys.paystackCustomer(query),
+    queryFn: () =>
+      apiClient.get<PaystackCustomer>(
+        `/api/admin/paystack/customer?query=${encodeURIComponent(query)}`,
+      ),
+    enabled: enabled && query.trim().length > 0,
+    retry: false,
+  });
+
+export const usePaystackRefund = () => {
+  const qc = useQueryClient();
+  return useMutation<
+    { status: string | null; refundedAmount: number; currency: string | null },
+    ApiError,
+    { reference: string; amount?: number }
+  >({
+    mutationFn: (input) => apiClient.post("/api/admin/paystack/refund", input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.paystackTransactions() });
+      void qc.invalidateQueries({ queryKey: queryKeys.paystackBalance() });
+      void qc.invalidateQueries({ queryKey: queryKeys.auditLogs() });
+    },
+  });
+};
+
+export const usePaystackSubscriptionAction = () => {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, { code: string; action: "enable" | "disable" }>({
+    mutationFn: ({ code, action }) =>
+      apiClient.post<void>(`/api/admin/paystack/subscription/${code}/${action}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.auditLogs() });
+      void qc.invalidateQueries({ queryKey: queryKeys.adminSubscriptions() });
+    },
+  });
+};
+
+// Recent rows from the transactional outbox. Real messages written by the
+// modules via IEventPublisher and drained by the OutboxDispatcher.
+export type OutboxMessage = {
+  id: string;
+  type: string;
+  payload: string;
+  occurredAt: string;
+  processedAt: string | null;
+};
+
+export const useOutboxMessages = (pendingOnly = false) =>
+  useQuery<OutboxMessage[]>({
+    queryKey: ["admin", "outbox", pendingOnly],
+    queryFn: () =>
+      apiClient.get<OutboxMessage[]>(`/api/events/outbox?pendingOnly=${pendingOnly}`),
   });
 
 // --- Entitlements catalog (public) --------------------------------------

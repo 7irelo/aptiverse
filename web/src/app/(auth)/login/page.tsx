@@ -13,11 +13,16 @@ import Alert from "@mui/material/Alert";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Box from "@mui/material/Box";
+import Backdrop from "@mui/material/Backdrop";
+import CircularProgress from "@mui/material/CircularProgress";
 import MuiLink from "@mui/material/Link";
 import Link from "next/link";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { PasswordField } from "@/components/auth/PasswordField";
 import { loginSchema, type LoginValues } from "@/lib/schemas";
+import { homeRouteForRole } from "@/lib/home-route";
+import { useHydrated } from "@/lib/hooks/useHydrated";
+import { clearAccessToken } from "@/lib/api/token";
 
 export default function LoginPage() {
   return (
@@ -33,30 +38,6 @@ function LoginSkeleton() {
       <Typography variant="h3" sx={{ fontWeight: 700 }}>Sign in</Typography>
     </Stack>
   );
-}
-
-// Maps a NextAuth session role to that role's dashboard root. Used post-
-// login when no specific callbackUrl was supplied — without this every
-// role was being dropped onto /dashboard (student) and bouncing into the
-// "Wrong role for this area" RoleGuard.
-function dashboardForRole(role: string | undefined | null): string {
-  switch ((role ?? "").toLowerCase()) {
-    case "teacher":
-      return "/teacher";
-    case "parent":
-      return "/parent";
-    case "tutor":
-      return "/tutor";
-    case "schooladmin":
-    case "school_admin":
-    case "school-admin":
-      return "/school-admin";
-    case "admin":
-    case "superuser":
-      return "/admin";
-    default:
-      return "/dashboard";
-  }
 }
 
 // True only when the API access token is present AND still in date.
@@ -81,9 +62,14 @@ function tokenStillValid(token: string | undefined): boolean {
   }
 }
 
-// Friendly copy for the ?error= codes NextAuth (and our Google signIn
-// callback) redirect back with. OAuthNoAccount is our invite-only rejection.
-function oauthErrorMessage(code: string | null): string | null {
+// Friendly copy for the ?error= codes next-auth and our Google signIn callback
+// redirect back with. OAuthNoAccount is our invite-only rejection.
+//
+// Every ?error= next-auth can send here, not only the OAuth ones. Errors now
+// route to /login rather than next-auth's built-in page, so this is the only
+// thing standing between a code in the query string and a person wondering
+// what just happened.
+function authErrorMessage(code: string | null): string | null {
   switch (code) {
     case "OAuthNoAccount":
       return "No Aptiverse account is linked to that Google email. Create an account first, then you can sign in with Google.";
@@ -92,8 +78,22 @@ function oauthErrorMessage(code: string | null): string | null {
     case "OAuthAccountNotLinked":
     case "AccessDenied":
       return "We couldn't sign you in with Google. Please try again.";
-    default:
+    // The long-tab case. The access token lasts four hours and renews itself
+    // only while a tab is awake to poll, so a session left open overnight
+    // lapses. Say that plainly: nothing has gone wrong with their account and
+    // signing in again is the whole fix.
+    case "SessionRequired":
+      return "Your session ended. Sign in again to pick up where you left off.";
+    case "Verification":
+      return "That link has expired. Request a new one and try again.";
+    case null:
+    case "":
       return null;
+    // Anything unrecognised still says something. Landing on a sign-in form
+    // with no explanation reads as the app having broken, which is worse than
+    // a plain sentence.
+    default:
+      return "Your session ended. Sign in again to continue.";
   }
 }
 
@@ -103,25 +103,38 @@ function LoginInner() {
   const rawCallback = params.get("callbackUrl");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const oauthError = oauthErrorMessage(params.get("error"));
+  const oauthError = authErrorMessage(params.get("error"));
   const { data: session, status } = useSession();
+  const hydrated = useHydrated();
+
+  // Carry an invitee's destination onto the register link too, so a brand new
+  // invitee who has no account lands back where they were headed (e.g. the
+  // connections hub) once they finish signing up. Same-origin paths only, to
+  // avoid turning the register link into an open redirect.
+  const registerHref =
+    rawCallback && rawCallback.startsWith("/")
+      ? `/register?callbackUrl=${encodeURIComponent(rawCallback)}`
+      : "/register";
 
   // Already signed in with a live token? Don't make them sign in again —
   // send them where they were headed, or to their role's dashboard.
   useEffect(() => {
     if (status !== "authenticated") return;
+    // An in-flight submit owns the navigation (a hard load). Bailing here keeps
+    // this soft redirect from racing it the instant the session flips.
+    if (submitting) return;
     const token = (session as { accessToken?: string } | null)?.accessToken;
     if (!tokenStillValid(token)) return;
     const role = (session?.user as { role?: string } | undefined)?.role;
     router.replace(
-      !rawCallback || rawCallback === "/dashboard" ? dashboardForRole(role) : rawCallback,
+      !rawCallback || rawCallback === "/dashboard" ? homeRouteForRole(role) : rawCallback,
     );
-  }, [status, session, rawCallback, router]);
+  }, [status, session, rawCallback, router, submitting]);
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isValid },
+    formState: { errors },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     mode: "onTouched",
@@ -136,11 +149,20 @@ function LoginInner() {
       password: values.password,
       redirect: false,
     });
-    setSubmitting(false);
+    // Only clear the submitting flag on failure. On success we stay disabled
+    // until the redirect below unmounts this form, so there is no window in
+    // which a second click fires a second sign-in.
     if (!res || res.error) {
+      setSubmitting(false);
       setError("Invalid email or password");
       return;
     }
+
+    // A different account may have been signed in a moment ago, and the API
+    // token is cached in memory for the lifetime of the tab. Drop it here so
+    // the first request after signing in cannot go out carrying the previous
+    // user's token.
+    clearAccessToken();
 
     // Resolve where to send the user. If they were redirected here from
     // a specific protected page, honour that. Otherwise fall back to the
@@ -149,13 +171,32 @@ function LoginInner() {
     const session = await getSession();
     const role = (session?.user as { role?: string } | undefined)?.role;
     const dest =
-      !rawCallback || rawCallback === "/dashboard" ? dashboardForRole(role) : rawCallback;
-    router.push(dest);
-    router.refresh();
+      !rawCallback || rawCallback === "/dashboard" ? homeRouteForRole(role) : rawCallback;
+
+    // Hard navigation, deliberately NOT router.push. A soft client-side
+    // navigation can win the race against NextAuth writing its session cookie:
+    // the destination's guard then reads no session yet and bounces back here,
+    // and the form sits stuck on "Signing in…" until a manual reload. That is
+    // the intermittent "stuck on login" bug. A full load guarantees the cookie
+    // is sent with the request and the app boots authenticated. `submitting`
+    // stays true so the overlay shows until the browser leaves this page.
+    window.location.assign(dest);
   }
 
   return (
     <Stack spacing={3}>
+      {/* Full-screen "signing you in" state. It stays up from a successful
+          submit until the browser leaves for the destination, so the moment
+          between clicking Sign in and the app appearing is never a frozen
+          form — which is what the stuck-looking login was. */}
+      <Backdrop
+        open={submitting}
+        sx={{ zIndex: (t) => t.zIndex.modal + 1, color: "#fff", flexDirection: "column", gap: 2 }}
+      >
+        <CircularProgress color="inherit" />
+        <Typography variant="body1">Signing you in…</Typography>
+      </Backdrop>
+
       <Box>
         <Typography variant="overline" color="primary.main">
           Welcome back
@@ -207,7 +248,17 @@ function LoginInner() {
               Forgot password?
             </MuiLink>
           </Stack>
-          <Button type="submit" size="large" variant="contained" disabled={!isValid || submitting}>
+          {/* Disabled only while this button genuinely cannot work: before
+              hydration (a native submit would put the password in the URL)
+              and while a sign-in is in flight. Never gate it on the form's
+              `isValid`. See useHydrated for the full reasoning: gating on
+              `isValid` is what made the first click on Sign in do nothing. */}
+          <Button
+            type="submit"
+            size="large"
+            variant="contained"
+            disabled={!hydrated || submitting}
+          >
             {submitting ? "Signing in…" : "Sign in"}
           </Button>
         </Stack>
@@ -217,7 +268,7 @@ function LoginInner() {
         New to Aptiverse?{" "}
         <MuiLink
           component={Link}
-          href="/register"
+          href={registerHref}
           color="text.primary"
           underline="hover"
           sx={{ fontWeight: 600 }}

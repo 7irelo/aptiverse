@@ -1,54 +1,46 @@
 "use client";
 
-import { useState } from "react";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
-import Grid from "@mui/material/Grid";
+import { useMemo, useState } from "react";
+import NextLink from "next/link";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
-import Chip from "@mui/material/Chip";
+import Paper from "@mui/material/Paper";
+import ButtonBase from "@mui/material/ButtonBase";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
+import Slider from "@mui/material/Slider";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import ToggleButton from "@mui/material/ToggleButton";
-import LockIcon from "@mui/icons-material/LockOutlined";
-import PublicIcon from "@mui/icons-material/PublicOutlined";
-import GroupsIcon from "@mui/icons-material/GroupsOutlined";
-import PersonIcon from "@mui/icons-material/PersonOutline";
-import AddIcon from "@mui/icons-material/Add";
-import IconButton from "@mui/material/IconButton";
-import Divider from "@mui/material/Divider";
-import EventIcon from "@mui/icons-material/EventOutlined";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import dayjs from "dayjs";
+import { alpha } from "@mui/material/styles";
 import { useSnackbar } from "notistack";
+import {
+  Plus,
+  Users,
+  CalendarClock,
+  ChevronRight,
+  Lock,
+  Globe,
+  ListTodo,
+} from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { QueryStates } from "@/components/common/QueryStates";
 import { RelativeTime } from "@/components/common/RelativeTime";
-import { useConfirm } from "@/components/common/ConfirmDialog";
 import {
   useStudyGroups,
   useAcademicUnits,
   useCreateStudyGroup,
   useJoinStudyGroup,
-  useLeaveStudyGroup,
-  useStudyGroupSessions,
-  useScheduleSession,
-  useCancelSession,
-  type StudyGroupSession,
 } from "@/lib/api/queries";
 import type { StudyGroup } from "@/lib/mockData";
 import { prettifyUnitId } from "@/lib/format";
+import { heroGradient, CapacityMeter, RoleBadge, PrivacyBadge, riseSx } from "./shared";
 
-// A group's subject is stored as an academic unit id (subject slug or course
-// practiceKey). We resolve the friendly name from the viewer's own units;
-// groups in a subject the viewer doesn't take fall back to a humanised slug.
 export default function StudyGroupsPage() {
   const groupsQuery = useStudyGroups();
   const academic = useAcademicUnits();
@@ -60,13 +52,13 @@ export default function StudyGroupsPage() {
     <>
       <PageHeader
         title="Study groups"
-        description="Small virtual rooms where you study with peers: share notes, schedule sessions, explain it to each other."
+        description="Study alongside peers: share tasks so everyone gets a nudge, sync group deadlines to your own calendar, and meet up on your own terms."
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Study groups" }]}
         actions={
           <Button
             variant="contained"
             color="secondary"
-            startIcon={<AddIcon />}
+            startIcon={<Plus size={18} />}
             onClick={() => setCreateOpen(true)}
           >
             Create group
@@ -77,25 +69,44 @@ export default function StudyGroupsPage() {
       <QueryStates
         query={groupsQuery}
         empty={{
-          icon: <GroupsIcon />,
+          icon: <ListTodo />,
           title: "No study groups yet",
           description: "Start your own and invite peers, or check back as more groups form.",
           action: (
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
+            <Button variant="contained" startIcon={<Plus size={18} />} onClick={() => setCreateOpen(true)}>
               Create a group
             </Button>
           ),
         }}
       >
-        {(groups) => (
-          <Grid container spacing={3}>
-            {groups.map((g) => (
-              <Grid key={g.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-                <StudyGroupCard group={g} subjectName={nameForUnit(g.subjectId)} />
-              </Grid>
-            ))}
-          </Grid>
-        )}
+        {(groups) => {
+          const mine = groups.filter((g) => g.isMember);
+          const discover = groups.filter((g) => !g.isMember);
+          return (
+            <Stack spacing={4}>
+              <HeroBand mine={mine.length} discover={discover.length} />
+
+              {mine.length > 0 && (
+                <GroupList
+                  heading="Your groups"
+                  groups={mine}
+                  nameForUnit={nameForUnit}
+                />
+              )}
+
+              <GroupList
+                heading={mine.length > 0 ? "Discover more" : "Groups you can join"}
+                groups={discover}
+                nameForUnit={nameForUnit}
+                emptyNote={
+                  discover.length === 0
+                    ? "You are in every open group going. Start a new one to bring more people in."
+                    : undefined
+                }
+              />
+            </Stack>
+          );
+        }}
       </QueryStates>
 
       <CreateGroupDialog open={createOpen} onClose={() => setCreateOpen(false)} />
@@ -103,300 +114,227 @@ export default function StudyGroupsPage() {
   );
 }
 
-function StudyGroupCard({ group: g, subjectName }: { group: StudyGroup; subjectName: string }) {
+function HeroBand({ mine, discover }: { mine: number; discover: number }) {
+  return (
+    <Paper
+      elevation={0}
+      sx={(t) => ({
+        ...heroGradient(t),
+        borderRadius: 3,
+        p: { xs: 2.5, sm: 3.5 },
+        overflow: "hidden",
+      })}
+    >
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={{ xs: 2, sm: 4 }}
+        alignItems={{ xs: "flex-start", sm: "center" }}
+      >
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>
+            Keep each other on track
+          </Typography>
+          <Typography variant="body2" sx={{ color: alpha("#F6F7F5", 0.82), maxWidth: 460 }}>
+            Share the readings, past papers and prep as tasks so nobody falls behind, and pull the ones
+            that matter onto your own calendar.
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={3}>
+          <Stat value={mine} label={mine === 1 ? "group you are in" : "groups you are in"} />
+          <Stat value={discover} label={discover === 1 ? "to discover" : "to discover"} />
+        </Stack>
+      </Stack>
+    </Paper>
+  );
+}
+
+function Stat({ value, label }: { value: number; label: string }) {
+  return (
+    <Box sx={{ textAlign: { xs: "left", sm: "right" } }}>
+      <Typography sx={{ fontWeight: 800, fontSize: "1.9rem", lineHeight: 1 }}>{value}</Typography>
+      <Typography variant="caption" sx={{ color: alpha("#F6F7F5", 0.7) }}>
+        {label}
+      </Typography>
+    </Box>
+  );
+}
+
+function GroupList({
+  heading,
+  groups,
+  nameForUnit,
+  emptyNote,
+}: {
+  heading: string;
+  groups: StudyGroup[];
+  nameForUnit: (id: string) => string;
+  emptyNote?: string;
+}) {
+  return (
+    <Box>
+      <Typography variant="overline" color="text.secondary" sx={{ display: "block", mb: 1, letterSpacing: "0.08em" }}>
+        {heading}
+      </Typography>
+      {emptyNote ? (
+        <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+          {emptyNote}
+        </Typography>
+      ) : (
+        <Paper
+          elevation={0}
+          variant="outlined"
+          sx={{ borderRadius: 3, overflow: "hidden" }}
+        >
+          {groups.map((g, i) => (
+            <GroupRow key={g.id} group={g} subjectName={nameForUnit(g.subjectId)} index={i} last={i === groups.length - 1} />
+          ))}
+        </Paper>
+      )}
+    </Box>
+  );
+}
+
+function GroupRow({
+  group: g,
+  subjectName,
+  index,
+  last,
+}: {
+  group: StudyGroup;
+  subjectName: string;
+  index: number;
+  last: boolean;
+}) {
   const { enqueueSnackbar } = useSnackbar();
   const join = useJoinStudyGroup();
-  const leave = useLeaveStudyGroup();
-  const { confirm, dialog } = useConfirm();
-  const [sessionsOpen, setSessionsOpen] = useState(false);
-  const busy = join.isPending || leave.isPending;
 
-  const doJoin = () =>
+  const doJoin = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     join.mutate(g.id, {
       onSuccess: () => enqueueSnackbar(`Joined ${g.name}.`, { variant: "success" }),
       onError: (err) =>
         enqueueSnackbar(err instanceof Error ? err.message : "Couldn't join.", { variant: "error" }),
     });
-
-  const doLeave = async () => {
-    const ok = await confirm({
-      title: `Leave ${g.name}?`,
-      description: g.isOwner
-        ? "You're the owner. Leaving hands the group to the next member, or removes it if you're the last one."
-        : "You'll stop being a member. You can rejoin later if it's open.",
-      confirmLabel: "Leave group",
-    });
-    if (!ok) return;
-    leave.mutate(g.id, {
-      onSuccess: () => enqueueSnackbar(`Left ${g.name}.`, { variant: "success" }),
-      onError: (err) =>
-        enqueueSnackbar(err instanceof Error ? err.message : "Couldn't leave.", { variant: "error" }),
-    });
   };
 
   return (
-    <>
-      <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-        <CardContent sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column" }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1} sx={{ mb: 1 }}>
-            <Chip label={subjectName} size="small" />
-            {g.privacy === "invite" ? (
-              <Chip icon={<LockIcon sx={{ fontSize: 14 }} />} label="Invite only" size="small" variant="outlined" />
-            ) : (
-              <Chip icon={<PublicIcon sx={{ fontSize: 14 }} />} label="Open" size="small" variant="outlined" />
-            )}
-          </Stack>
+    <ButtonBase
+      component={NextLink}
+      href={`/dashboard/study-groups/${g.id}`}
+      sx={(t) => ({
+        display: "block",
+        width: "100%",
+        textAlign: "left",
+        px: { xs: 2, sm: 2.5 },
+        py: 2,
+        borderBottom: last ? "none" : `1px solid ${t.palette.divider}`,
+        transition: "background .2s ease",
+        "&:hover": {
+          background: `linear-gradient(90deg, ${alpha(t.palette.secondary.main, 0.08)}, transparent 70%)`,
+        },
+        "&:focus-visible": { outline: `2px solid ${t.palette.secondary.main}`, outlineOffset: -2 },
+        ...riseSx(index),
+      })}
+    >
+      <Stack direction="row" spacing={2} alignItems="center">
+        <SubjectGlyph name={subjectName} />
 
-          <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-            {g.name}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ rowGap: 0.5 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: "1rem" }} noWrap>
+              {g.name}
+            </Typography>
+            <RoleBadge role={g.role} />
+            {g.privacy === "invite" && <PrivacyBadge privacy="invite" />}
+          </Stack>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }} noWrap>
+            {subjectName}
+            {g.description ? ` · ${g.description}` : ""}
           </Typography>
-          {g.description && (
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {g.description}
-            </Typography>
-          )}
-
-          <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: g.description ? 0 : 1.5, mb: 2 }}>
-            <PersonIcon sx={{ fontSize: 16, color: "text.secondary" }} />
-            <Typography variant="caption" color="text.secondary">
-              {g.members} {g.members === 1 ? "member" : "members"}
-            </Typography>
-            {g.isOwner && <Chip label="You own this" size="small" color="secondary" sx={{ ml: 0.5 }} />}
-          </Stack>
-
-          {g.nextSession && (
-            <Box sx={{ p: 1.5, borderRadius: 1.5, bgcolor: "action.hover", mb: 2 }}>
-              <Typography variant="caption" color="text.secondary">
-                Next session
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 1 }}>
+            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ color: "text.secondary" }}>
+              <Users size={14} />
+              <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                {g.members}/{g.memberCapacity}
               </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                <RelativeTime iso={g.nextSession} />
-              </Typography>
-            </Box>
-          )}
-
-          <Box sx={{ mt: "auto", pt: 1 }}>
-            {g.isMember ? (
-              <Stack direction="row" spacing={1}>
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  fullWidth
-                  startIcon={<EventIcon />}
-                  onClick={() => setSessionsOpen(true)}
-                >
-                  Sessions
-                </Button>
-                <Button variant="outlined" disabled={busy} onClick={doLeave}>
-                  {leave.isPending ? "Leaving…" : "Leave"}
-                </Button>
+            </Stack>
+            {g.openTasks > 0 && (
+              <Stack direction="row" spacing={0.5} alignItems="center" sx={{ color: "text.secondary" }}>
+                <ListTodo size={14} />
+                <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                  {g.openTasks} open
+                </Typography>
               </Stack>
-            ) : g.privacy === "open" ? (
-              <Button variant="contained" color="secondary" fullWidth disabled={busy} onClick={doJoin}>
-                {join.isPending ? "Joining…" : "Join group"}
-              </Button>
-            ) : (
-              <Button variant="outlined" fullWidth disabled>
-                Invite only
-              </Button>
             )}
-          </Box>
-        </CardContent>
-      </Card>
-      {dialog}
-      <SessionsDialog
-        groupId={g.id}
-        groupName={g.name}
-        open={sessionsOpen}
-        onClose={() => setSessionsOpen(false)}
-      />
-    </>
+            {g.nextSession && (
+              <Stack direction="row" spacing={0.5} alignItems="center" sx={{ color: "text.secondary" }}>
+                <CalendarClock size={14} />
+                <Typography variant="caption">
+                  <RelativeTime iso={g.nextSession} />
+                </Typography>
+              </Stack>
+            )}
+          </Stack>
+        </Box>
+
+        <Box sx={{ display: { xs: "none", md: "block" }, width: 150 }}>
+          <CapacityMeter members={g.members} capacity={g.memberCapacity} />
+        </Box>
+
+        {g.isMember ? (
+          <ChevronRight size={20} style={{ opacity: 0.5, flexShrink: 0 }} />
+        ) : g.isFull ? (
+          <Button size="small" variant="outlined" disabled sx={{ flexShrink: 0 }}>
+            Full
+          </Button>
+        ) : g.privacy === "open" ? (
+          <Button
+            size="small"
+            variant="contained"
+            color="secondary"
+            onClick={doJoin}
+            disabled={join.isPending}
+            sx={{ flexShrink: 0 }}
+          >
+            {join.isPending ? "Joining" : "Join"}
+          </Button>
+        ) : (
+          <Button size="small" variant="outlined" disabled startIcon={<Lock size={14} />} sx={{ flexShrink: 0 }}>
+            Invite
+          </Button>
+        )}
+      </Stack>
+    </ButtonBase>
   );
 }
 
-function SessionsDialog({
-  groupId,
-  groupName,
-  open,
-  onClose,
-}: {
-  groupId: string;
-  groupName: string;
-  open: boolean;
-  onClose: () => void;
-}) {
-  const { enqueueSnackbar } = useSnackbar();
-  const sessionsQuery = useStudyGroupSessions(groupId, open);
-  const schedule = useScheduleSession(groupId);
-  const cancel = useCancelSession(groupId);
-  const { confirm, dialog: confirmDialog } = useConfirm();
-
-  const [title, setTitle] = useState("");
-  const [when, setWhen] = useState("");
-  const [duration, setDuration] = useState(60);
-  const [location, setLocation] = useState("");
-
-  const sessions = sessionsQuery.data ?? [];
-  const whenValid = when.length > 0 && dayjs(when).isValid() && dayjs(when).isAfter(dayjs());
-  const canSubmit = title.trim().length >= 2 && whenValid && !schedule.isPending;
-
-  const resetForm = () => {
-    setTitle("");
-    setWhen("");
-    setDuration(60);
-    setLocation("");
-  };
-
-  const submit = () => {
-    if (!canSubmit) return;
-    schedule.mutate(
-      {
-        title: title.trim(),
-        startsAt: dayjs(when).toISOString(),
-        durationMinutes: duration,
-        location: location.trim() || undefined,
-      },
-      {
-        onSuccess: () => {
-          enqueueSnackbar("Session scheduled.", { variant: "success" });
-          resetForm();
-        },
-        onError: (err) =>
-          enqueueSnackbar(err instanceof Error ? err.message : "Couldn't schedule.", {
-            variant: "error",
-          }),
-      },
-    );
-  };
-
-  const remove = async (s: StudyGroupSession) => {
-    const ok = await confirm({
-      title: `Cancel "${s.title}"?`,
-      description: "This removes the session for everyone in the group.",
-      confirmLabel: "Cancel session",
-    });
-    if (!ok) return;
-    try {
-      await cancel.mutateAsync(s.id);
-      enqueueSnackbar("Session cancelled.", { variant: "success" });
-    } catch (err) {
-      enqueueSnackbar(`Couldn't cancel${err instanceof Error ? `: ${err.message}` : ""}`, {
-        variant: "error",
-      });
-    }
-  };
-
+// A subject-initial tile, its hue seeded from the name so a group is
+// recognisable at a glance without needing per-subject art.
+function SubjectGlyph({ name }: { name: string }) {
+  const initial = name.trim().charAt(0).toUpperCase() || "?";
+  const hue = useMemo(() => {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+    return h;
+  }, [name]);
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle sx={{ fontWeight: 600 }}>{groupName} sessions</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2.5} sx={{ pt: 0.5 }}>
-          <Box>
-            <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: "0.08em" }}>
-              Upcoming
-            </Typography>
-            {sessionsQuery.isLoading ? (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Loading…
-              </Typography>
-            ) : sessions.length === 0 ? (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                No sessions scheduled yet. Add one below.
-              </Typography>
-            ) : (
-              <Stack divider={<Divider flexItem />} sx={{ mt: 1 }}>
-                {sessions.map((s) => (
-                  <Stack
-                    key={s.id}
-                    direction="row"
-                    spacing={1.5}
-                    alignItems="center"
-                    sx={{ py: 1.25 }}
-                  >
-                    <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
-                        {s.title}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {dayjs(s.startsAt).format("ddd D MMM, HH:mm")} · {s.durationMinutes} min
-                        {s.location ? ` · ${s.location}` : ""}
-                      </Typography>
-                    </Box>
-                    {s.canManage && (
-                      <IconButton
-                        size="small"
-                        onClick={() => remove(s)}
-                        disabled={cancel.isPending}
-                        aria-label="Cancel session"
-                      >
-                        <DeleteOutlineIcon fontSize="small" />
-                      </IconButton>
-                    )}
-                  </Stack>
-                ))}
-              </Stack>
-            )}
-          </Box>
-
-          <Divider />
-
-          <Box>
-            <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: "0.08em" }}>
-              Schedule a session
-            </Typography>
-            <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField
-                label="What are you working on?"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                fullWidth
-                size="small"
-                placeholder="e.g. Past paper walkthrough"
-              />
-              <TextField
-                label="When"
-                type="datetime-local"
-                value={when}
-                onChange={(e) => setWhen(e.target.value)}
-                fullWidth
-                size="small"
-                slotProps={{ inputLabel: { shrink: true } }}
-                error={when.length > 0 && !whenValid}
-                helperText={when.length > 0 && !whenValid ? "Pick a time in the future." : undefined}
-              />
-              <Stack direction="row" spacing={2}>
-                <TextField
-                  label="Minutes"
-                  type="number"
-                  value={duration}
-                  onChange={(e) => setDuration(Number(e.target.value))}
-                  size="small"
-                  sx={{ width: 120 }}
-                  slotProps={{ htmlInput: { min: 15, max: 600, step: 15 } }}
-                />
-                <TextField
-                  label="Where (optional)"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  size="small"
-                  fullWidth
-                  placeholder="Room or a link"
-                />
-              </Stack>
-            </Stack>
-          </Box>
-        </Stack>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5 }}>
-        <Button onClick={onClose} color="inherit">
-          Close
-        </Button>
-        <Button onClick={submit} variant="contained" color="secondary" disabled={!canSubmit}>
-          {schedule.isPending ? "Scheduling…" : "Schedule"}
-        </Button>
-      </DialogActions>
-      {confirmDialog}
-    </Dialog>
+    <Box
+      sx={(t) => ({
+        flexShrink: 0,
+        width: 44,
+        height: 44,
+        borderRadius: 2,
+        display: "grid",
+        placeItems: "center",
+        fontWeight: 800,
+        fontSize: "1.1rem",
+        color: t.palette.mode === "dark" ? "#F6F7F5" : "#1B1D22",
+        background: `linear-gradient(135deg, hsl(${hue} 45% ${t.palette.mode === "dark" ? 28 : 88}%), hsl(${(hue + 40) % 360} 40% ${t.palette.mode === "dark" ? 20 : 80}%))`,
+      })}
+    >
+      {initial}
+    </Box>
   );
 }
 
@@ -411,12 +349,14 @@ function CreateGroupDialog({ open, onClose }: { open: boolean; onClose: () => vo
   const [subjectId, setSubjectId] = useState("");
   const [description, setDescription] = useState("");
   const [privacy, setPrivacy] = useState<"open" | "invite">("open");
+  const [capacity, setCapacity] = useState(12);
 
   const reset = () => {
     setName("");
     setSubjectId("");
     setDescription("");
     setPrivacy("open");
+    setCapacity(12);
     create.reset();
   };
   const handleClose = () => {
@@ -427,7 +367,7 @@ function CreateGroupDialog({ open, onClose }: { open: boolean; onClose: () => vo
   const submit = () => {
     if (name.trim().length < 2 || !subjectId) return;
     create.mutate(
-      { name: name.trim(), subjectId, description: description.trim() || undefined, privacy },
+      { name: name.trim(), subjectId, description: description.trim() || undefined, privacy, memberCapacity: capacity },
       {
         onSuccess: (g) => {
           enqueueSnackbar(`Created ${g.name}.`, { variant: "success" });
@@ -444,7 +384,7 @@ function CreateGroupDialog({ open, onClose }: { open: boolean; onClose: () => vo
 
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">
-      <DialogTitle sx={{ fontWeight: 600 }}>Create a study group</DialogTitle>
+      <DialogTitle sx={{ fontWeight: 700 }}>Create a study group</DialogTitle>
       <DialogContent>
         <Stack spacing={2.5} sx={{ pt: 0.5 }}>
           <TextField
@@ -482,6 +422,31 @@ function CreateGroupDialog({ open, onClose }: { open: boolean; onClose: () => vo
             placeholder="What's the group for? When do you meet?"
           />
           <Box>
+            <Stack direction="row" justifyContent="space-between" alignItems="baseline" sx={{ mb: 0.5 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                Member limit
+              </Typography>
+              <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                {capacity} people
+              </Typography>
+            </Stack>
+            <Slider
+              value={capacity}
+              onChange={(_, v) => setCapacity(v as number)}
+              min={2}
+              max={50}
+              step={1}
+              color="secondary"
+              marks={[
+                { value: 2, label: "2" },
+                { value: 50, label: "50" },
+              ]}
+            />
+            <Typography variant="caption" color="text.secondary">
+              You can change this later. Smaller groups tend to talk more.
+            </Typography>
+          </Box>
+          <Box>
             <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.75 }}>
               Who can join
             </Typography>
@@ -493,11 +458,11 @@ function CreateGroupDialog({ open, onClose }: { open: boolean; onClose: () => vo
               fullWidth
             >
               <ToggleButton value="open">
-                <PublicIcon sx={{ fontSize: 16, mr: 0.75 }} />
+                <Globe size={16} style={{ marginRight: 6 }} />
                 Open
               </ToggleButton>
               <ToggleButton value="invite">
-                <LockIcon sx={{ fontSize: 16, mr: 0.75 }} />
+                <Lock size={16} style={{ marginRight: 6 }} />
                 Invite only
               </ToggleButton>
             </ToggleButtonGroup>
@@ -514,7 +479,7 @@ function CreateGroupDialog({ open, onClose }: { open: boolean; onClose: () => vo
           color="secondary"
           disabled={name.trim().length < 2 || !subjectId || create.isPending}
         >
-          {create.isPending ? "Creating…" : "Create group"}
+          {create.isPending ? "Creating" : "Create group"}
         </Button>
       </DialogActions>
     </Dialog>

@@ -12,6 +12,8 @@ declare module "next-auth" {
       permissions?: string[];
       firstName?: string;
       lastName?: string;
+      // Whether the email is verified. Drives the soft verification gate.
+      emailConfirmed?: boolean;
     };
   }
 }
@@ -27,6 +29,7 @@ declare module "next-auth/jwt" {
       firstName?: string;
       lastName?: string;
       displayName?: string;
+      emailConfirmed?: boolean;
     };
   }
 }

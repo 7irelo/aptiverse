@@ -76,6 +76,111 @@ namespace Aptiverse.Entitlements.Infrastructure.Paystack
         // constant-time, to the value Paystack put in x-paystack-signature.
         // Returns false when not configured or when the header is missing.
         bool VerifySignature(string rawBody, string? signatureHeader);
+
+        // ----- Admin cockpit reads --------------------------------------
+        // These back the admin finance page so an operator does not have to
+        // sign in to Paystack to see the state of the money. All read-only.
+
+        // The settled and pending balance on the Paystack account, per
+        // currency. "Available" is what has cleared and can be settled to the
+        // bank; "pending" is captured but not yet cleared.
+        Task<IReadOnlyList<PaystackBalance>> GetBalanceAsync(CancellationToken ct = default);
+
+        // Platform-wide transactions, newest first, independent of any one
+        // customer. `status` filters to "success" / "failed" / "abandoned";
+        // null returns all. Paginated by Paystack's own page/perPage.
+        Task<PaystackTransactionPage> ListRecentTransactionsAsync(
+            int page = 1, int perPage = 50, string? status = null,
+            DateTime? from = null, DateTime? to = null, CancellationToken ct = default);
+
+        // Settlements are the payouts Paystack makes to your bank. This is the
+        // reconciliation view: what actually landed, and when.
+        Task<PaystackSettlementPage> ListSettlementsAsync(
+            int page = 1, int perPage = 50, CancellationToken ct = default);
+
+        // A customer by email or customer code, with their recent transactions.
+        // Returns null when Paystack has never seen the address.
+        Task<PaystackCustomerInfo?> FetchCustomerAsync(
+            string emailOrCode, CancellationToken ct = default);
+
+        // ----- Admin write actions --------------------------------------
+
+        // Refund a transaction by reference. A null amount refunds the full
+        // captured amount; a value refunds that many minor units (cents), which
+        // Paystack validates against what is left. This moves money and cannot
+        // be undone, so the caller gates it behind confirmation and Superuser.
+        Task<PaystackRefundResult> RefundTransactionAsync(
+            string reference, long? amountMinor = null, CancellationToken ct = default);
+    }
+
+    public record PaystackBalance
+    {
+        public required string Currency { get; init; }
+        public long AvailableMinor { get; init; }
+        public long PendingMinor { get; init; }
+    }
+
+    public record PaystackTransactionPage
+    {
+        public IReadOnlyList<PaystackTransactionRow> Rows { get; init; } = [];
+        public int Page { get; init; }
+        public int PageCount { get; init; }
+        public int Total { get; init; }
+    }
+
+    // Richer than PaystackTransactionInfo: the cockpit needs who paid and
+    // whether it can still be refunded, not just the amount.
+    public record PaystackTransactionRow
+    {
+        public required string Reference { get; init; }
+        public long AmountMinor { get; init; }
+        public string Currency { get; init; } = "ZAR";
+        public string? Status { get; init; }
+        public DateTime? PaidAt { get; init; }
+        public string? CustomerEmail { get; init; }
+        public string? Channel { get; init; }
+        public string? CardBrand { get; init; }
+        public string? CardLast4 { get; init; }
+    }
+
+    public record PaystackSettlementPage
+    {
+        public IReadOnlyList<PaystackSettlementRow> Rows { get; init; } = [];
+        public int Page { get; init; }
+        public int PageCount { get; init; }
+        public int Total { get; init; }
+    }
+
+    public record PaystackSettlementRow
+    {
+        public required long Id { get; init; }
+        public long AmountMinor { get; init; }
+        public string Currency { get; init; } = "ZAR";
+        public string? Status { get; init; }
+        public DateTime? SettledAt { get; init; }
+        public string? BankName { get; init; }
+        public string? AccountLast4 { get; init; }
+    }
+
+    public record PaystackCustomerInfo
+    {
+        public required string CustomerCode { get; init; }
+        public string? Email { get; init; }
+        public string? FirstName { get; init; }
+        public string? LastName { get; init; }
+        public long? CustomerId { get; init; }
+        public IReadOnlyList<PaystackTransactionRow> Transactions { get; init; } = [];
+    }
+
+    public record PaystackRefundResult
+    {
+        public bool Success { get; init; }
+        // Paystack refund status: "pending", "processing", "processed", ...
+        public string? Status { get; init; }
+        public long RefundedAmountMinor { get; init; }
+        public string? Currency { get; init; }
+        // Populated when Success is false, for surfacing to the operator.
+        public string? Error { get; init; }
     }
 
     public record PaystackInitRequest
@@ -150,6 +255,12 @@ namespace Aptiverse.Entitlements.Infrastructure.Paystack
         // Our correlation ids passed through init metadata.
         public long? LocalSubscriptionId { get; init; }
         public string? PlanCode { get; init; }
+        // The full metadata map as Paystack echoed it back, string values only.
+        // Carries the marketing attribution bundle set at checkout, which is
+        // how a confirmed payment is tied back to the advert that caused it
+        // without adding a column or a table for it.
+        public IReadOnlyDictionary<string, string> Metadata { get; init; }
+            = new Dictionary<string, string>();
         // The reusable card token + card summary from the first charge. Path A
         // stores these so it can renew (charge_authorization) and show the
         // card on file without a Paystack subscription to read from.
@@ -158,6 +269,12 @@ namespace Aptiverse.Entitlements.Infrastructure.Paystack
         public string? CardLast4 { get; init; }
         public int? CardExpMonth { get; init; }
         public int? CardExpYear { get; init; }
+        // Paystack's stable card fingerprint. Identical for the same physical
+        // card across different customers, which is what makes it usable as a
+        // self-referral signal. Never stored raw downstream: the affiliate
+        // module keeps only a hash, because all it ever asks is whether two
+        // of them match.
+        public string? CardSignature { get; init; }
     }
 
     // A direct charge against a saved authorization (reusable card token).
@@ -183,5 +300,8 @@ namespace Aptiverse.Entitlements.Infrastructure.Paystack
         public string? CardLast4 { get; init; }
         public int? CardExpMonth { get; init; }
         public int? CardExpYear { get; init; }
+        // Same fingerprint as on a verify, carried on renewals too so a
+        // shared-card signal is not limited to the first payment.
+        public string? CardSignature { get; init; }
     }
 }

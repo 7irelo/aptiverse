@@ -30,6 +30,12 @@ namespace Aptiverse.AcademicPlanning.Application.Frontend.Dtos
     // The student's academic profile (curriculum + grade + school).
     public record FrontendAcademicProfileDto
     {
+        [JsonPropertyName("firstName")] public string FirstName { get; init; } = "";
+        [JsonPropertyName("lastName")] public string LastName { get; init; } = "";
+        // Read-only. The email identifies the account and is the password-reset
+        // channel, so it is echoed here for display but is not accepted on the
+        // update DTO below. Changing it needs a verification round-trip.
+        [JsonPropertyName("email")] public string? Email { get; init; }
         [JsonPropertyName("curriculumId")] public string? CurriculumId { get; init; }
         [JsonPropertyName("grade")] public int? Grade { get; init; }
         [JsonPropertyName("school")] public string? School { get; init; }
@@ -38,8 +44,11 @@ namespace Aptiverse.AcademicPlanning.Application.Frontend.Dtos
         [JsonPropertyName("institutionId")] public string? InstitutionId { get; init; }
     }
 
+    // Deliberately has no Email property: see FrontendAcademicProfileDto.Email.
     public record FrontendUpdateAcademicProfileDto
     {
+        [JsonPropertyName("firstName")] public string? FirstName { get; init; }
+        [JsonPropertyName("lastName")] public string? LastName { get; init; }
         [JsonPropertyName("curriculumId")] public string? CurriculumId { get; init; }
         [JsonPropertyName("grade")] public int? Grade { get; init; }
         [JsonPropertyName("school")] public string? School { get; init; }
@@ -105,6 +114,24 @@ namespace Aptiverse.AcademicPlanning.Application.Frontend.Dtos
         [JsonPropertyName("code")] public string? Code { get; init; }
         [JsonPropertyName("lecturer")] public string? Lecturer { get; init; }
         [JsonPropertyName("createdAt")] public DateTime CreatedAt { get; init; }
+
+        // Study level (first_year..fourth_year, honours, masters, phd). Null on
+        // courses added before this existed. Pitches AI practice generation.
+        [JsonPropertyName("level")] public string? Level { get; init; }
+
+        // How many semesters the course runs (null = ongoing / set before this
+        // existed).
+        [JsonPropertyName("durationSemesters")] public int? DurationSemesters { get; init; }
+
+        // When the course is expected to end, computed from createdAt + duration.
+        // Null when there is no duration to compute from. The client uses it to
+        // show "ends Nov 2026" and, with isFinished, to sort past from active.
+        [JsonPropertyName("finishesOn")] public DateTime? FinishesOn { get; init; }
+
+        // True once the course is done: either marked finished by the student, or
+        // its computed end has passed. The one flag the analytics UI reads to move
+        // a course into the Past section.
+        [JsonPropertyName("isFinished")] public bool IsFinished { get; init; }
     }
 
     // Body for enrolling in / creating a course (emergent, shared per institution).
@@ -113,6 +140,20 @@ namespace Aptiverse.AcademicPlanning.Application.Frontend.Dtos
         [JsonPropertyName("name")] public string Name { get; init; } = "";
         [JsonPropertyName("code")] public string? Code { get; init; }
         [JsonPropertyName("lecturer")] public string? Lecturer { get; init; }
+
+        // Study level, so AI practice is pitched right (first_year..fourth_year,
+        // honours, masters, phd). Optional.
+        [JsonPropertyName("level")] public string? Level { get; init; }
+
+        // How long the course runs, in semesters. Optional: omitted means the
+        // student did not say, and the course reads as ongoing.
+        [JsonPropertyName("durationSemesters")] public int? DurationSemesters { get; init; }
+    }
+
+    // Body for PATCH /courses/{id}: mark a course finished or reopen it.
+    public record FrontendUpdateCourseDto
+    {
+        [JsonPropertyName("finished")] public bool Finished { get; init; }
     }
 
     // Student-logged assessment (SBA task / test / essay / etc.). The
@@ -192,5 +233,76 @@ namespace Aptiverse.AcademicPlanning.Application.Frontend.Dtos
         [JsonPropertyName("averageMastery")] public int AverageMastery { get; init; }
         [JsonPropertyName("trend")] public int Trend { get; init; }
         [JsonPropertyName("strugglingTopics")] public IList<string> StrugglingTopics { get; init; } = [];
+    }
+
+    // --- Admission / progression targets -----------------------------------
+    //
+    // Every field here is the student's own research. The server stores and
+    // validates it; it never supplies a requirement of its own.
+
+    public record FrontendAdmissionRequirementDto
+    {
+        [JsonPropertyName("id")] public string Id { get; init; } = "";
+        [JsonPropertyName("unitId")] public string UnitId { get; init; } = "";
+        [JsonPropertyName("minimumPercent")] public int MinimumPercent { get; init; }
+        [JsonPropertyName("goalId")] public string? GoalId { get; init; }
+    }
+
+    public record FrontendAdmissionTargetDto
+    {
+        [JsonPropertyName("id")] public string Id { get; init; } = "";
+        [JsonPropertyName("institution")] public string Institution { get; init; } = "";
+        [JsonPropertyName("programme")] public string Programme { get; init; } = "";
+        [JsonPropertyName("kind")] public string Kind { get; init; } = "";
+        [JsonPropertyName("stage")] public string? Stage { get; init; }
+        [JsonPropertyName("overallUnit")] public string? OverallUnit { get; init; }
+        [JsonPropertyName("overallRequired")] public int? OverallRequired { get; init; }
+        [JsonPropertyName("deadline")] public DateTime? Deadline { get; init; }
+        [JsonPropertyName("sourceNote")] public string? SourceNote { get; init; }
+        [JsonPropertyName("status")] public string Status { get; init; } = "";
+        [JsonPropertyName("createdAt")] public DateTime CreatedAt { get; init; }
+        [JsonPropertyName("requirements")] public IList<FrontendAdmissionRequirementDto> Requirements { get; init; } = [];
+    }
+
+    public record FrontendAdmissionRequirementInputDto
+    {
+        [JsonPropertyName("unitId")] public string UnitId { get; init; } = "";
+        [JsonPropertyName("minimumPercent")] public int MinimumPercent { get; init; }
+    }
+
+    public record FrontendCreateAdmissionTargetDto
+    {
+        [JsonPropertyName("institution")] public string Institution { get; init; } = "";
+        [JsonPropertyName("programme")] public string Programme { get; init; } = "";
+        [JsonPropertyName("kind")] public string? Kind { get; init; }
+        [JsonPropertyName("stage")] public string? Stage { get; init; }
+        [JsonPropertyName("overallUnit")] public string? OverallUnit { get; init; }
+        [JsonPropertyName("overallRequired")] public int? OverallRequired { get; init; }
+        [JsonPropertyName("deadline")] public DateTime? Deadline { get; init; }
+        [JsonPropertyName("sourceNote")] public string? SourceNote { get; init; }
+        [JsonPropertyName("requirements")] public IList<FrontendAdmissionRequirementInputDto>? Requirements { get; init; }
+    }
+
+    public record FrontendUpdateAdmissionTargetDto
+    {
+        [JsonPropertyName("institution")] public string? Institution { get; init; }
+        [JsonPropertyName("programme")] public string? Programme { get; init; }
+        [JsonPropertyName("kind")] public string? Kind { get; init; }
+        [JsonPropertyName("stage")] public string? Stage { get; init; }
+        [JsonPropertyName("overallUnit")] public string? OverallUnit { get; init; }
+        [JsonPropertyName("overallRequired")] public int? OverallRequired { get; init; }
+        [JsonPropertyName("deadline")] public DateTime? Deadline { get; init; }
+        [JsonPropertyName("sourceNote")] public string? SourceNote { get; init; }
+        [JsonPropertyName("status")] public string? Status { get; init; }
+        // Full replacement of the granular list when present. Omit to leave the
+        // requirements untouched; send [] to clear them.
+        [JsonPropertyName("requirements")] public IList<FrontendAdmissionRequirementInputDto>? Requirements { get; init; }
+    }
+
+    // Links a generated goal back to the requirement it came from, so
+    // generating twice does not produce duplicates.
+    public record FrontendLinkRequirementGoalDto
+    {
+        [JsonPropertyName("goalId")] public string? GoalId { get; init; }
     }
 }

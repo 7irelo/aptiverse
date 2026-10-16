@@ -24,6 +24,9 @@ const ROOT_PATHS = new Set([
   "/school-admin",
   "/tutor",
   "/admin",
+  // The affiliate "Referrals" landing. Without this it would stay highlighted
+  // on /refer/earnings and the rest, lighting up two nav items at once.
+  "/refer",
 ]);
 
 export function sectionsToTree(sections: NavSection[]): NavNode[] {

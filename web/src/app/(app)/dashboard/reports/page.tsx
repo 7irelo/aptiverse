@@ -19,12 +19,12 @@ import { alpha } from "@mui/material/styles";
 import Link from "next/link";
 import dayjs from "dayjs";
 import { useSession } from "next-auth/react";
-import PrintIcon from "@mui/icons-material/PrintOutlined";
-import DescriptionIcon from "@mui/icons-material/DescriptionOutlined";
+import { Printer, FileText } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { CardError } from "@/components/common/CardError";
 import { Logo } from "@/components/common/Logo";
 import { prettifyUnitId } from "@/lib/format";
+import { useStudyVocabulary } from "@/lib/hooks/useStudyVocabulary";
 import {
   useTermPredictions,
   useTopicMastery,
@@ -32,11 +32,21 @@ import {
   useAcademicUnits,
   useWellbeingSummary,
   useAcademicProfile,
+  useInstitutions,
 } from "@/lib/api/queries";
 
 // Print isolation: hide the whole app shell and show only #report-doc, so the
 // browser's Save-as-PDF produces a clean document, not the dashboard chrome.
+// `@page { margin: 0 }`, matching PracticeRunner's print paper.
+//
+// The browser prints its own header and footer (page URL, title, timestamp)
+// into the page margin, which is why a printed report was signing itself
+// "localhost:3000/dashboard/reports". A zero page margin leaves the browser
+// nowhere to put them, so they go away. The 16mm the document actually needs
+// then comes from padding on #report-doc, where it is ours rather than the
+// browser's. Same trick, same reason, now in both places.
 const printStyles = {
+  "@page": { margin: 0 },
   "@media print": {
     "body *": { visibility: "hidden" as const },
     "#report-doc, #report-doc *": { visibility: "visible" as const },
@@ -45,11 +55,11 @@ const printStyles = {
       left: 0,
       top: 0,
       width: "100%",
+      padding: "16mm",
       margin: 0,
       boxShadow: "none",
       border: "none",
     },
-    "@page": { margin: "16mm" },
   },
 };
 
@@ -60,6 +70,10 @@ export default function ReportsPage() {
   const academic = useAcademicUnits();
   const wellbeingQuery = useWellbeingSummary();
   const profileQuery = useAcademicProfile();
+  const vocab = useStudyVocabulary();
+  // Only fetched for a tertiary student, whose stage line names their
+  // institution the way a high-schooler's names their grade.
+  const institutionsQuery = useInstitutions(undefined, { enabled: vocab.isTertiary });
   const { data: session } = useSession();
 
   const predictions = predictionsQuery.data ?? [];
@@ -79,7 +93,7 @@ export default function ReportsPage() {
   // actually holds, so it never resolved and every row in the printed report
   // read "Unlinked". useAcademicUnits keys on that slug and covers university
   // courses too, which useSubjects never returned at all.
-  const subjectName = (id: string) => academic.nameFor(id) ?? prettifyUnitId(id);
+  const unitName = (id: string) => academic.nameFor(id) ?? prettifyUnitId(id);
 
   const graded = assessments
     .filter((a) => a.actualMark != null)
@@ -105,6 +119,18 @@ export default function ReportsPage() {
   const studentName = session?.user?.name || session?.user?.email || "Student";
   const generatedOn = dayjs().format("D MMMM YYYY");
 
+  // The line under the student's name orients whoever reads the printout. A
+  // high-schooler is placed by grade; a university student has no grade at all
+  // (it is null by design), so naming their institution is the equivalent fact.
+  // Before this, a tertiary report simply carried a bare name.
+  const institution = profile?.institutionId
+    ? institutionsQuery.data?.find((i) => i.id === profile.institutionId)
+    : undefined;
+  const stageLine =
+    profile?.grade != null
+      ? `Grade ${profile.grade}`
+      : (institution?.name ?? institution?.shortName ?? profile?.school ?? null);
+
   const nothingToReport =
     !loading &&
     !isError &&
@@ -118,7 +144,7 @@ export default function ReportsPage() {
 
       <PageHeader
         title="Reports"
-        description="Generate a progress report to share with a parent, teacher, or tutor. It builds from your real marks and mastery."
+        description={`Generate a progress report to share with a parent, ${vocab.educatorSingular}, or tutor. It builds from your real marks and mastery.`}
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Reports" }]}
       />
 
@@ -155,7 +181,7 @@ export default function ReportsPage() {
               >
                 <Box>
                   <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                    Term progress report
+                    {vocab.PeriodSingular} progress report
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Review the preview below, then save it as a PDF or print it to share.
@@ -164,7 +190,7 @@ export default function ReportsPage() {
                 <Button
                   variant="contained"
                   color="secondary"
-                  startIcon={<PrintIcon />}
+                  startIcon={<Printer size={18} />}
                   onClick={() => window.print()}
                   sx={{ flexShrink: 0 }}
                 >
@@ -190,7 +216,7 @@ export default function ReportsPage() {
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                     {studentName}
-                    {profile?.grade != null ? ` · Grade ${profile.grade}` : ""}
+                    {stageLine ? ` · ${stageLine}` : ""}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     Generated {generatedOn}
@@ -205,7 +231,7 @@ export default function ReportsPage() {
               <Grid container spacing={2} sx={{ mb: 4 }}>
                 <SummaryFigure label="Current average" value={currentAvg != null ? `${currentAvg}%` : "—"} />
                 <SummaryFigure
-                  label="Predicted next term"
+                  label={`Predicted ${vocab.nextPeriod}`}
                   value={predictedAvg != null ? `${predictedAvg}%` : "—"}
                 />
                 <SummaryFigure
@@ -217,11 +243,15 @@ export default function ReportsPage() {
 
               {/* Subject standing */}
               {predictions.length > 0 && (
-                <Section title="Subject standing">
-                  <Table size="small">
+                <Section title={`${vocab.UnitSingular} standing`}>
+                  {/* A four-column table with unit names does not fit
+                      360px. It scrolls inside its own box so the page itself
+                      never scrolls sideways. */}
+                  <Box sx={{ overflowX: "auto" }}>
+                  <Table size="small" sx={{ minWidth: 420 }}>
                     <TableHead>
                       <TableRow>
-                        <TableCell>Subject</TableCell>
+                        <TableCell>{vocab.UnitSingular}</TableCell>
                         <TableCell align="right">Current</TableCell>
                         <TableCell align="right">Predicted</TableCell>
                         <TableCell align="right">Confidence</TableCell>
@@ -230,7 +260,7 @@ export default function ReportsPage() {
                     <TableBody>
                       {predictions.map((p) => (
                         <TableRow key={p.subjectId}>
-                          <TableCell>{subjectName(p.subjectId)}</TableCell>
+                          <TableCell>{unitName(p.subjectId)}</TableCell>
                           <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>
                             {p.currentTerm}%
                           </TableCell>
@@ -244,17 +274,19 @@ export default function ReportsPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  </Box>
                 </Section>
               )}
 
               {/* Graded assessments */}
               {graded.length > 0 && (
                 <Section title="Graded assessments">
-                  <Table size="small">
+                  <Box sx={{ overflowX: "auto" }}>
+                  <Table size="small" sx={{ minWidth: 540 }}>
                     <TableHead>
                       <TableRow>
                         <TableCell>Assessment</TableCell>
-                        <TableCell>Subject</TableCell>
+                        <TableCell>{vocab.UnitSingular}</TableCell>
                         <TableCell align="right">Weight</TableCell>
                         <TableCell align="right">Mark</TableCell>
                         <TableCell align="right">Date</TableCell>
@@ -264,7 +296,7 @@ export default function ReportsPage() {
                       {graded.slice(0, 20).map((a) => (
                         <TableRow key={a.id}>
                           <TableCell>{a.title}</TableCell>
-                          <TableCell>{subjectName(a.subjectId)}</TableCell>
+                          <TableCell>{unitName(a.subjectId)}</TableCell>
                           <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>
                             {a.weight}%
                           </TableCell>
@@ -281,6 +313,7 @@ export default function ReportsPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  </Box>
                 </Section>
               )}
 
@@ -401,7 +434,7 @@ function EmptyReport() {
             bgcolor: (t) => alpha(t.palette.primary.main, 0.1),
           }}
         >
-          <DescriptionIcon />
+          <FileText />
         </Box>
         <Typography variant="h6" sx={{ mb: 1 }}>
           Nothing to report yet

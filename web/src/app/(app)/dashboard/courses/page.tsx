@@ -16,11 +16,16 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
+import Menu from "@mui/material/Menu";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import ListItemText from "@mui/material/ListItemText";
+import Chip from "@mui/material/Chip";
 import Autocomplete from "@mui/material/Autocomplete";
 import Skeleton from "@mui/material/Skeleton";
 import AddIcon from "@mui/icons-material/Add";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import SchoolIcon from "@mui/icons-material/SchoolOutlined";
+import { MoreVertical, CircleCheck, RotateCcw, Trash2 } from "lucide-react";
 import { useSnackbar } from "notistack";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useConfirm } from "@/components/common/ConfirmDialog";
@@ -34,8 +39,9 @@ import {
   useCourses,
   useAddCourse,
   useDeleteCourse,
+  useSetCourseFinished,
 } from "@/lib/api/queries";
-import type { Institution, EnrolledCourse } from "@/lib/mockData";
+import { COURSE_LEVELS, type Institution, type EnrolledCourse, type CourseLevel } from "@/lib/mockData";
 
 const INSTITUTION_TYPE_LABELS: Record<string, string> = {
   university: "Universities",
@@ -134,7 +140,7 @@ export default function CoursesPage() {
             No courses yet
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5, mt: 0.5 }}>
-            Add the courses you&apos;re taking this term. You&apos;ll be able to log assessments and
+            Add the courses you&apos;re taking this semester. You&apos;ll be able to log assessments and
             generate practice against them.
           </Typography>
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => setDialogOpen(true)}>
@@ -253,6 +259,12 @@ function AddCourseDialog({
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [lecturer, setLecturer] = useState("");
+  // Study level, so generated practice is pitched at the right year rather than
+  // defaulting to a school register.
+  const [level, setLevel] = useState<CourseLevel>("first_year");
+  // Full year is the common case, so it leads. This is what lets a finished
+  // course drop out of the active list on its own later.
+  const [durationSemesters, setDurationSemesters] = useState(2);
 
   // Dedup guard: warn if a course with the same name (case-insensitive) or the
   // same code is already on the student's list, so the emergent registry stays
@@ -269,6 +281,8 @@ function AddCourseDialog({
     setName("");
     setCode("");
     setLecturer("");
+    setLevel("first_year");
+    setDurationSemesters(2);
     add.reset();
   };
   const handleClose = () => {
@@ -279,7 +293,13 @@ function AddCourseDialog({
   const submit = () => {
     if (trimmedName.length < 2 || duplicate) return;
     add.mutate(
-      { name: trimmedName, code: trimmedCode || undefined, lecturer: lecturer.trim() || undefined },
+      {
+        name: trimmedName,
+        code: trimmedCode || undefined,
+        lecturer: lecturer.trim() || undefined,
+        level,
+        durationSemesters,
+      },
       {
         onSuccess: (c) => {
           enqueueSnackbar(`Added ${c.name}.`, { variant: "success" });
@@ -311,6 +331,31 @@ function AddCourseDialog({
             onChange={(e) => setCode(e.target.value)}
             fullWidth
           />
+          <TextField
+            select
+            label="What level are you at?"
+            value={level}
+            onChange={(e) => setLevel(e.target.value as CourseLevel)}
+            fullWidth
+            helperText="We pitch your generated practice at this level."
+          >
+            {COURSE_LEVELS.map((l) => (
+              <MenuItem key={l.value} value={l.value}>
+                {l.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="How long is it?"
+            value={durationSemesters}
+            onChange={(e) => setDurationSemesters(Number(e.target.value))}
+            fullWidth
+            helperText="We use this to move it to your past courses once it is done."
+          >
+            <MenuItem value={1}>One semester</MenuItem>
+            <MenuItem value={2}>Full year (two semesters)</MenuItem>
+          </TextField>
           <TextField
             label="Lecturer (optional)"
             value={lecturer}
@@ -349,9 +394,12 @@ function AddCourseDialog({
 function CourseCard({ course: c }: { course: EnrolledCourse }) {
   const { enqueueSnackbar } = useSnackbar();
   const del = useDeleteCourse();
+  const setFinished = useSetCourseFinished();
   const { confirm, dialog: confirmDialog } = useConfirm();
+  const [menuEl, setMenuEl] = useState<null | HTMLElement>(null);
 
   const remove = async () => {
+    setMenuEl(null);
     const ok = await confirm({
       title: `Remove ${c.name}?`,
       description:
@@ -369,15 +417,35 @@ function CourseCard({ course: c }: { course: EnrolledCourse }) {
     }
   };
 
+  const toggleFinished = async () => {
+    setMenuEl(null);
+    const next = !c.isFinished;
+    try {
+      await setFinished.mutateAsync({ id: c.id, finished: next });
+      enqueueSnackbar(next ? `Marked ${c.name} finished.` : `Reopened ${c.name}.`, {
+        variant: "success",
+      });
+    } catch (err) {
+      enqueueSnackbar(`Couldn't update${err instanceof Error ? `: ${err.message}` : ""}`, {
+        variant: "error",
+      });
+    }
+  };
+
   return (
     <>
       <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
         <CardContent sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column" }}>
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
             <Box sx={{ minWidth: 0 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700 }} noWrap>
-                {c.name}
-              </Typography>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, minWidth: 0 }} noWrap>
+                  {c.name}
+                </Typography>
+                {c.isFinished && (
+                  <Chip label="Finished" size="small" variant="outlined" sx={{ flexShrink: 0 }} />
+                )}
+              </Stack>
               {c.code && (
                 <Typography variant="caption" color="text.secondary">
                   {c.code}
@@ -386,12 +454,26 @@ function CourseCard({ course: c }: { course: EnrolledCourse }) {
             </Box>
             <IconButton
               size="small"
-              onClick={remove}
-              disabled={del.isPending}
-              aria-label="Remove course"
+              onClick={(e) => setMenuEl(e.currentTarget)}
+              aria-label="Course options"
+              sx={{ flexShrink: 0 }}
             >
-              <DeleteOutlineIcon fontSize="small" />
+              <MoreVertical size={18} />
             </IconButton>
+            <Menu anchorEl={menuEl} open={Boolean(menuEl)} onClose={() => setMenuEl(null)}>
+              <MenuItem onClick={toggleFinished} disabled={setFinished.isPending}>
+                <ListItemIcon>
+                  {c.isFinished ? <RotateCcw size={16} /> : <CircleCheck size={16} />}
+                </ListItemIcon>
+                <ListItemText>{c.isFinished ? "Reopen course" : "Mark finished"}</ListItemText>
+              </MenuItem>
+              <MenuItem onClick={remove} disabled={del.isPending}>
+                <ListItemIcon>
+                  <Trash2 size={16} />
+                </ListItemIcon>
+                <ListItemText>Remove course</ListItemText>
+              </MenuItem>
+            </Menu>
           </Stack>
           {c.lecturer && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 2 }}>
@@ -406,7 +488,7 @@ function CourseCard({ course: c }: { course: EnrolledCourse }) {
           <Stack direction="row" spacing={1} sx={{ mt: 2.5 }}>
             <Button
               component={Link}
-              href={`/dashboard/practice?subject=${encodeURIComponent(c.practiceKey)}`}
+              href="/dashboard/practice"
               variant="contained"
               color="secondary"
               size="small"

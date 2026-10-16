@@ -40,7 +40,7 @@ namespace Aptiverse.Events.Application
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             logger.LogInformation(
-                "OutboxDispatcher started — polling every {Seconds}s, publishing to Redis channel '{Channel}'.",
+                "OutboxDispatcher started: polling every {Seconds}s, publishing to Redis channel '{Channel}'.",
                 PollInterval.TotalSeconds, Channel);
 
             while (!stoppingToken.IsCancellationRequested)

@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Aptiverse.Api.Data;
 using Aptiverse.Audit.Domain.Models.Audit;
+using Aptiverse.Domain.Models;
 using Aptiverse.Insights.Application.Frontend.Dtos;
 using Aptiverse.Mastery.Domain.Models.Mastery;
 using Microsoft.AspNetCore.Authorization;
@@ -37,7 +38,12 @@ namespace Aptiverse.Insights.Controllers
         // during quiet periods.
         private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(15);
 
+        // Staff-only. This projects the platform-wide audit trail, so it is
+        // gated exactly like the sibling gaps endpoint rather than left open to
+        // every signed-in account: as a plain [Authorize] route any student,
+        // parent or tutor could read every other user's activity.
         [HttpGet("live-activity")]
+        [Authorize(Roles = "Teacher,SchoolAdmin,Admin,Superuser")]
         public async Task<ActionResult<IEnumerable<FrontendLiveActivityDto>>> GetLiveActivity(
             [FromQuery] int take = 30,
             CancellationToken ct = default)
@@ -52,6 +58,7 @@ namespace Aptiverse.Insights.Controllers
         // EventSource consumes `activity` events (JSON payload) and ignores the
         // `: heartbeat` comment lines.
         [HttpGet("live-activity/stream")]
+        [Authorize(Roles = "Teacher,SchoolAdmin,Admin,Superuser")]
         public async Task LiveActivityStream(CancellationToken ct)
         {
             Response.Headers["Content-Type"] = "text/event-stream";
@@ -145,7 +152,6 @@ namespace Aptiverse.Insights.Controllers
                 {
                     a.Id,
                     a.UserId,
-                    a.UserEmail,
                     a.EntityType,
                     a.EntityId,
                     a.CreatedAt,
@@ -156,12 +162,33 @@ namespace Aptiverse.Insights.Controllers
                 })
                 .ToListAsync(ct);
 
+            // Resolve display names rather than shipping raw email addresses to
+            // the client. The audit trail stores the email as it was at the time,
+            // which is fine as an internal record but is personal data the
+            // activity feed has no need to surface.
+            var userIds = rows
+                .Select(r => r.UserId)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(id => id!)
+                .Distinct()
+                .ToList();
+
+            var names = userIds.Count == 0
+                ? []
+                : await _db.Set<User>().AsNoTracking()
+                    .Where(u => userIds.Contains(u.Id))
+                    .Select(u => new { u.Id, u.FirstName, u.LastName })
+                    .ToDictionaryAsync(
+                        u => u.Id,
+                        u => $"{u.FirstName} {u.LastName}".Trim(),
+                        ct);
+
             return rows
                 .Select(r => new FrontendLiveActivityDto
                 {
                     Id = r.Id.ToString(),
                     StudentId = r.UserId ?? "",
-                    Student = string.IsNullOrWhiteSpace(r.UserEmail) ? "Unknown" : r.UserEmail,
+                    Student = DisplayName(r.UserId, names),
                     Action = !string.IsNullOrWhiteSpace(r.ActionName)
                         ? r.ActionName!
                         : (string.IsNullOrWhiteSpace(r.EntityType) ? "Activity" : r.EntityType),
@@ -170,6 +197,20 @@ namespace Aptiverse.Insights.Controllers
                     Ts = DateTime.SpecifyKind(r.CreatedAt, DateTimeKind.Utc)
                 })
                 .ToList();
+        }
+
+        // A person's name for the feed, never their email. Falls back to
+        // "Unknown" rather than leaking the address when the user row is gone
+        // (deleted account) or the audit row carries no user id.
+        private static string DisplayName(string? userId, IDictionary<string, string> names)
+        {
+            if (!string.IsNullOrWhiteSpace(userId)
+                && names.TryGetValue(userId, out var name)
+                && !string.IsNullOrWhiteSpace(name))
+            {
+                return name;
+            }
+            return "Unknown";
         }
 
         // Gaps: aggregate the Mastery module's knowledge_gaps into per-(concept,
