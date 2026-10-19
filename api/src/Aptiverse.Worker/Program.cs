@@ -1,3 +1,4 @@
+using Aptiverse.Identity;
 using Aptiverse.SharedKernel.Hosting;
 using Aptiverse.Support;
 using JasperFx;
@@ -13,6 +14,7 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 
 builder.AddPlatform("aptiverse-worker");
 
+builder.Services.AddIdentityModule(builder.Configuration);
 builder.Services.AddSupportModule(builder.Configuration);
 
 var app = builder.Build();

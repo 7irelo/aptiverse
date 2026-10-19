@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Aptiverse.Identity</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Aptiverse.SharedKernel\Aptiverse.SharedKernel.csproj" />
+    <ProjectReference Include="..\Aptiverse.Identity.Contracts\Aptiverse.Identity.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Apis.Auth" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Aptiverse.Identity.UnitTests" />
+    <InternalsVisibleTo Include="Aptiverse.IntegrationTests" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+
+</Project>

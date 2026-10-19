@@ -75,6 +75,33 @@ public sealed class ModuleBoundaryTests
         }
     }
 
+    [Fact]
+    public void Every_module_project_is_registered_for_these_rules()
+    {
+        var modulesDir = Path.Combine(RepoRoot(), "src", "Modules");
+        var onDisk = Directory.GetDirectories(modulesDir)
+            .SelectMany(Directory.GetDirectories)
+            .Select(Path.GetFileName)
+            .OfType<string>()
+            .Where(name => name.StartsWith("Aptiverse.", StringComparison.Ordinal) && !name.EndsWith(".Contracts", StringComparison.Ordinal))
+            .Select(name => name["Aptiverse.".Length..]);
+
+        var unregistered = onDisk.Except(Modules.All.Select(m => m.Name), StringComparer.Ordinal).ToList();
+
+        Assert.True(unregistered.Count == 0, $"Add to Modules.cs (and Host, Worker, Aptiverse.slnx): {string.Join(", ", unregistered)}");
+    }
+
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Aptiverse.slnx")))
+        {
+            dir = dir.Parent;
+        }
+
+        return dir?.FullName ?? throw new InvalidOperationException("Aptiverse.slnx not found above the test output folder.");
+    }
+
     private static IEnumerable<string> AptiverseReferences(Assembly assembly) =>
         assembly.GetReferencedAssemblies()
             .Select(a => a.Name!)

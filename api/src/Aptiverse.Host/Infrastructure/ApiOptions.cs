@@ -2,17 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Aptiverse.Host.Infrastructure;
 
-internal sealed class AuthOptions
-{
-    public const string SectionName = "Auth";
-
-    [Required(AllowEmptyStrings = false)]
-    public string Issuer { get; set; } = string.Empty;
-
-    [Required(AllowEmptyStrings = false)]
-    public string Audience { get; set; } = string.Empty;
-}
-
 internal sealed class CorsSettings
 {
     public const string SectionName = "Cors";

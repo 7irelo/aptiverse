@@ -5,6 +5,10 @@
     <Project Path="src/Aptiverse.Worker/Aptiverse.Worker.csproj" />
   </Folder>
   <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Identity/">
+    <Project Path="src/Modules/Identity/Aptiverse.Identity.Contracts/Aptiverse.Identity.Contracts.csproj" />
+    <Project Path="src/Modules/Identity/Aptiverse.Identity/Aptiverse.Identity.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Support/">
     <Project Path="src/Modules/Support/Aptiverse.Support.Contracts/Aptiverse.Support.Contracts.csproj" />
     <Project Path="src/Modules/Support/Aptiverse.Support/Aptiverse.Support.csproj" />

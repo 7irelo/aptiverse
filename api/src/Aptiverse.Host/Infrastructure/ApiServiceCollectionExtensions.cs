@@ -4,11 +4,8 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
-using Aptiverse.SharedKernel.Authorization;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Aptiverse.Host.Infrastructure;
 
@@ -28,7 +25,6 @@ internal static class ApiServiceCollectionExtensions
         });
         services.AddExceptionHandler<GlobalExceptionHandler>();
 
-        services.AddAuth(configuration);
         services.AddPerClientRateLimiting(configuration);
         services.AddConfiguredCors(configuration);
         services.AddKnownProxyForwarding(configuration);
@@ -41,34 +37,6 @@ internal static class ApiServiceCollectionExtensions
         }));
 
         return services;
-    }
-
-    private static void AddAuth(this IServiceCollection services, IConfiguration configuration)
-    {
-        services.AddOptions<AuthOptions>()
-            .Bind(configuration.GetSection(AuthOptions.SectionName))
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
-
-        var auth = configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>() ?? new();
-
-        // Placeholder until Phase 2 (Identity) issues ES256 tokens and publishes a JWKS. With no signing keys
-        // configured every bearer token is rejected, so protected endpoints answer 401 today.
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
-            {
-                options.MapInboundClaims = false;
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidIssuer = auth.Issuer,
-                    ValidAudience = auth.Audience,
-                    NameClaimType = "sub",
-                    RoleClaimType = "role",
-                };
-            });
-
-        services.AddAuthorizationBuilder()
-            .AddPolicy(Policies.Admin, policy => policy.RequireAuthenticatedUser().RequireRole("admin"));
     }
 
     private static void AddPerClientRateLimiting(this IServiceCollection services, IConfiguration configuration)

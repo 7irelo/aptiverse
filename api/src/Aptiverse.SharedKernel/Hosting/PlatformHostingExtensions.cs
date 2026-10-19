@@ -44,6 +44,11 @@ public static class PlatformHostingExtensions
             // The document generator boots the app without a database. Nothing connects in this mode.
             configuration["ConnectionStrings:Aptiverse"] = "Host=localhost;Database=openapi-generation";
         }
+        else if (string.IsNullOrWhiteSpace(configuration.GetConnectionString("Aptiverse"))
+            && DatabaseOptions.FromParts(configuration.GetSection(DatabaseOptions.PartsSectionName)) is { } composed)
+        {
+            configuration["ConnectionStrings:Aptiverse"] = composed;
+        }
 
         services.AddOptions<DatabaseOptions>()
             .Bind(configuration.GetSection(DatabaseOptions.SectionName))
