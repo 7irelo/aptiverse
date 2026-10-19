@@ -11,8 +11,8 @@ output "alb_dns_name" {
 }
 
 output "ecr_repository_url" {
-  description = "ECR repository for the api image."
-  value       = module.ecr.repository_urls["api"]
+  description = "ECR repository for the api image (shared, from envs/global)."
+  value       = local.global.api_repository_url
 }
 
 output "image_tag_parameter" {

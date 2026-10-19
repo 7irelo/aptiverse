@@ -32,7 +32,7 @@ variable "api_hostname" {
 }
 
 variable "web_origins" {
-  description = "Web origins allowed for CORS on the uploads bucket and passed to the api."
+  description = "Web origins allowed for CORS on the api and the uploads bucket. The first is the canonical web app URL used in emailed links."
   type        = list(string)
   default     = ["https://dev.aptiverse.co.za", "http://localhost:3000"]
 }

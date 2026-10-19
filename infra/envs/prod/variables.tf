@@ -32,9 +32,9 @@ variable "api_hostname" {
 }
 
 variable "web_origins" {
-  description = "Web origins allowed for CORS on the uploads bucket and passed to the api."
+  description = "Web origins allowed for CORS on the api and the uploads bucket. The first is the canonical web app URL used in emailed links."
   type        = list(string)
-  default     = ["https://aptiverse.co.za", "https://www.aptiverse.co.za", "https://app.aptiverse.co.za"]
+  default     = ["https://aptiverse.co.za", "https://www.aptiverse.co.za"]
 }
 
 variable "aspnetcore_environment" {

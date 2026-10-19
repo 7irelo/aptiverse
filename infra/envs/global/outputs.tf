@@ -27,3 +27,13 @@ output "github_oidc_provider_arn" {
   description = "GitHub OIDC provider ARN."
   value       = module.github_oidc.provider_arn
 }
+
+output "api_repository_url" {
+  description = "ECR repository for the api image, shared by every environment."
+  value       = module.ecr.repository_urls["api"]
+}
+
+output "api_repository_arn" {
+  description = "ARN of the shared api image repository."
+  value       = module.ecr.repository_arns["api"]
+}
