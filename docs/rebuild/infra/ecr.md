@@ -6,7 +6,7 @@
 | Phase | 1 |
 | Depends on | INF-02 |
 | Code path | `infra/modules/ecr/`, used by `envs/*/main.tf` (`module "ecr"`) |
-| Status | INF-08 done in code. Repository naming contradicts the api pipeline, and the per-env repositories conflict with promoting one immutable image; fixes, digest pinning, enhanced scanning and signature verification not started. |
+| Status | INF-08, INF-40 and INF-41 done in code: one shared `aptiverse/api` repository in `envs/global`. Digest pinning, enhanced scanning and signature verification not started. |
 
 ## Purpose
 
@@ -22,8 +22,8 @@ Hold the one api container image (used for the api, worker and migration roles) 
 ## Tasks
 
 - [x] **INF-08** `modules/ecr`: repository, lifecycle policy, scan on push. *(`infra/modules/ecr/main.tf`)*
-- [ ] **INF-40** Resolve the repository name contradiction: either the api pipeline pushes to `aptiverse-<env>/api` (output `ecr_repository_url`) or infra creates the name the pipeline uses. Update `infra/README.md` "Deploying the api" and hand the agreed name to `ci/api-pipeline.md`.
-- [ ] **INF-41** Promotion model for immutable artifacts: build once, promote the same digest dev to staging to prod. Pick one: (a) a single shared repository in `envs/global` (`aptiverse/api`) that every env pulls from, with the env deploy roles granted push only from dev and pull everywhere; or (b) per-env repositories with ECR replication or a promotion job that copies the manifest by digest (`crane copy` or `aws ecr batch-get-image` plus `put-image`). Record the choice in `phase-0/decisions.md` via its owner, implement it here, and remove the other path.
+- [x] **INF-40** Resolve the repository name contradiction: either the api pipeline pushes to `aptiverse-<env>/api` (output `ecr_repository_url`) or infra creates the name the pipeline uses. Update `infra/README.md` "Deploying the api" and hand the agreed name to `ci/api-pipeline.md`. (done: one name, `aptiverse/api`, created in `envs/global`; the api pipeline pushes there and `infra/README.md` says so)
+- [x] **INF-41** Promotion model for immutable artifacts: build once, promote the same digest dev to staging to prod. Pick one: (a) a single shared repository in `envs/global` (`aptiverse/api`) that every env pulls from, with the env deploy roles granted push only from dev and pull everywhere; or (b) per-env repositories with ECR replication or a promotion job that copies the manifest by digest (`crane copy` or `aws ecr batch-get-image` plus `put-image`). Record the choice in `phase-0/decisions.md` via its owner, implement it here, and remove the other path. (done: option (a): a shared repository in `envs/global`, envs read `api_repository_url` and `api_repository_arn` from global state, per-env repositories are released from state with a `removed` block (`destroy = false`); deploy roles still have push in every env, narrowing that to dev is INF-38)
 - [ ] **INF-42** Digest pinning: the deployed image reference becomes `<repo>@sha256:<digest>` instead of `<repo>:<sha>`. Store the digest next to the sha in SSM (`/aptiverse/<env>/api/image-digest`), build `local.image` from it in `envs/*/main.tf`, and grant the api deploy role `ssm:PutParameter` on the new parameter in `github-oidc.md`.
 - [ ] **INF-43** Enhanced scanning: decide between basic scan on push (today) and Amazon Inspector enhanced scanning with continuous rescans of images in use; if enabled, set `aws_ecr_registry_scanning_configuration` (rules for `aptiverse-*`) and route Inspector findings of HIGH or CRITICAL to the alarm topic.
 - [ ] **INF-44** Signature verification: once the api pipeline signs images (cosign keyless or AWS Signer with Notation, see `ci/api-pipeline.md`), enforce verification before deploy (a pipeline verify step plus, if AWS Signer is chosen, a signing profile managed here). Document the trust root in the module README.

@@ -6,7 +6,7 @@
 | Phase | 1 (deploy and promotion tasks finish before Phase 2 exit) |
 | Depends on | `infra/ecr.md`, `infra/service.md`, `infra/github-oidc.md`, `ci/infra-pipeline.md` (single env dispatch), `ci/shared-workflows.md`, REPO-02, REPO-10 |
 | Code path | `api/.github/workflows/ci.yml`, `api/Dockerfile`, `api/.dockerignore`, `api/scripts/migrations-bundle.sh`, `api/src/Aptiverse.Host/Infrastructure/MigrateCommand.cs` |
-| Status | Build half done: 39 tasks: 5 done, 6 partial, 0 unverified, 28 not started. No deploy, migration run, smoke test, rollback proof or promotion exists yet. |
+| Status | Build half done: 39 tasks: 5 done, 7 partial, 0 unverified, 27 not started. Pushes to the shared `aptiverse/api` repository; no deploy, migration run, smoke test, rollback proof or promotion exists yet. |
 
 ## Purpose
 
@@ -63,7 +63,7 @@ Image naming contract: ECR repositories are `aptiverse-<env>/api` (`infra/module
 - [x] **CI-09** Multi-stage Dockerfile (chiselled base, non-root, `.dockerignore`) (`api/Dockerfile` uses `aspnet:10.0-noble-chiseled-extra`, `USER $APP_UID`; `api/.dockerignore` excludes `.env`, tests, docs)
 - [x] **CI-10** Trivy image scan (`aquasecurity/trivy-action@0.28.0`, CRITICAL and HIGH, `ignore-unfixed`, exit code 1)
 - [ ] **CI-11** Push to ECR tagged with git sha (never `:latest`) *(partial: pushes `${IMAGE}:${GITHUB_SHA}` on main when `AWS_ROLE_ARN` and `ECR_REGISTRY` are set; image name `aptiverse-api` does not match the ECR repository `aptiverse-<env>/api`)*
-- [ ] **CI-53** Change the image name to the dev repository `${ECR_REGISTRY}/aptiverse-dev/api`, use the per-env `AWS_DEPLOY_ROLE_ARN` (the role in `infra/github-oidc.md` that has `EcrPush` on that repository), and capture the pushed digest as a job output (split from CI-11)
+- [ ] **CI-53** Change the image name to the shared repository `${ECR_REGISTRY}/aptiverse/api` (INF-41), use the per-env `AWS_DEPLOY_ROLE_ARN` (the role in `infra/github-oidc.md` that has `EcrPush` on that repository), and capture the pushed digest as a job output (split from CI-11) *(partial: image name changed in `.github/workflows/ci.yml`; the per-env deploy role and digest output are not done)*
 - [ ] **CI-59** Generate a CycloneDX SBOM for the image (`syft` or `anchore/sbom-action`, pinned by digest), upload it as an artifact, attach it to the GitHub release on tags, and attest it to the image (`actions/attest-sbom`)
 - [ ] **CI-60** Attest build provenance for the pushed digest (`actions/attest-build-provenance`, SLSA v1 predicate) and, if ECR consumers need it, sign with `cosign sign` keyless via GitHub OIDC
 - [ ] **CI-61** Verify before every deploy: `gh attestation verify oci://<image>@<digest> --owner aptiverse-labs` (or `cosign verify` with the expected workflow identity) in each deploy job; a failed verification stops the deploy
@@ -89,7 +89,7 @@ Image naming contract: ECR repositories are `aptiverse-<env>/api` (`infra/module
 ### Promotion
 
 - [ ] **CI-16** Staging promotion after dev passes; prod on tag with manual approval (umbrella; done when CI-63 and CI-64 are done)
-- [ ] **CI-63** Promote the same digest, never rebuild: after `deploy-dev` succeeds, copy the image by digest from `aptiverse-dev/api` to `aptiverse-staging/api` (`crane copy` or `aws ecr batch-get-image` plus `put-image` with the same manifest), verify the digest is identical and the attestation still verifies, then deploy staging with CI-54 to CI-58. Alternative recorded in `infra/ecr.md`: one shared repository read by all envs (split from CI-16)
+- [ ] **CI-63** Promote the same digest, never rebuild: one shared repository (INF-41), so promotion writes the dev-verified tag to `/aptiverse/<env>/api/image-tag` for staging, then prod, after checking the digest behind the tag is the one dev ran and its attestation still verifies; then deploy with CI-54 to CI-58 (split from CI-16)
 - [ ] **CI-64** Prod deploys only from a `v*` tag whose commit already passed staging; the job runs in the GitHub environment `prod` with required reviewers and a wait timer, uses the digest recorded by the staging run (look it up, do not rebuild), and is blocked when staging's smoke test for that sha failed (split from CI-16)
 
 ### Release
