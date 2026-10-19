@@ -93,3 +93,15 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "ecr_push" {
+  description = "Let this env's api deploy role push images. True only for the env that builds them (dev); later envs promote the same digest."
+  type        = bool
+  default     = false
+}
+
+variable "allowed_regions" {
+  description = "Regions the infra-apply role may act in. af-south-1 hosts the stacks; eu-west-1 hosts SES."
+  type        = list(string)
+  default     = ["af-south-1", "eu-west-1"]
+}

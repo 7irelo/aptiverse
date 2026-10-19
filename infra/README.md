@@ -50,9 +50,39 @@ Never apply without a reviewed plan. For the first rollout, run each step by han
 2. `envs/global`. Import the existing SES identity and the SES DNS records first (see `modules/ses/README.md` and `modules/dns/README.md`) so DKIM tokens and Cloudflare records are adopted, not duplicated.
 3. `envs/dev`. Before or straight after the first apply:
    - populate the secrets listed in the `app_secret_names` output (`aws secretsmanager put-secret-value`); ECS will not start tasks while a referenced secret is empty;
+   - `db-app` holds the runtime database login as JSON `{"username":"aptiverse_app","password":"..."}`. Generate the password in your own terminal; the migration task creates the role with it on every run, so rotating it is: put a new value, run the migration task, then force a new deployment of api and worker;
    - push a first image to the `ecr_repository_url` output and write its tag to the `image_tag_parameter` output (`aws ssm put-parameter --overwrite`), then apply again so the task definitions pick it up.
 4. Copy the `github_role_arns` output into GitHub variables (see CI below). From then on, applies run from CI.
 5. `envs/staging`, then `envs/prod` the same way.
+
+## Access model
+
+Who can do what, and why it is split this way:
+
+| Principal | Can | Cannot |
+|---|---|---|
+| api task role | S3 get and put under `uploads/` and `exports/`, delete under `uploads/`, SES send | anything else in S3, any secret at runtime |
+| worker task role | S3 get and delete under `uploads/` and `exports/`, put under `exports/`, list those prefixes, SES send | other prefixes |
+| migration task role | nothing (it only talks to Postgres) | any AWS API |
+| api and worker execution roles | read their own injected secrets, which include `db-app` | read the RDS master secret |
+| migration execution role | read the RDS master secret and `db-app` | anything else |
+| Postgres `aptiverse_app` (api, worker) | select, insert, update, delete in every module schema and `wolverine` | DDL, own any object |
+| Postgres master (migration task only) | own the schemas, run migrations, create `aptiverse_app` | (used by nothing else) |
+| `gha-api` (deploy) | read the shared image repository, run the migration task, roll the services, pass the api, worker and migration roles; push images only in dev (`ecr_push`) | push from staging or prod |
+| `gha-infra-apply` | the services the stacks manage, scoped to `aptiverse-*` names, in af-south-1 and eu-west-1 | read secret values, attach AdministratorAccess, PowerUserAccess or IAMFullAccess, create IAM users or keys |
+
+### Moving an environment onto the runtime database role (once)
+
+A plain apply would roll the api and worker onto `db-app` before the migration task has created that role, and they would fail to connect (the circuit breaker then rolls them back). Do it in this order:
+
+1. Put the `db-app` secret value (above).
+2. `terraform apply -target=module.api.aws_ecs_task_definition.migration -target=module.api.aws_iam_role_policy.migration_execution_secrets` so only the migration task changes.
+3. Run the migration task (`aws ecs run-task` as in "Deploying the api") and check its log ends with `Runtime role aptiverse_app granted DML on ...`.
+4. `terraform apply` for everything else. The api and worker now connect as `aptiverse_app`.
+
+### Proving the apply policy
+
+The scoped `infra-apply` policy replaced PowerUserAccess without an AWS account to test against. Before relying on it: run a full `plan` and `apply` of `envs/dev` with the new role, and fix any `AccessDenied` by adding the narrowest action to `apply_services` in `modules/github-oidc`. IAM Access Analyzer policy generation from that apply's CloudTrail events is the check that nothing broader is needed (INF-74).
 
 ## CI
 
@@ -78,7 +108,8 @@ Infra sets these on every api, worker and migration task (`app_environment` and 
 | Key | Source | Consumer |
 |---|---|---|
 | `Database__Host`, `__Port`, `__Name` | env (RDS outputs) | `DatabaseOptions.FromParts` builds `ConnectionStrings:Aptiverse` (TLS required) |
-| `Database__Username`, `__Password` | secret (RDS managed master secret, JSON keys) | same |
+| `Database__Username`, `__Password` | secret `db-app` (JSON keys) for api and worker; the RDS managed master secret for the migration task only | same |
+| `Database__Runtime__Username`, `__Password` | secret `db-app`, migration task only | `RuntimeDatabaseRole`: the migrate command creates or updates that role and grants it DML |
 | `Auth__Issuer` | env (`https://<api_hostname>.<domain>`) | Identity `AuthOptions`, token `iss` |
 | `Auth__WebAppUrl` | env (first entry of `web_origins`) | Identity `AuthOptions`, links in emails |
 | `Auth__SigningKey` | secret `jwt-signing-key` (PEM EC P-256) | Identity `SigningKeys`; required outside Development |

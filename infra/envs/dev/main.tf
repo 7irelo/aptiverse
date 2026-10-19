@@ -56,14 +56,30 @@ locals {
   # Secrets resolved by ECS at task start. Every referenced secret (and JSON
   # key) must have a value before the first deploy. Add Paystack, Anthropic and
   # the rest here as their modules land in the api.
+  #
+  # The api and worker log in as the runtime role in the db-app secret, which
+  # can change rows but not the schema. Only the migration task gets the RDS
+  # master login; it creates the runtime role and grants it access.
   app_secrets = {
-    Database__Username          = "${local.db_secret}:username::"
-    Database__Password          = "${local.db_secret}:password::"
+    Database__Username          = "${module.secrets.arns["db-app"]}:username::"
+    Database__Password          = "${module.secrets.arns["db-app"]}:password::"
     Auth__SigningKey            = module.secrets.arns["jwt-signing-key"]
     Sentry__Dsn                 = module.secrets.arns["sentry-dsn"]
     OTEL_EXPORTER_OTLP_HEADERS  = "${module.secrets.arns["grafana-otlp"]}:otlp_headers::"
     OTEL_EXPORTER_OTLP_ENDPOINT = "${module.secrets.arns["grafana-otlp"]}:endpoint::"
   }
+
+  migration_secrets = merge(local.app_secrets, {
+    Database__Username          = "${local.db_secret}:username::"
+    Database__Password          = "${local.db_secret}:password::"
+    Database__Runtime__Username = "${module.secrets.arns["db-app"]}:username::"
+    Database__Runtime__Password = "${module.secrets.arns["db-app"]}:password::"
+  })
+
+  ses_resources = [
+    local.global.ses_identity_arn,
+    local.global.ses_configuration_set_arn,
+  ]
 }
 
 # --- Foundation --------------------------------------------------------------
@@ -187,31 +203,58 @@ resource "aws_ssm_parameter" "image_tag" {
   }
 }
 
-data "aws_iam_policy_document" "app" {
+# Task role policies, one per role. The api signs presigned upload and
+# download URLs and removes a user's own uploads; the worker writes exports and
+# runs purge jobs. Neither may touch any other prefix. The migration task role
+# has no policy at all (modules/service).
+data "aws_iam_policy_document" "api" {
   statement {
-    sid = "Uploads"
-    actions = [
-      "s3:GetObject",
-      "s3:PutObject",
-      "s3:DeleteObject",
-      "s3:AbortMultipartUpload",
-    ]
-    resources = ["${module.storage.bucket_arn}/*"]
+    sid       = "UploadsAndExports"
+    actions   = ["s3:GetObject", "s3:PutObject", "s3:AbortMultipartUpload"]
+    resources = ["${module.storage.bucket_arn}/uploads/*", "${module.storage.bucket_arn}/exports/*"]
   }
 
   statement {
-    sid       = "UploadsList"
+    sid       = "DeleteOwnUploads"
+    actions   = ["s3:DeleteObject"]
+    resources = ["${module.storage.bucket_arn}/uploads/*"]
+  }
+
+  statement {
+    sid       = "SendEmail"
+    actions   = ["ses:SendEmail"]
+    resources = local.ses_resources
+  }
+}
+
+data "aws_iam_policy_document" "worker" {
+  statement {
+    sid       = "ReadAndPurge"
+    actions   = ["s3:GetObject", "s3:DeleteObject"]
+    resources = ["${module.storage.bucket_arn}/uploads/*", "${module.storage.bucket_arn}/exports/*"]
+  }
+
+  statement {
+    sid       = "WriteExports"
+    actions   = ["s3:PutObject", "s3:AbortMultipartUpload"]
+    resources = ["${module.storage.bucket_arn}/exports/*"]
+  }
+
+  statement {
+    sid       = "ListForPurge"
     actions   = ["s3:ListBucket"]
     resources = [module.storage.bucket_arn]
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+      values   = ["uploads/*", "exports/*"]
+    }
   }
 
   statement {
-    sid     = "SendEmail"
-    actions = ["ses:SendEmail"]
-    resources = [
-      local.global.ses_identity_arn,
-      local.global.ses_configuration_set_arn,
-    ]
+    sid       = "SendEmail"
+    actions   = ["ses:SendEmail"]
+    resources = local.ses_resources
   }
 }
 
@@ -242,9 +285,10 @@ module "api" {
   max_capacity  = var.api_max_count
 
   log_retention_days    = var.log_retention_days
-  task_role_policy_json = data.aws_iam_policy_document.app.json
+  task_role_policy_json = data.aws_iam_policy_document.api.json
 
   create_migration_task = true
+  migration_secrets     = local.migration_secrets
 }
 
 module "worker" {
@@ -270,7 +314,7 @@ module "worker" {
   max_capacity  = var.worker_max_count
 
   log_retention_days    = var.log_retention_days
-  task_role_policy_json = data.aws_iam_policy_document.app.json
+  task_role_policy_json = data.aws_iam_policy_document.worker.json
 }
 
 # --- CI access and alerting ---------------------------------------------------
@@ -284,6 +328,7 @@ module "github_oidc" {
   state_bucket_name         = var.state_bucket_name
 
   ecr_repository_arns              = [local.global.api_repository_arn]
+  ecr_push                         = true
   ecs_cluster_arn                  = aws_ecs_cluster.this.arn
   ecs_service_arns                 = [module.api.service_arn, module.worker.service_arn]
   migration_task_definition_family = module.api.migration_task_definition_family
@@ -293,6 +338,10 @@ module "github_oidc" {
   passable_role_arns = [
     module.api.task_role_arn,
     module.api.execution_role_arn,
+    module.api.migration_task_role_arn,
+    module.api.migration_execution_role_arn,
+    module.worker.task_role_arn,
+    module.worker.execution_role_arn,
   ]
 }
 
