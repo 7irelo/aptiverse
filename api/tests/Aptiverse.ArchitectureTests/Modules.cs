@@ -1,4 +1,6 @@
 using System.Reflection;
+using Aptiverse.Identity;
+using Aptiverse.Identity.Contracts;
 using Aptiverse.SharedKernel.Domain;
 using Aptiverse.Support;
 using Aptiverse.Support.Contracts;
@@ -10,6 +12,7 @@ internal static class Modules
 {
     public static readonly ModuleInfo[] All =
     [
+        new("Identity", typeof(IdentityModule).Assembly, typeof(UserRegistered).Assembly),
         new("Support", typeof(SupportModule).Assembly, typeof(FaqPublished).Assembly),
     ];
 

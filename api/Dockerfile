@@ -10,17 +10,20 @@
 
 ARG DOTNET_VERSION=10.0
 
+# Every .csproj under src/ with its folder structure and nothing else.
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS projects
+WORKDIR /src
+COPY src/ src/
+RUN find src -type f ! -name '*.csproj' -delete && find src -type d -empty -delete
+
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS build
 ARG TARGETARCH
 WORKDIR /src
 
-# Restore first, from project files only, so the layer is cached until dependencies change.
+# Restore first, from project files only, so the layer is cached until dependencies change. The project files
+# are collected by the stage above, so a new module never needs a Dockerfile edit.
 COPY global.json nuget.config Directory.Build.props Directory.Packages.props .editorconfig ./
-COPY src/Aptiverse.SharedKernel/Aptiverse.SharedKernel.csproj src/Aptiverse.SharedKernel/
-COPY src/Aptiverse.Host/Aptiverse.Host.csproj src/Aptiverse.Host/
-COPY src/Aptiverse.Worker/Aptiverse.Worker.csproj src/Aptiverse.Worker/
-COPY src/Modules/Support/Aptiverse.Support/Aptiverse.Support.csproj src/Modules/Support/Aptiverse.Support/
-COPY src/Modules/Support/Aptiverse.Support.Contracts/Aptiverse.Support.Contracts.csproj src/Modules/Support/Aptiverse.Support.Contracts/
+COPY --from=projects /src/src/ src/
 RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
     dotnet restore src/Aptiverse.Host/Aptiverse.Host.csproj -a $TARGETARCH \
  && dotnet restore src/Aptiverse.Worker/Aptiverse.Worker.csproj -a $TARGETARCH

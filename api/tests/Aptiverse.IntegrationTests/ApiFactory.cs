@@ -1,11 +1,10 @@
+using Aptiverse.SharedKernel.Persistence;
 using Aptiverse.SharedKernel.Seeding;
-using Aptiverse.Support.Persistence;
 using JasperFx.CommandLine;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Testcontainers.PostgreSql;
@@ -52,7 +51,11 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         }
 
         await using var scope = Services.CreateAsyncScope();
-        await scope.ServiceProvider.GetRequiredService<SupportDbContext>().Database.MigrateAsync();
+        foreach (var migrator in scope.ServiceProvider.GetServices<IModuleMigrator>())
+        {
+            await migrator.MigrateAsync(CancellationToken.None);
+        }
+
         foreach (var seeder in scope.ServiceProvider.GetServices<IDataSeeder>())
         {
             await seeder.SeedAsync(CancellationToken.None);

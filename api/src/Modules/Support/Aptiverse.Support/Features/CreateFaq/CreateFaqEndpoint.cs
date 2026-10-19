@@ -15,7 +15,7 @@ internal static class CreateFaqEndpoint
         group.MapPost("/faqs", HandleAsync)
             .WithName("createFaq")
             .WithSummary("Create an FAQ")
-            .RequireAuthorization(Policies.Admin)
+            .RequirePermission(Permissions.Content.Manage)
             .WithValidation<CreateFaqRequest>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)

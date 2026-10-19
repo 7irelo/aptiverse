@@ -5,6 +5,28 @@
     "version": "v1"
   },
   "paths": {
+    "/.well-known/jwks.json": {
+      "get": {
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Public keys that verify access tokens",
+        "description": "The current ES256 signing key and any retired keys still inside their rotation window. Public, cacheable.",
+        "operationId": "getJwks",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JwksResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/support/faqs": {
       "get": {
         "tags": [
@@ -237,6 +259,55 @@
           }
         }
       },
+      "JwkResponse": {
+        "required": [
+          "kty",
+          "crv",
+          "x",
+          "y",
+          "kid",
+          "use",
+          "alg"
+        ],
+        "type": "object",
+        "properties": {
+          "kty": {
+            "type": "string"
+          },
+          "crv": {
+            "type": "string"
+          },
+          "x": {
+            "type": "string"
+          },
+          "y": {
+            "type": "string"
+          },
+          "kid": {
+            "type": "string"
+          },
+          "use": {
+            "type": "string"
+          },
+          "alg": {
+            "type": "string"
+          }
+        }
+      },
+      "JwksResponse": {
+        "required": [
+          "keys"
+        ],
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JwkResponse"
+            }
+          }
+        }
+      },
       "ProblemDetails": {
         "type": "object",
         "properties": {
@@ -276,6 +347,9 @@
     }
   },
   "tags": [
+    {
+      "name": "Identity"
+    },
     {
       "name": "Support"
     }

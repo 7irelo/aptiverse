@@ -20,7 +20,9 @@ public sealed class ConventionTests
             .ToHashSet();
 
         var missing = types
+            // Request records live in Features/<UseCase>/; a domain entity such as AccountDeletionRequest is not one.
             .Where(t => t.Name.EndsWith("Request", StringComparison.Ordinal) && !t.IsAbstract)
+            .Where(t => t.Namespace?.Contains(".Features.", StringComparison.Ordinal) == true)
             .Where(t => !validated.Contains(t))
             .Select(t => t.FullName)
             .ToList();

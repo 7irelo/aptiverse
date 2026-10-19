@@ -1,4 +1,5 @@
 using Aptiverse.Host.Infrastructure;
+using Aptiverse.Identity;
 using Aptiverse.SharedKernel.Hosting;
 using Aptiverse.Support;
 using JasperFx;
@@ -17,6 +18,7 @@ builder.AddPlatform("aptiverse-api");
 builder.Services.AddApiPlatform(builder.Configuration);
 
 // Modules: each exposes AddXModule + MapXEndpoints and nothing else.
+builder.Services.AddIdentityModule(builder.Configuration);
 builder.Services.AddSupportModule(builder.Configuration);
 
 var app = builder.Build();
@@ -39,11 +41,12 @@ app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
-    app.MapScalarApiReference();
+    app.MapOpenApi().AllowAnonymous();
+    app.MapScalarApiReference().AllowAnonymous();
 }
 
 app.MapPlatformHealthChecks();
+app.MapIdentityEndpoints();
 app.MapSupportEndpoints();
 
 if (PlatformHostingExtensions.IsBuildTimeDocumentGeneration)

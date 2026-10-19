@@ -11,11 +11,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Aptiverse.SharedKernel\Aptiverse.SharedKernel.csproj" />
+    <ProjectReference Include="..\Modules\Identity\Aptiverse.Identity\Aptiverse.Identity.csproj" />
     <ProjectReference Include="..\Modules\Support\Aptiverse.Support\Aptiverse.Support.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.Extensions.ApiDescription.Server">
       <PrivateAssets>all</PrivateAssets>

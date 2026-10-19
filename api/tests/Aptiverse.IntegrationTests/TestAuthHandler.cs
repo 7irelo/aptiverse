@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using Aptiverse.SharedKernel.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,10 +22,10 @@ internal sealed class TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOption
         }
 
         var identity = new ClaimsIdentity(
-            [new Claim("sub", Guid.CreateVersion7().ToString()), new Claim("role", role.ToString())],
+            [new Claim(AptiverseClaims.Subject, Guid.CreateVersion7().ToString()), new Claim(AptiverseClaims.Roles, role.ToString())],
             SchemeName,
-            nameType: "sub",
-            roleType: "role");
+            nameType: AptiverseClaims.Subject,
+            roleType: AptiverseClaims.Roles);
 
         return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName)));
     }

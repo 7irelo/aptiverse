@@ -17,6 +17,7 @@ public static class ResultHttpExtensions
             ErrorType.Conflict => StatusCodes.Status409Conflict,
             ErrorType.Forbidden => StatusCodes.Status403Forbidden,
             ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
+            ErrorType.TooManyRequests => StatusCodes.Status429TooManyRequests,
             _ => StatusCodes.Status500InternalServerError,
         };
 
@@ -48,6 +49,7 @@ public static class ResultHttpExtensions
         ErrorType.Conflict => "The request conflicts with the current state.",
         ErrorType.Forbidden => "You do not have access to this resource.",
         ErrorType.Unauthorized => "Authentication is required.",
+        ErrorType.TooManyRequests => "Too many requests. Please slow down and try again shortly.",
         _ => "The request could not be completed.",
     };
 }

@@ -22,9 +22,21 @@ public sealed class HealthTests(ApiFactory factory)
     {
         Assert.SkipUnless(factory.DockerAvailable, factory.DockerUnavailableReason ?? string.Empty);
 
-        var response = await factory.CreateClient().GetAsync("/nope", TestContext.Current.CancellationToken);
+        var response = await factory.CreateAdminClient().GetAsync("/nope", TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task Anonymous_request_to_unknown_route_fails_closed()
+    {
+        Assert.SkipUnless(factory.DockerAvailable, factory.DockerUnavailableReason ?? string.Empty);
+
+        // The fallback policy runs before routing can answer 404, so anonymous callers cannot enumerate routes.
+        var response = await factory.CreateClient().GetAsync("/nope", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
     }
 }
