@@ -6,7 +6,7 @@
 | Phase | 1 (least privilege tightening by 10) |
 | Depends on | INF-02, REPO-01 (org repos exist), REPO-02 (environments and protection) |
 | Code path | `infra/modules/github-oidc/`; provider in `envs/global`, roles in `envs/{dev,staging,prod}` |
-| Status | INF-18 done in code. Apply role is broader than least privilege, roles lack a permissions boundary, the plan role can read data, and GitHub-side wiring is unverified. |
+| Status | INF-18 done in code. INF-74 partial: PowerUserAccess replaced by a scoped policy plus guardrails, not yet proven by a real apply. Roles lack a permissions boundary, the plan role can read data, and GitHub-side wiring is unverified. |
 
 ## Purpose
 
@@ -22,7 +22,7 @@ Let GitHub Actions in `aptiverse-labs/{api,web,infra}` assume short-lived AWS ro
 ## Tasks
 
 - [x] **INF-18** `modules/github-oidc`: OIDC provider and per-repo, per-env deploy roles. *(`infra/modules/github-oidc/main.tf`)*
-- [ ] **INF-74** Replace `PowerUserAccess` on `infra-apply` with a scoped policy covering only the services the stacks own (ec2 VPC resources, ecs, ecr, rds, elasticloadbalancing, acm, s3 on `aptiverse-*` buckets, secretsmanager on `aptiverse/*` without `GetSecretValue`, ssm on `/aptiverse/*`, logs, cloudwatch, sns, kms, application-autoscaling, backup, budgets, ce, cloudtrail, guardduty, securityhub, config). Generate the starting point from CloudTrail with IAM Access Analyzer policy generation after a full dev apply, then review.
+- [ ] **INF-74** Replace `PowerUserAccess` on `infra-apply` with a scoped policy covering only the services the stacks own (ec2 VPC resources, ecs, ecr, rds, elasticloadbalancing, acm, s3 on `aptiverse-*` buckets, secretsmanager on `aptiverse/*` without `GetSecretValue`, ssm on `/aptiverse/*`, logs, cloudwatch, sns, kms, application-autoscaling, backup, budgets, ce, cloudtrail, guardduty, securityhub, config). Generate the starting point from CloudTrail with IAM Access Analyzer policy generation after a full dev apply, then review. *(partial: PowerUserAccess replaced by `apply_services` (each managed service listed, scoped to `aptiverse-*` ARNs where possible) and `apply_guard` (no secret values, only af-south-1 and eu-west-1, no broad managed policies, no IAM users or keys); the api deploy role pushes images only in dev (`ecr_push`). Not yet proven: written without AWS access, so a full dev plan and apply with this role, then Access Analyzer policy generation from CloudTrail, must confirm it (`infra/README.md` "Proving the apply policy"))*
 - [ ] **INF-75** Permissions boundary: create `aptiverse-boundary` and require it (`iam:PermissionsBoundary` condition) on every role `infra-apply` creates, so a compromised apply run cannot create an `aptiverse-*` role with admin rights. Attach the boundary to all task, execution and GitHub roles.
 - [ ] **INF-76** Prod environment gate: confirm the GitHub `prod` and `global` environments require reviewers and restrict deployment branches to `main` (and tags for api prod), so `api` and `infra-apply` in prod can only be assumed after approval. *(unverified: GitHub settings, owned with REPO-02)*
 - [ ] **INF-77** Copy `github_role_arns` into GitHub variables per repo and environment (`AWS_ROLE_ARN`, `AWS_PLAN_ROLE_ARN`, `AWS_APPLY_ROLE_ARN_<STACK>`) and record which variable each workflow reads in `infra/README.md`. *(unverified: GitHub settings)*
