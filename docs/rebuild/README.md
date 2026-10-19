@@ -17,27 +17,24 @@ Counted from the task lists. Done and partial were checked against the code on 2
 | Folder | What it covers | Files | Tasks | Done | Partial | Unverified | Deferred |
 |---|---|---|---|---|---|---|---|
 | [`phase-0/`](phase-0/) | Phase 0: decisions, secrets, live-app fixes, repositories, security baseline, change management | 8 | 195 | 11 | 11 | 82 | 0 |
-| [`infra/`](infra/) | Terraform: one file per module and environment, plus edge security, backups and account security | 21 | 166 | 25 | 6 | 26 | 0 |
-| [`ci/`](ci/) | Pipelines for api, web and infra, and shared workflows | 4 | 93 | 9 | 10 | 4 | 0 |
+| [`infra/`](infra/) | Terraform: one file per module and environment, plus edge security, backups and account security | 21 | 166 | 28 | 6 | 26 | 0 |
+| [`ci/`](ci/) | Pipelines for api, web and infra, and shared workflows | 4 | 93 | 9 | 11 | 4 | 0 |
 | [`observability/`](observability/) | Telemetry, logging, dashboards and alerting | 4 | 50 | 4 | 4 | 5 | 0 |
-| [`backend/`](backend/) | One file per API module | 15 | 1014 | 24 | 31 | 2 | 24 |
+| [`backend/`](backend/) | One file per API module | 15 | 1014 | 27 | 32 | 2 | 24 |
 | [`frontend/`](frontend/) | Web foundation: skeleton, auth and BFF, tokens, guardrails, testing, ports, shell | 7 | 181 | 15 | 20 | 1 | 1 |
 | [`frontend/components/`](frontend/components/) | One file per UI component | 28 | 136 | 2 | 25 | 0 | 0 |
 | [`pages/`](pages/) | One file per page (see pages/README.md) | 69 | 2863 | 7 | 13 | 3 | 16 |
 | [`launch/`](launch/) | Hardening, POPIA, disaster recovery, incidents, migration ETL, cutover, post-launch | 17 | 343 | 3 | 7 | 4 | 0 |
-| **Total** | | **173** | **5041** | **100** | **127** | **127** | **41** |
+| **Total** | | **173** | **5041** | **106** | **129** | **127** | **41** |
 
-## Blockers found in the code (fix first)
+## Blockers found in the code
 
-These came out of the status pass and stop progress until fixed:
+Fixed on 2026-10-19: the API build (BE-SK-37, BE-SK-38), Identity wiring (BE-IDN-08, partial: no `/auth` or `/me` slices yet), the Dockerfile and module guard (BE-SK-53), the infra to api configuration contract (INF-49) and the image repository name and promotion model (INF-40, INF-41). The API builds, its tests pass (36 passed, 1 skipped by design), and it boots in Production mode with the variables infra injects.
 
-- **The API does not build.** `SharedKernel/Authorization/Policies.cs` was deleted while `Support/Features/CreateFaq/CreateFaqEndpoint.cs` and the Host's `ApiServiceCollectionExtensions.cs` still use `Policies.Admin`; `RequirePermission` points at a policy that is never registered (BE-SK-37, BE-SK-38).
-- **The Identity module does not compile and is not wired in.** No `IdentityModule` class, and it is missing from the solution, Host, Worker, Dockerfile and architecture tests (backend/identity.md).
-- **The Dockerfile only copies the Support project**, so any new module breaks the image build (BE-SK-53).
-- **The first deploy would fail to boot.** Infra injects `Database__*`, `Jwt__SigningKey` and `App__WebOrigins`; the API reads `ConnectionStrings:Aptiverse`, `Auth:*` and `Cors:AllowedOrigins` (INF-49).
-- **Image names do not match.** CI pushes `aptiverse-api`; infra creates `aptiverse-<env>/api` per environment, which also blocks promoting one tested image (INF-40/41, CI-53/63).
+Still open:
+
 - **No CI runs today.** Per-repo workflows only run after the split into the org repos (REPO-01). Local `main` is ahead of GitHub `main`, which still deploys the old app: never push the rebuild over it before cutover (FIX-25).
-- **Infra access is too broad.** The apply role has PowerUserAccess and the app connects with the RDS master credentials (INF-38, INF-45, INF-46, INF-74).
+- **Infra access is too broad.** The apply role has PowerUserAccess, every env's deploy role can push to the shared image repository, and the app connects with the RDS master credentials (INF-38, INF-45, INF-46, INF-74).
 
 ## Every file
 
