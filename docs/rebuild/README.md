@@ -17,7 +17,7 @@ Counted from the task lists. Done and partial were checked against the code on 2
 | Folder | What it covers | Files | Tasks | Done | Partial | Unverified | Deferred |
 |---|---|---|---|---|---|---|---|
 | [`phase-0/`](phase-0/) | Phase 0: decisions, secrets, live-app fixes, repositories, security baseline, change management | 8 | 195 | 11 | 11 | 82 | 0 |
-| [`infra/`](infra/) | Terraform: one file per module and environment, plus edge security, backups and account security | 21 | 166 | 28 | 6 | 26 | 0 |
+| [`infra/`](infra/) | Terraform: one file per module and environment, plus edge security, backups and account security | 21 | 166 | 29 | 9 | 26 | 0 |
 | [`ci/`](ci/) | Pipelines for api, web and infra, and shared workflows | 4 | 93 | 9 | 11 | 4 | 0 |
 | [`observability/`](observability/) | Telemetry, logging, dashboards and alerting | 4 | 50 | 4 | 4 | 5 | 0 |
 | [`backend/`](backend/) | One file per API module | 15 | 1014 | 27 | 32 | 2 | 24 |
@@ -25,7 +25,7 @@ Counted from the task lists. Done and partial were checked against the code on 2
 | [`frontend/components/`](frontend/components/) | One file per UI component | 28 | 136 | 2 | 25 | 0 | 0 |
 | [`pages/`](pages/) | One file per page (see pages/README.md) | 69 | 2863 | 7 | 13 | 3 | 16 |
 | [`launch/`](launch/) | Hardening, POPIA, disaster recovery, incidents, migration ETL, cutover, post-launch | 17 | 343 | 3 | 7 | 4 | 0 |
-| **Total** | | **173** | **5041** | **106** | **129** | **127** | **41** |
+| **Total** | | **173** | **5041** | **107** | **132** | **127** | **41** |
 
 ## Blockers found in the code
 
@@ -34,7 +34,7 @@ Fixed on 2026-10-19: the API build (BE-SK-37, BE-SK-38), Identity wiring (BE-IDN
 Still open:
 
 - **No CI runs today.** Per-repo workflows only run after the split into the org repos (REPO-01). Local `main` is ahead of GitHub `main`, which still deploys the old app: never push the rebuild over it before cutover (FIX-25).
-- **Infra access is too broad.** The apply role has PowerUserAccess, every env's deploy role can push to the shared image repository, and the app connects with the RDS master credentials (INF-38, INF-45, INF-46, INF-74).
+- **The new infra access model is unproven against AWS.** PowerUserAccess is gone, the app has its own database role, and task roles are split (INF-38, INF-45, INF-46, INF-74 on 2026-10-19), but this was written without an AWS account. A dev plan and apply with the new apply role must confirm it, and each environment moves onto the runtime database role once, in the order in `infra/README.md`.
 
 ## Every file
 
