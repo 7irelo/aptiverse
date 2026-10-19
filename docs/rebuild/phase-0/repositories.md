@@ -23,7 +23,7 @@ Finish the move to the three org repos and give each the same guardrails, so cod
 
 ### Move
 
-- [ ] **REPO-01** Finish move to `aptiverse-labs/{api,web,infra}` with history for each subfolder (`git subtree split` or `git filter-repo`) *(partial: on 2026-10-19 the rebuild-era commits were replayed onto each org repo's `main` and pushed as a `rebuild` branch, trailer-free and fast-forwardable from `main`; `main` stays on the old app until cutover (FIX-25). Workflows only trigger on `main` and pull requests, so CI runs once a pull request from `rebuild` is open)*
+- [ ] **REPO-01** Finish move to `aptiverse-labs/{api,web,infra}` with history for each subfolder (`git subtree split` or `git filter-repo`) *(unverified: on 2026-10-19 the owner said to work off `7irelo/aptiverse`, not the `aptiverse-labs` org repos; the rebuild lives on `7irelo/aptiverse` `main`. Whether the three-repo layout of ADR 0006 still stands is for the owner to confirm before this task is done or dropped)*
 - [ ] **REPO-11** Confirm each org repo's first CI run is green (api `ci`, web `CI`, infra `ci`) (split from REPO-01) *(unverified: GitHub Actions)*
 - [ ] **REPO-12** Repoint local working copies to the org remotes and retire the combined tree (split from REPO-01) *(unverified: each machine)*
 
