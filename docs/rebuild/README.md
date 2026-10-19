@@ -33,7 +33,7 @@ Fixed on 2026-10-19: the API build (BE-SK-37, BE-SK-38), Identity wiring (BE-IDN
 
 Still open:
 
-- **CI has not run yet.** The rebuild is pushed to a `rebuild` branch in each org repo (REPO-01), but the workflows trigger only on `main` and pull requests; a draft pull request from `rebuild` runs them. Local `main` is ahead of GitHub `main`, which still deploys the old app: never push the rebuild over it before cutover (FIX-25).
+- **CI has not run yet.** The rebuild is on `7irelo/aptiverse` `main`, which has no root `.github/workflows`; the per-project workflows under `api/`, `web/` and `infra/` only run in their own repositories (REPO-01, repository layout to be confirmed by the owner). Never push the rebuild to the `aptiverse-labs` repos' `main` before cutover: Vercel deploys web from there (FIX-25).
 - **The new infra access model is unproven against AWS.** PowerUserAccess is gone, the app has its own database role, and task roles are split (INF-38, INF-45, INF-46, INF-74 on 2026-10-19), but this was written without an AWS account. A dev plan and apply with the new apply role must confirm it, and each environment moves onto the runtime database role once, in the order in `infra/README.md`.
 
 ## Every file
