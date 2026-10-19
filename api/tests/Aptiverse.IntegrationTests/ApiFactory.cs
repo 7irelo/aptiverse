@@ -27,6 +27,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public string? DockerUnavailableReason { get; private set; }
 
+    /// <summary>Connection string of the throwaway database, as the user that owns every schema.</summary>
+    public string ConnectionString => _postgres?.GetConnectionString() ?? throw new InvalidOperationException("Postgres is not running.");
+
     public async ValueTask InitializeAsync()
     {
         // Program ends with RunJasperFxCommands; this lets WebApplicationFactory start the host normally.
