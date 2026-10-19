@@ -1,11 +1,13 @@
 using Aptiverse.SharedKernel.Persistence;
 using JasperFx.Resources;
+using Microsoft.Extensions.Options;
 
 namespace Aptiverse.Host.Infrastructure;
 
 /// <summary>
-/// `Aptiverse.Host.dll migrate`: applies every module's migrations, creates the Wolverine message storage, then
-/// exits. Deployed environments run this as a one-off task before rolling the service.
+/// `Aptiverse.Host.dll migrate`: applies every module's migrations, creates the Wolverine message storage, grants
+/// the runtime database role access to what now exists, then exits. Deployed environments run this as a one-off
+/// task before rolling the service, connected as the user that owns the schemas.
 /// </summary>
 internal static class MigrateCommand
 {
@@ -26,6 +28,19 @@ internal static class MigrateCommand
 
         logger.LogInformation("Creating Wolverine message storage");
         await app.SetupResources();
+
+        var runtimeRole = app.Configuration.GetSection(RuntimeDatabaseRole.SectionName).Get<RuntimeDatabaseRole>() ?? new();
+        if (runtimeRole.IsConfigured)
+        {
+            var connectionString = app.Services.GetRequiredService<IOptions<DatabaseOptions>>().Value.ConnectionString;
+            var schemas = await runtimeRole.EnsureAsync(connectionString, CancellationToken.None);
+            logger.LogInformation("Runtime role {Role} granted DML on {Schemas}", runtimeRole.Username, string.Join(", ", schemas));
+        }
+        else
+        {
+            // Local compose runs everything as one user. Deployed environments always set the runtime role.
+            logger.LogInformation("No Database:Runtime role configured; skipping runtime grants");
+        }
 
         return 0;
     }
