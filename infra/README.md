@@ -63,13 +63,32 @@ Never apply without a reviewed plan. For the first rollout, run each step by han
 
 ## Deploying the api (how the pieces fit)
 
-1. The api pipeline builds and pushes `<ecr>/aptiverse-<env>/api:<git-sha>` (immutable tags).
+1. The api pipeline builds and pushes `<ecr>/aptiverse/api:<git-sha>` (immutable tags) once. Every environment deploys that same image; promotion changes the tag in SSM, never rebuilds.
 2. It writes the sha to `/aptiverse/<env>/api/image-tag` in SSM, then triggers an infra apply for that env (workflow dispatch), which registers new task definitions from this repo.
 3. It runs the migration task: `aws ecs run-task --task-definition <migration family>` with the `migration_network_configuration` output, waits, and fails on a non-zero exit code.
 4. ECS rolls the api and worker with the deployment circuit breaker; a failed rollout rolls back automatically (see `docs/runbooks/rollback-ecs-deploy.md`).
 5. The pipeline smoke-tests `/health/ready`.
 
 The role is selected by the container command (`host/Aptiverse.Host.dll`, `worker/Aptiverse.Worker.dll`, or `host/Aptiverse.Host.dll migrate`); `APP_ROLE` is also set for information. The api must listen on 8080 in the api role and tolerate a read-only root filesystem (a writable `/tmp` is mounted).
+
+## Configuration contract (api and worker)
+
+Infra sets these on every api, worker and migration task (`app_environment` and `app_secrets` in each env's `main.tf`). Names are the api's configuration keys with `__` for nesting. The api validates required keys on start, so a missing one fails the deploy instead of running half configured.
+
+| Key | Source | Consumer |
+|---|---|---|
+| `Database__Host`, `__Port`, `__Name` | env (RDS outputs) | `DatabaseOptions.FromParts` builds `ConnectionStrings:Aptiverse` (TLS required) |
+| `Database__Username`, `__Password` | secret (RDS managed master secret, JSON keys) | same |
+| `Auth__Issuer` | env (`https://<api_hostname>.<domain>`) | Identity `AuthOptions`, token `iss` |
+| `Auth__WebAppUrl` | env (first entry of `web_origins`) | Identity `AuthOptions`, links in emails |
+| `Auth__SigningKey` | secret `jwt-signing-key` (PEM EC P-256) | Identity `SigningKeys`; required outside Development |
+| `Cors__AllowedOrigins__<n>` | env (`web_origins`) | Host `CorsSettings` |
+| `ForwardedHeaders__KnownNetworks__0` | env (`vpc_cidr`) | Host `ForwardedHeadersSettings`, so rate limits see the client IP and not the ALB |
+| `Storage__*`, `Email__*` | env | reserved for the Storage and Notifications modules |
+| `Sentry__Dsn`, `OTEL_EXPORTER_OTLP_*` | secrets | telemetry |
+| `Sentry__Environment`, `OTEL_RESOURCE_ATTRIBUTES`, `OTEL_SERVICE_NAME` | env | telemetry |
+
+`Auth__Audience`, `Legal__TermsVersion` and `Legal__PrivacyVersion` come from the image's `appsettings.json`; override them here only if an environment needs a different value.
 
 ## Database access (SSM port forward, no SSH)
 

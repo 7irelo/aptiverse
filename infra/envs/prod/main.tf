@@ -28,27 +28,30 @@ locals {
 
   # The deployed tag lives in SSM so the api pipeline can roll out a new image
   # without editing this repo, while the task definition stays defined here.
-  image = "${module.ecr.repository_urls["api"]}:${aws_ssm_parameter.image_tag.insecure_value}"
+  image = "${local.global.api_repository_url}:${aws_ssm_parameter.image_tag.insecure_value}"
 
   db_secret = module.database.master_user_secret_arn
 
-  # Plain configuration shared by the api, worker and migration task.
-  app_environment = {
-    ASPNETCORE_ENVIRONMENT   = var.aspnetcore_environment
-    ASPNETCORE_HTTP_PORTS    = tostring(var.api_container_port)
-    Database__Host           = module.database.address
-    Database__Port           = tostring(module.database.port)
-    Database__Name           = module.database.db_name
-    Storage__Bucket          = module.storage.bucket_name
-    Storage__Region          = var.region
-    Email__SesRegion         = local.global.ses_region
-    Email__ConfigurationSet  = local.global.ses_configuration_set_name
-    Email__FromAddress       = "noreply@${var.domain}"
-    App__ApiBaseUrl          = "https://${local.api_fqdn}"
-    App__WebOrigins          = join(",", var.web_origins)
-    OTEL_RESOURCE_ATTRIBUTES = "deployment.environment=${var.environment}"
-    Sentry__Environment      = var.environment
-  }
+  # Plain configuration shared by the api, worker and migration task. Names
+  # follow the api's configuration keys (section__key); the api composes its
+  # connection string from the Database__* values.
+  app_environment = merge({
+    ASPNETCORE_ENVIRONMENT             = var.aspnetcore_environment
+    ASPNETCORE_HTTP_PORTS              = tostring(var.api_container_port)
+    Database__Host                     = module.database.address
+    Database__Port                     = tostring(module.database.port)
+    Database__Name                     = module.database.db_name
+    Auth__Issuer                       = "https://${local.api_fqdn}"
+    Auth__WebAppUrl                    = var.web_origins[0]
+    ForwardedHeaders__KnownNetworks__0 = var.vpc_cidr
+    Storage__Bucket                    = module.storage.bucket_name
+    Storage__Region                    = var.region
+    Email__SesRegion                   = local.global.ses_region
+    Email__ConfigurationSet            = local.global.ses_configuration_set_name
+    Email__FromAddress                 = "noreply@${var.domain}"
+    OTEL_RESOURCE_ATTRIBUTES           = "deployment.environment=${var.environment}"
+    Sentry__Environment                = var.environment
+  }, { for i, origin in var.web_origins : "Cors__AllowedOrigins__${i}" => origin })
 
   # Secrets resolved by ECS at task start. Every referenced secret (and JSON
   # key) must have a value before the first deploy. Add Paystack, Anthropic and
@@ -56,7 +59,7 @@ locals {
   app_secrets = {
     Database__Username          = "${local.db_secret}:username::"
     Database__Password          = "${local.db_secret}:password::"
-    Jwt__SigningKey             = module.secrets.arns["jwt-signing-key"]
+    Auth__SigningKey            = module.secrets.arns["jwt-signing-key"]
     Sentry__Dsn                 = module.secrets.arns["sentry-dsn"]
     OTEL_EXPORTER_OTLP_HEADERS  = "${module.secrets.arns["grafana-otlp"]}:otlp_headers::"
     OTEL_EXPORTER_OTLP_ENDPOINT = "${module.secrets.arns["grafana-otlp"]}:endpoint::"
@@ -74,11 +77,15 @@ module "network" {
   interface_endpoints = var.interface_endpoints
 }
 
-module "ecr" {
-  source = "../../modules/ecr"
+# The api image repository moved to envs/global so one image is promoted by
+# digest. A per-environment repository that was already applied is dropped from
+# state, not destroyed; delete it by hand once it holds nothing worth keeping.
+removed {
+  from = module.ecr
 
-  name_prefix  = local.name
-  repositories = ["api"]
+  lifecycle {
+    destroy = false
+  }
 }
 
 module "secrets" {
@@ -276,7 +283,7 @@ module "github_oidc" {
   allow_main_branch_deploys = var.allow_main_branch_deploys
   state_bucket_name         = var.state_bucket_name
 
-  ecr_repository_arns              = values(module.ecr.repository_arns)
+  ecr_repository_arns              = [local.global.api_repository_arn]
   ecs_cluster_arn                  = aws_ecs_cluster.this.arn
   ecs_service_arns                 = [module.api.service_arn, module.worker.service_arn]
   migration_task_definition_family = module.api.migration_task_definition_family
