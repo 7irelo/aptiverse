@@ -52,3 +52,13 @@ output "log_group_arn" {
   description = "CloudWatch log group ARN."
   value       = aws_cloudwatch_log_group.this.arn
 }
+
+output "migration_task_role_arn" {
+  description = "Migration task role ARN (no permissions), or null when not created."
+  value       = try(aws_iam_role.migration_task[0].arn, null)
+}
+
+output "migration_execution_role_arn" {
+  description = "Migration execution role ARN, or null when not created."
+  value       = try(aws_iam_role.migration_execution[0].arn, null)
+}

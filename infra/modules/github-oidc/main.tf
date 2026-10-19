@@ -84,17 +84,29 @@ data "aws_iam_policy_document" "api" {
     resources = ["*"]
   }
 
+  # Every env may read the shared repository (to check the digest it is about
+  # to deploy); only the env that builds images may push to it.
   dynamic "statement" {
     for_each = length(var.ecr_repository_arns) > 0 ? [1] : []
     content {
-      sid = "EcrPush"
+      sid = "EcrRead"
       actions = [
         "ecr:BatchCheckLayerAvailability",
         "ecr:BatchGetImage",
-        "ecr:CompleteLayerUpload",
         "ecr:DescribeImages",
         "ecr:DescribeImageScanFindings",
         "ecr:GetDownloadUrlForLayer",
+      ]
+      resources = var.ecr_repository_arns
+    }
+  }
+
+  dynamic "statement" {
+    for_each = length(var.ecr_repository_arns) > 0 && var.ecr_push ? [1] : []
+    content {
+      sid = "EcrPush"
+      actions = [
+        "ecr:CompleteLayerUpload",
         "ecr:InitiateLayerUpload",
         "ecr:PutImage",
         "ecr:UploadLayerPart",
@@ -244,14 +256,317 @@ resource "aws_iam_role_policy" "plan_guard" {
   policy = data.aws_iam_policy_document.plan_guard[0].json
 }
 
-# Apply needs to manage almost everything the stacks own. PowerUserAccess covers
-# all non-IAM services; IAM is limited to aptiverse-* roles and policies and the
-# GitHub OIDC provider.
-resource "aws_iam_role_policy_attachment" "apply_poweruser" {
+# Apply manages only what the stacks own. Each service is listed explicitly
+# (no PowerUserAccess), scoped to aptiverse-* names where the ARN allows it,
+# and limited to the regions the stacks use. Add a statement here when a stack
+# starts managing a new service; the plan role (read only) shows what is
+# missing before an apply fails.
+data "aws_iam_policy_document" "apply_services" {
   count = var.create_roles ? 1 : 0
 
-  role       = aws_iam_role.this["infra-apply"].name
-  policy_arn = "arn:${local.partition}:iam::aws:policy/PowerUserAccess"
+  statement {
+    sid       = "Identity"
+    actions   = ["sts:GetCallerIdentity"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "Network"
+    actions = [
+      "ec2:Describe*",
+      "ec2:CreateTags",
+      "ec2:DeleteTags",
+      "ec2:*Vpc",
+      "ec2:ModifyVpcAttribute",
+      "ec2:*Subnet",
+      "ec2:ModifySubnetAttribute",
+      "ec2:*RouteTable",
+      "ec2:*Route",
+      "ec2:*InternetGateway",
+      "ec2:*NatGateway",
+      "ec2:AllocateAddress",
+      "ec2:ReleaseAddress",
+      "ec2:DisassociateAddress",
+      "ec2:*SecurityGroup",
+      "ec2:*SecurityGroupIngress",
+      "ec2:*SecurityGroupEgress",
+      "ec2:*SecurityGroupRules",
+      "ec2:*VpcEndpoint",
+      "ec2:*VpcEndpoints",
+      "ec2:*FlowLogs",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "ContainersAndLoadBalancing"
+    actions = [
+      "ecs:*",
+      "elasticloadbalancing:*",
+      "application-autoscaling:*",
+      "acm:*",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "ImageRepositories"
+    actions   = ["ecr:*"]
+    resources = ["arn:${local.partition}:ecr:${local.region}:${local.account_id}:repository/aptiverse/*"]
+  }
+
+  statement {
+    sid       = "ImageRepositoriesList"
+    actions   = ["ecr:GetAuthorizationToken", "ecr:DescribeRepositories"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid     = "Database"
+    actions = ["rds:*"]
+    resources = [
+      "arn:${local.partition}:rds:${local.region}:${local.account_id}:db:aptiverse-*",
+      "arn:${local.partition}:rds:${local.region}:${local.account_id}:subgrp:aptiverse-*",
+      "arn:${local.partition}:rds:${local.region}:${local.account_id}:pg:aptiverse-*",
+      "arn:${local.partition}:rds:${local.region}:${local.account_id}:snapshot:aptiverse-*",
+    ]
+  }
+
+  statement {
+    sid       = "DatabaseDescribe"
+    actions   = ["rds:Describe*", "rds:ListTagsForResource"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "Buckets"
+    actions   = ["s3:*"]
+    resources = ["arn:${local.partition}:s3:::aptiverse-*", "arn:${local.partition}:s3:::aptiverse-*/*"]
+  }
+
+  statement {
+    sid       = "BucketsList"
+    actions   = ["s3:ListAllMyBuckets", "s3:GetBucketLocation"]
+    resources = ["*"]
+  }
+
+  # Secret metadata only. GetSecretValue is denied in the guardrails; values are
+  # set out of band. rds!* is the master secret RDS creates for
+  # manage_master_user_password.
+  statement {
+    sid = "SecretMetadata"
+    actions = [
+      "secretsmanager:CreateSecret",
+      "secretsmanager:DeleteSecret",
+      "secretsmanager:DescribeSecret",
+      "secretsmanager:UpdateSecret",
+      "secretsmanager:RestoreSecret",
+      "secretsmanager:TagResource",
+      "secretsmanager:UntagResource",
+      "secretsmanager:GetResourcePolicy",
+      "secretsmanager:PutResourcePolicy",
+      "secretsmanager:DeleteResourcePolicy",
+      "secretsmanager:ListSecretVersionIds",
+      "secretsmanager:RotateSecret",
+    ]
+    resources = [
+      "arn:${local.partition}:secretsmanager:${local.region}:${local.account_id}:secret:aptiverse-*",
+      "arn:${local.partition}:secretsmanager:${local.region}:${local.account_id}:secret:rds!*",
+    ]
+  }
+
+  statement {
+    sid       = "SecretList"
+    actions   = ["secretsmanager:ListSecrets"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "Parameters"
+    actions = [
+      "ssm:GetParameter",
+      "ssm:GetParameters",
+      "ssm:PutParameter",
+      "ssm:DeleteParameter",
+      "ssm:AddTagsToResource",
+      "ssm:RemoveTagsFromResource",
+      "ssm:ListTagsForResource",
+    ]
+    resources = ["arn:${local.partition}:ssm:${local.region}:${local.account_id}:parameter/aptiverse/*"]
+  }
+
+  statement {
+    sid       = "ParametersList"
+    actions   = ["ssm:DescribeParameters"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "Logs"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:DeleteLogGroup",
+      "logs:PutRetentionPolicy",
+      "logs:DeleteRetentionPolicy",
+      "logs:TagResource",
+      "logs:UntagResource",
+      "logs:TagLogGroup",
+      "logs:UntagLogGroup",
+      "logs:ListTagsForResource",
+      "logs:ListTagsLogGroup",
+      "logs:AssociateKmsKey",
+      "logs:DisassociateKmsKey",
+    ]
+    resources = [
+      "arn:${local.partition}:logs:${local.region}:${local.account_id}:log-group:/ecs/aptiverse-*",
+      "arn:${local.partition}:logs:${local.region}:${local.account_id}:log-group:/vpc/aptiverse-*",
+    ]
+  }
+
+  statement {
+    sid       = "LogsDescribe"
+    actions   = ["logs:DescribeLogGroups"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "Alarms"
+    actions = [
+      "cloudwatch:PutMetricAlarm",
+      "cloudwatch:DeleteAlarms",
+      "cloudwatch:DescribeAlarms",
+      "cloudwatch:TagResource",
+      "cloudwatch:UntagResource",
+      "cloudwatch:ListTagsForResource",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "AlarmTopics"
+    actions   = ["sns:*"]
+    resources = ["arn:${local.partition}:sns:${local.region}:${local.account_id}:aptiverse-*"]
+  }
+
+  statement {
+    sid       = "AlarmTopicsList"
+    actions   = ["sns:ListTopics"]
+    resources = ["*"]
+  }
+
+  # Key management, never use: no Encrypt, Decrypt or GenerateDataKey. Grants
+  # are allowed only on behalf of AWS services (RDS, Secrets Manager).
+  statement {
+    sid = "KeyManagement"
+    actions = [
+      "kms:CreateKey",
+      "kms:CreateAlias",
+      "kms:DeleteAlias",
+      "kms:UpdateAlias",
+      "kms:DescribeKey",
+      "kms:GetKeyPolicy",
+      "kms:PutKeyPolicy",
+      "kms:GetKeyRotationStatus",
+      "kms:EnableKeyRotation",
+      "kms:DisableKeyRotation",
+      "kms:EnableKey",
+      "kms:DisableKey",
+      "kms:ScheduleKeyDeletion",
+      "kms:CancelKeyDeletion",
+      "kms:TagResource",
+      "kms:UntagResource",
+      "kms:ListAliases",
+      "kms:ListKeys",
+      "kms:ListResourceTags",
+      "kms:ListKeyPolicies",
+      "kms:ListGrants",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "KeyGrantsForServices"
+    actions   = ["kms:CreateGrant", "kms:RetireGrant", "kms:RevokeGrant"]
+    resources = ["*"]
+    condition {
+      test     = "Bool"
+      variable = "kms:GrantIsForAWSResource"
+      values   = ["true"]
+    }
+  }
+
+  # The global stack's SES identity lives in eu-west-1.
+  statement {
+    sid       = "Email"
+    actions   = ["ses:*"]
+    resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "apply_guard" {
+  count = var.create_roles ? 1 : 0
+
+  statement {
+    sid       = "NoSecretValues"
+    effect    = "Deny"
+    actions   = ["secretsmanager:GetSecretValue"]
+    resources = ["*"]
+  }
+
+  # Only the regions the stacks use. Global services (IAM, STS and the like)
+  # are exempt because their requests are not regional.
+  statement {
+    sid         = "OnlyOurRegions"
+    effect      = "Deny"
+    not_actions = ["iam:*", "sts:*", "cloudfront:*", "route53:*", "budgets:*", "ce:*", "support:*"]
+    resources   = ["*"]
+    condition {
+      test     = "StringNotEquals"
+      variable = "aws:RequestedRegion"
+      values   = var.allowed_regions
+    }
+  }
+
+  # iam:* on aptiverse-* roles could otherwise hand a role full access and pass
+  # it to a task. These stacks never attach broad AWS managed policies.
+  statement {
+    sid       = "NoBroadManagedPolicies"
+    effect    = "Deny"
+    actions   = ["iam:AttachRolePolicy"]
+    resources = ["*"]
+    condition {
+      test     = "ArnLike"
+      variable = "iam:PolicyARN"
+      values = [
+        "arn:${local.partition}:iam::aws:policy/AdministratorAccess",
+        "arn:${local.partition}:iam::aws:policy/PowerUserAccess",
+        "arn:${local.partition}:iam::aws:policy/IAMFullAccess",
+      ]
+    }
+  }
+
+  statement {
+    sid       = "NoIamUsersOrKeys"
+    effect    = "Deny"
+    actions   = ["iam:CreateUser", "iam:CreateAccessKey", "iam:CreateLoginProfile"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "apply_services" {
+  count = var.create_roles ? 1 : 0
+
+  name   = "scoped-services"
+  role   = aws_iam_role.this["infra-apply"].id
+  policy = data.aws_iam_policy_document.apply_services[0].json
+}
+
+resource "aws_iam_role_policy" "apply_guard" {
+  count = var.create_roles ? 1 : 0
+
+  name   = "guardrails"
+  role   = aws_iam_role.this["infra-apply"].id
+  policy = data.aws_iam_policy_document.apply_guard[0].json
 }
 
 data "aws_iam_policy_document" "apply_iam" {

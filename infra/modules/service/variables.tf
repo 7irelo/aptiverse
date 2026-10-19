@@ -147,9 +147,15 @@ variable "task_role_policy_json" {
 }
 
 variable "create_migration_task" {
-  description = "Also register a one-off migration task definition (<name>-migrate) with the same image, secrets and roles. It runs with APP_ROLE=migrate."
+  description = "Also register a one-off migration task definition (<name>-migrate) with the same image and environment, its own secrets (migration_secrets) and its own execution and task roles. It runs with APP_ROLE=migrate."
   type        = bool
   default     = false
+}
+
+variable "migration_secrets" {
+  description = "Secrets for the migration task, same format as secrets. Null reuses secrets. Set it so only the migration task can read the database master login."
+  type        = map(string)
+  default     = null
 }
 
 variable "migration_command" {

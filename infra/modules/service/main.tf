@@ -11,6 +11,15 @@ locals {
     regex("^(arn:[^:]+:secretsmanager:[^:]+:[^:]+:secret:[^:]+)", v)[0]
   ])
 
+  # The migration task owns the schemas, so it gets its own secrets (the RDS
+  # master login plus the runtime role it provisions) and its own roles. The
+  # api and worker never see the master credentials.
+  migration_secrets = coalesce(var.migration_secrets, var.secrets)
+  migration_secret_arns = distinct([
+    for v in values(local.migration_secrets) :
+    regex("^(arn:[^:]+:secretsmanager:[^:]+:[^:]+:secret:[^:]+)", v)[0]
+  ])
+
   environment = merge({ APP_ROLE = var.role }, var.environment)
 
   # The api image has no shell, so the role is chosen by the command (entrypoint is `dotnet`).
@@ -55,6 +64,7 @@ locals {
     command      = coalesce(var.migration_command, local.default_commands["migrate"])
     portMappings = []
     environment  = [for k in sort(keys(local.migration_environment)) : { name = k, value = local.migration_environment[k] }]
+    secrets      = [for k in sort(keys(local.migration_secrets)) : { name = k, valueFrom = local.migration_secrets[k] }]
     logConfiguration = merge(local.container_base.logConfiguration, {
       options = merge(local.container_base.logConfiguration.options, { awslogs-stream-prefix = "migrate" })
     })
@@ -143,6 +153,50 @@ resource "aws_iam_role_policy" "task_extra" {
   policy = var.task_role_policy_json
 }
 
+# Migration roles: the execution role may read the migration secrets; the
+# task role has no permissions at all, because migrating only talks to
+# Postgres. No ECS Exec into the one-off task either.
+resource "aws_iam_role" "migration_execution" {
+  count = var.create_migration_task ? 1 : 0
+
+  name               = "${var.name}-migrate-execution"
+  assume_role_policy = data.aws_iam_policy_document.ecs_tasks_assume.json
+  tags               = var.tags
+}
+
+resource "aws_iam_role_policy_attachment" "migration_execution" {
+  count = var.create_migration_task ? 1 : 0
+
+  role       = aws_iam_role.migration_execution[0].name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+data "aws_iam_policy_document" "migration_execution_secrets" {
+  count = var.create_migration_task && length(local.migration_secret_arns) > 0 ? 1 : 0
+
+  statement {
+    sid       = "ReadMigrationSecrets"
+    actions   = ["secretsmanager:GetSecretValue"]
+    resources = local.migration_secret_arns
+  }
+}
+
+resource "aws_iam_role_policy" "migration_execution_secrets" {
+  count = var.create_migration_task && length(local.migration_secret_arns) > 0 ? 1 : 0
+
+  name   = "read-migration-secrets"
+  role   = aws_iam_role.migration_execution[0].id
+  policy = data.aws_iam_policy_document.migration_execution_secrets[0].json
+}
+
+resource "aws_iam_role" "migration_task" {
+  count = var.create_migration_task ? 1 : 0
+
+  name               = "${var.name}-migrate-task"
+  assume_role_policy = data.aws_iam_policy_document.ecs_tasks_assume.json
+  tags               = var.tags
+}
+
 # --- Networking --------------------------------------------------------------
 
 resource "aws_security_group" "this" {
@@ -222,8 +276,8 @@ resource "aws_ecs_task_definition" "migration" {
   network_mode             = "awsvpc"
   cpu                      = var.cpu
   memory                   = var.memory
-  execution_role_arn       = aws_iam_role.execution.arn
-  task_role_arn            = aws_iam_role.task.arn
+  execution_role_arn       = aws_iam_role.migration_execution[0].arn
+  task_role_arn            = aws_iam_role.migration_task[0].arn
 
   runtime_platform {
     operating_system_family = "LINUX"

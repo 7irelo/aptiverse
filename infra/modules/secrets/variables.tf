@@ -8,6 +8,7 @@ variable "secrets" {
   type        = map(string)
   default = {
     "jwt-signing-key" = "ES256 private key (PEM) used by the api to sign access tokens."
+    "db-app"          = "JSON: username, password. Runtime Postgres login for the api and worker; the migration task creates the role with this password."
     "auth-session"    = "Auth.js session encryption secret shared with the web BFF."
     "paystack"        = "JSON: secret_key, public_key, webhook_secret."
     "anthropic"       = "JSON: api_key."
