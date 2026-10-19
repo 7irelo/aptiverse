@@ -93,7 +93,7 @@ jobs:
     env:
       # Push only from main, and only once the AWS OIDC role and ECR registry are configured as repo variables.
       PUSH: ${{ github.event_name == 'push' && vars.AWS_ROLE_ARN != '' && vars.ECR_REGISTRY != '' }}
-      IMAGE: ${{ vars.ECR_REGISTRY != '' && format('{0}/aptiverse-api', vars.ECR_REGISTRY) || 'aptiverse-api' }}
+      IMAGE: ${{ vars.ECR_REGISTRY != '' && format('{0}/aptiverse/api', vars.ECR_REGISTRY) || 'aptiverse/api' }}
     steps:
       - uses: actions/checkout@v4
 
