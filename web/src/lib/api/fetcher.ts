@@ -23,11 +23,14 @@ export type ProblemDetails = {
 export class ApiError extends Error {
   readonly status: number;
   readonly problem: ProblemDetails | undefined;
+  /** Seconds to wait, from Retry-After or the problem's retryAfterSeconds. */
+  readonly retryAfterSeconds: number | undefined;
 
   constructor(
     status: number,
     problem: ProblemDetails | undefined,
     url: string,
+    retryAfterSeconds?: number,
   ) {
     super(
       problem?.title ?? `API request to ${url} failed with status ${status}`,
@@ -35,7 +38,28 @@ export class ApiError extends Error {
     this.name = "ApiError";
     this.status = status;
     this.problem = problem;
+    const fromProblem = problem?.retryAfterSeconds;
+    this.retryAfterSeconds =
+      retryAfterSeconds ??
+      (typeof fromProblem === "number" && fromProblem >= 0
+        ? Math.ceil(fromProblem)
+        : undefined);
   }
+
+  /** The API's machine readable code, for example "identity.token_invalid". */
+  get code(): string | undefined {
+    const code = this.problem?.code;
+    return typeof code === "string" ? code : undefined;
+  }
+}
+
+/** Parses a Retry-After header given in seconds. HTTP dates are ignored. */
+export function parseRetryAfter(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const seconds = Number(value);
+  return Number.isFinite(seconds) && seconds >= 0
+    ? Math.ceil(seconds)
+    : undefined;
 }
 
 export function resolveBaseUrl(): string {
@@ -74,7 +98,12 @@ export async function apiFetch<T>(
   if (!response.ok) {
     const problem =
       body && typeof body === "object" ? (body as ProblemDetails) : undefined;
-    throw new ApiError(response.status, problem, url);
+    throw new ApiError(
+      response.status,
+      problem,
+      url,
+      parseRetryAfter(response.headers.get("retry-after")),
+    );
   }
 
   return body as T;

@@ -14,6 +14,13 @@ const MOCK_API_PORT = 5199;
 const APP_PORT = 3100;
 const APP_API_DOWN_PORT = 3101;
 
+// Auth for the local production build: a throwaway secret, and non-Secure
+// cookies because the test server is plain http.
+const AUTH_ENV = {
+  AUTH_SECRET: "e2e-only-secret-not-used-anywhere-else-0123456789",
+  APTIVERSE_INSECURE_COOKIES: "1",
+};
+
 // Build once if no production build exists yet (CI builds in an earlier step).
 const start = (port: number) =>
   existsSync(".next/BUILD_ID")
@@ -46,14 +53,17 @@ export default defineConfig({
     {
       command: start(APP_PORT),
       url: `http://localhost:${APP_PORT}`,
-      env: { API_INTERNAL_URL: `http://127.0.0.1:${MOCK_API_PORT}` },
+      env: {
+        ...AUTH_ENV,
+        API_INTERNAL_URL: `http://127.0.0.1:${MOCK_API_PORT}`,
+      },
       reuseExistingServer: !process.env.CI,
       timeout: 300_000,
     },
     {
       command: `npm run start -- --port ${APP_API_DOWN_PORT}`,
       url: `http://localhost:${APP_API_DOWN_PORT}`,
-      env: { API_INTERNAL_URL: "http://127.0.0.1:5998" },
+      env: { ...AUTH_ENV, API_INTERNAL_URL: "http://127.0.0.1:5998" },
       reuseExistingServer: !process.env.CI,
       timeout: 300_000,
     },

@@ -4,10 +4,17 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV !== "production";
 
 /**
- * Content Security Policy without nonces, so marketing pages stay static.
- * Next.js injects small inline scripts, which is why script-src allows
- * 'unsafe-inline'. Moving to nonces (set in proxy.ts) is a Phase 10
- * hardening task once most pages are dynamic anyway.
+ * Content Security Policy without nonces. Nonces need every page rendered
+ * per request, and Next.js says nonce CSP is incompatible with Partial
+ * Prerendering (cacheComponents), whose static shells cannot carry a
+ * per-request nonce. Next.js injects small inline scripts, so script-src
+ * keeps 'unsafe-inline' until that changes; every other directive is strict.
+ * The browser never holds an API token (BFF), which limits what an injected
+ * script could steal.
+ *
+ * form-action allows accounts.google.com because "Continue with Google"
+ * posts to Auth.js, which redirects there, and browsers apply form-action to
+ * that redirect.
  */
 const csp = [
   "default-src 'self'",
@@ -27,7 +34,7 @@ const csp = [
     .join(" "),
   "frame-ancestors 'none'",
   "base-uri 'self'",
-  "form-action 'self'",
+  "form-action 'self' https://accounts.google.com",
   "object-src 'none'",
 ].join("; ");
 
@@ -42,9 +49,14 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), payment=()",
+    value:
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
   },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
 ];
+
+/** Pages that carry one-time tokens in the URL never leak them as a Referer. */
+const tokenPageHeaders = [{ key: "Referrer-Policy", value: "no-referrer" }];
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
@@ -59,7 +71,11 @@ const nextConfig: NextConfig = {
     },
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      { source: "/reset-password", headers: tokenPageHeaders },
+      { source: "/verify-email", headers: tokenPageHeaders },
+    ];
   },
 };
 

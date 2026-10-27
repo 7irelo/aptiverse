@@ -1,94 +1,62 @@
 import type { NextRequest } from "next/server";
 
+import { upstreamContextHeaders } from "@/lib/auth/client-ip";
+import {
+  ensureFreshSession,
+  type FreshSession,
+} from "@/lib/auth/fresh-session";
+import {
+  clearSession,
+  readSession,
+  writeSession,
+} from "@/lib/auth/session-store";
+import { allowedOriginsFor } from "@/lib/bff/csrf";
+import { handleBff, type BffToken } from "@/lib/bff/handler";
+
 /**
  * Backend-for-frontend proxy. Client components call /api/bff/<api path>
- * (see src/lib/api/fetcher.ts) and this handler forwards the request to the
- * API at API_INTERNAL_URL, so the browser never talks to the API directly.
- *
- * TODO(phase-2 auth): read the Auth.js session here, attach the access token
- * as `Authorization: Bearer <token>`, refresh it when expired, and strip the
- * session cookie before forwarding. Until then requests go through anonymous.
+ * (see src/lib/api/fetcher.ts); this handler checks the origin and path,
+ * attaches the access token from the encrypted session cookie and forwards
+ * to API_INTERNAL_URL. Rotated tokens are written back to the cookie here;
+ * a session the API refuses is cleared. The logic lives in src/lib/bff.
  */
 
-// Headers that must not be forwarded between hops, plus ones we set ourselves.
-const DROPPED_REQUEST_HEADERS = new Set([
-  "connection",
-  "content-length",
-  "cookie",
-  "host",
-  "keep-alive",
-  "proxy-authorization",
-  "te",
-  "trailer",
-  "transfer-encoding",
-  "upgrade",
-]);
+// Long enough for the longest tutor answer streamed over SSE.
+export const maxDuration = 300;
 
-const DROPPED_RESPONSE_HEADERS = new Set([
-  "connection",
-  "content-encoding",
-  "content-length",
-  "keep-alive",
-  "set-cookie",
-  "transfer-encoding",
-]);
+async function persist(fresh: FreshSession): Promise<BffToken> {
+  switch (fresh.state) {
+    case "none":
+      return { state: "none" };
+    case "ended":
+      await clearSession();
+      return { state: "ended" };
+    case "unavailable":
+      return { state: "unavailable" };
+    case "valid":
+      if (fresh.rotated) await writeSession(fresh.session);
+      return { state: "valid", accessToken: fresh.session.accessToken };
+  }
+}
 
 async function forward(
   request: NextRequest,
   ctx: RouteContext<"/api/bff/[...path]">,
 ) {
-  const apiBase = process.env.API_INTERNAL_URL;
-  if (!apiBase) {
-    return Response.json(
-      { title: "API is not configured", status: 503 },
-      { status: 503, headers: { "content-type": "application/problem+json" } },
-    );
-  }
-
   const { path } = await ctx.params;
-  const target = new URL(
-    `${apiBase.replace(/\/+$/, "")}/${path.map(encodeURIComponent).join("/")}`,
-  );
-  target.search = request.nextUrl.search;
-
-  const headers = new Headers();
-  request.headers.forEach((value, key) => {
-    if (!DROPPED_REQUEST_HEADERS.has(key.toLowerCase()))
-      headers.set(key, value);
-  });
-
-  const hasBody = request.method !== "GET" && request.method !== "HEAD";
-
-  let upstream: Response;
-  try {
-    upstream = await fetch(target, {
-      method: request.method,
-      headers,
-      body: hasBody ? await request.arrayBuffer() : undefined,
-      cache: "no-store",
-      redirect: "manual",
-    });
-  } catch {
-    return Response.json(
-      { title: "The API could not be reached", status: 502 },
-      { status: 502, headers: { "content-type": "application/problem+json" } },
-    );
-  }
-
-  const responseHeaders = new Headers();
-  upstream.headers.forEach((value, key) => {
-    if (!DROPPED_RESPONSE_HEADERS.has(key.toLowerCase()))
-      responseHeaders.set(key, value);
-  });
-
-  return new Response(upstream.body, {
-    status: upstream.status,
-    statusText: upstream.statusText,
-    headers: responseHeaders,
+  return handleBff(request, path, {
+    apiBase: process.env.API_INTERNAL_URL,
+    allowedOrigins: allowedOriginsFor(request.url),
+    contextHeaders: upstreamContextHeaders(request.headers),
+    getToken: async () =>
+      persist(await ensureFreshSession(await readSession())),
+    forceRefresh: async () =>
+      persist(await ensureFreshSession(await readSession(), { force: true })),
   });
 }
 
 export const GET = forward;
+export const HEAD = forward;
 export const POST = forward;
 export const PUT = forward;
 export const PATCH = forward;
