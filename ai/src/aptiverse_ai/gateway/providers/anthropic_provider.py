@@ -85,6 +85,8 @@ def to_completion(provider: str, model: str, request: ModelRequest, message: Any
 
 def map_error(provider: str, exc: Exception) -> ProviderError:
     if isinstance(exc, anthropic.APIStatusError):
+        if exc.status_code in (401, 403):
+            return ProviderError(provider, f"status {exc.status_code}", retryable=False, failover=True)
         retry_after: float | None = None
         header = exc.response.headers.get("retry-after")
         if header:

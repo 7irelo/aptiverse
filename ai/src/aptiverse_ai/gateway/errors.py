@@ -10,11 +10,22 @@ class GatewayError(AppError):
 class ProviderError(GatewayError):
     """A provider failed. `retryable` errors may be retried or failed over before the first token."""
 
-    def __init__(self, provider: str, detail: str, *, retryable: bool, retry_after: float | None = None):
+    def __init__(
+        self,
+        provider: str,
+        detail: str,
+        *,
+        retryable: bool,
+        retry_after: float | None = None,
+        failover: bool | None = None,
+    ):
         super().__init__("ai.provider_error", detail)
         self.provider = provider
         self.retryable = retryable
         self.retry_after = retry_after
+        # Some errors are permanent for this provider (exhausted credit, revoked key) but another provider
+        # can still serve the call: no retry, straight to the next route.
+        self.failover = retryable if failover is None else failover
 
 
 class AllProvidersUnavailable(GatewayError):

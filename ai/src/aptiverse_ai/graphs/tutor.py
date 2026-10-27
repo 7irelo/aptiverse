@@ -121,7 +121,10 @@ def _route_rules(route: RouteDecision, ctx: StudentContext) -> str:
     if route.intent == "off_topic":
         rules.append("politely steer back to their studies in one or two sentences")
     if route.intent == "quiz_me":
-        rules.append("propose a short quiz with create_practice_quiz; the student confirms before it is created")
+        rules.append(
+            "call create_practice_quiz now with the subject and topics the student named (ask only if they named "
+            "neither); it returns a proposal the student confirms, so nothing is created without them"
+        )
     return "; ".join(rules)
 
 

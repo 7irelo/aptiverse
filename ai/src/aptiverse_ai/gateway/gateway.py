@@ -180,7 +180,7 @@ class ModelGateway:
                     except ProviderError as exc:
                         route.breaker.record_failure()
                         span.set_attribute("error.type", exc.code)
-                        if not first_token or not exc.retryable:
+                        if not first_token or not exc.failover:
                             raise
                         last_error = exc
             log.warning("all_providers_unavailable", use_case=request.use_case, error=str(last_error))
@@ -302,7 +302,11 @@ class ModelGateway:
                     except ProviderError as exc:
                         span.set_attribute("error.type", exc.code)
                         if not exc.retryable:
-                            raise
+                            if not exc.failover:
+                                raise
+                            last_error = exc
+                            route.breaker.record_failure()
+                            break
                         last_error = exc
                         if attempt < self._max_retries:
                             self.stats.retries += 1

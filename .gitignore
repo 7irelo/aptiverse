@@ -1,0 +1,10 @@
+# Secrets: never commit. Each app keeps its own .env.example with placeholder values.
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
+*.tfstate
+*.tfstate.*

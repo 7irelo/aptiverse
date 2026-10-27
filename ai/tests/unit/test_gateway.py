@@ -250,3 +250,14 @@ def test_breaker_opens_then_half_opens_for_one_probe() -> None:
     assert not b.allow()
     b.record_success()
     assert b.state == "closed"
+
+
+async def test_permanent_provider_error_fails_over_without_retrying() -> None:
+    no_credit = ProviderError("first", "status 429 insufficient_quota", retryable=False, failover=True)
+    first = FakeProvider("first", script=[FakeReply(error=no_credit)])
+    second = FakeProvider("second", script=[FakeReply(text="served")])
+    g = gateway(first, second, retries=2)
+    result = await g.complete(request())
+    assert result.usage.provider == "second"
+    assert len(first.calls) == 1
+    assert g.stats.retries == 0

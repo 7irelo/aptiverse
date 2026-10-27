@@ -127,6 +127,11 @@ def to_completion(provider: str, model: str, request: ModelRequest, response: An
 
 def map_error(provider: str, exc: Exception) -> ProviderError:
     if isinstance(exc, openai.APIStatusError):
+        code = getattr(exc, "code", None) or (exc.body.get("code") if isinstance(exc.body, dict) else None)
+        if exc.status_code in (401, 403) or code == "insufficient_quota":
+            return ProviderError(
+                provider, f"status {exc.status_code} {code or ''}".strip(), retryable=False, failover=True
+            )
         header = exc.response.headers.get("retry-after")
         retry_after = float(header) if header and header.replace(".", "", 1).isdigit() else None
         return ProviderError(
