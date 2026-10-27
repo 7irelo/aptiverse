@@ -1,0 +1,57 @@
+# USD micros per million tokens (1 USD = 1_000_000 micros).
+# First-party Anthropic list prices, checked 2026-10-27 from the claude-api reference.
+# Bedrock bills separately; the fallback path is costed at these rates until Bedrock prices are confirmed.
+# Cache write is the 5-minute TTL rate (1.25x input); cache read as published where known, else 0.1x input.
+models:
+  claude-haiku-5-5:
+    input: 100000
+    output: 500000
+    cache_write: 125000
+    cache_read: 10000
+  claude-sonnet-5-5:
+    input: 2000000
+    output: 10000000
+    cache_write: 2500000
+    cache_read: 200000
+  claude-opus-5-5:
+    input: 4000000
+    output: 20000000
+    cache_write: 5000000
+    cache_read: 200000
+  fake-fast:
+    input: 100000
+    output: 500000
+    cache_write: 125000
+    cache_read: 10000
+  fake-standard:
+    input: 2000000
+    output: 10000000
+    cache_write: 2500000
+    cache_read: 200000
+  fake-deep:
+    input: 4000000
+    output: 20000000
+    cache_write: 5000000
+    cache_read: 200000
+  # OpenAI, from third-party October 2026 price lists (the official pricing page must confirm these
+  # before budgets rely on them). OpenAI has no cache write charge; cached input is billed as cache_read.
+  gpt-6.1-terra:
+    input: 1000000
+    output: 5000000
+    cache_write: 1000000
+    cache_read: 50000
+  gpt-6.1-sol:
+    input: 2000000
+    output: 10000000
+    cache_write: 2000000
+    cache_read: 100000
+  gpt-6-luna:
+    input: 100000
+    output: 500000
+    cache_write: 100000
+    cache_read: 10000
+  gpt-6-astra:
+    input: 10000000
+    output: 50000000
+    cache_write: 10000000
+    cache_read: 1000000
