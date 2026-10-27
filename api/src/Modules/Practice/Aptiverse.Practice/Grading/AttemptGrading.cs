@@ -222,9 +222,10 @@ internal sealed class GradeFinalizer(IDbContextOutbox<PracticeDbContext> outbox)
             attempt.ScorePercent ?? 0m,
             partial,
             Marking.SecondsOnTask(attempt, test.DurationMinutes),
-            tallies.Select(t => new TopicAccuracy(t.Topic, t.QuestionsTotal, t.QuestionsCorrect, t.MarksAvailable, t.MarksAwarded)).ToList(),
+            tallies.Select(t => new TopicAccuracy(t.Topic, t.QuestionsTotal, t.QuestionsCorrect, t.MarksAvailable, t.MarksAwarded, t.QuestionsMarked)).ToList(),
             attempt.SubmittedAt ?? now,
-            now));
+            now,
+            tallies.Sum(t => t.QuestionsMarked)));
     }
 }
 

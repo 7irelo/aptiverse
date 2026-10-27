@@ -25,7 +25,8 @@ public sealed record PracticeAttemptSubmitted(Guid AttemptId, Guid UserId, strin
 /// <summary>
 /// The final grade of a scored attempt, published once. When <paramref name="PartiallyGraded"/> is true some written
 /// answers could not be marked: the scores cover the marked part only and pending answers are never counted as zero.
-/// Flashcard attempts are self-rated and publish no grade.
+/// <paramref name="QuestionsMarked"/> and <see cref="TopicAccuracy.QuestionsMarked"/> count the marked questions, so a
+/// subscriber can use the marked part of a partly graded attempt. Flashcard attempts are self-rated and publish no grade.
 /// </summary>
 /// <param name="AttemptId">The attempt.</param>
 /// <param name="TestId">The test.</param>
@@ -37,6 +38,7 @@ public sealed record PracticeAttemptSubmitted(Guid AttemptId, Guid UserId, strin
 /// <param name="PartiallyGraded">Some answers are not marked yet.</param>
 /// <param name="SecondsOnTask">Elapsed time without pauses, capped at the duration for timed tests.</param>
 /// <param name="Topics">Accuracy per topic.</param>
+/// <param name="QuestionsMarked">Questions with a mark (correct or not); equals the question count unless partly graded.</param>
 /// <param name="SubmittedAt">When the attempt was submitted.</param>
 /// <param name="OccurredAt">When the grade was recorded.</param>
 public sealed record PracticeAttemptGraded(
@@ -51,6 +53,13 @@ public sealed record PracticeAttemptGraded(
     int SecondsOnTask,
     IReadOnlyList<TopicAccuracy> Topics,
     DateTimeOffset SubmittedAt,
-    DateTimeOffset OccurredAt);
+    DateTimeOffset OccurredAt,
+    int QuestionsMarked = 0);
 
-public sealed record TopicAccuracy(string Topic, int QuestionsTotal, int QuestionsCorrect, int MarksAvailable, int MarksAwarded);
+/// <param name="Topic">The topic as the questions name it.</param>
+/// <param name="QuestionsTotal">Questions on the topic, marked or not.</param>
+/// <param name="QuestionsCorrect">Marked questions answered fully correctly.</param>
+/// <param name="MarksAvailable">Marks available on the marked questions.</param>
+/// <param name="MarksAwarded">Marks awarded on the marked questions.</param>
+/// <param name="QuestionsMarked">Questions on the topic with a mark. Zero in events published before this field existed.</param>
+public sealed record TopicAccuracy(string Topic, int QuestionsTotal, int QuestionsCorrect, int MarksAvailable, int MarksAwarded, int QuestionsMarked = 0);

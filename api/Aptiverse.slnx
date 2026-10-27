@@ -17,6 +17,10 @@
     <Project Path="src/Modules/Identity/Aptiverse.Identity.Contracts/Aptiverse.Identity.Contracts.csproj" />
     <Project Path="src/Modules/Identity/Aptiverse.Identity/Aptiverse.Identity.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Mcp/">
+    <Project Path="src/Modules/Mcp/Aptiverse.Mcp.Contracts/Aptiverse.Mcp.Contracts.csproj" />
+    <Project Path="src/Modules/Mcp/Aptiverse.Mcp/Aptiverse.Mcp.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Notifications/">
     <Project Path="src/Modules/Notifications/Aptiverse.Notifications.Contracts/Aptiverse.Notifications.Contracts.csproj" />
     <Project Path="src/Modules/Notifications/Aptiverse.Notifications/Aptiverse.Notifications.csproj" />

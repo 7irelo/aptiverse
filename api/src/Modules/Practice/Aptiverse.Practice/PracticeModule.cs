@@ -1,3 +1,4 @@
+using Aptiverse.Practice.Agents;
 using Aptiverse.Practice.Contracts;
 using Aptiverse.Practice.Erasure;
 using Aptiverse.Practice.Features.ArchiveTest;
@@ -85,6 +86,8 @@ public static class PracticeModule
 
         services.AddScoped<PracticeUserDataEraser>();
         services.AddScoped<IActiveAttemptLookup, ActiveAttemptLookup>();
+        services.AddScoped<IPracticeMistakeLookup, PracticeMistakeLookup>();
+        services.AddScoped<IPracticeQuizCommands, PracticeQuizCommands>();
 
         services.AddOptions<RateLimiterOptions>()
             .Configure<IOptions<PracticeOptions>>((limiter, practice) => PracticeRateLimiting.AddPolicies(limiter, practice.Value));

@@ -47,15 +47,14 @@ internal sealed partial class EvidenceIngestor(
                 return;
             }
 
-            // Pending written answers are not wrong answers: a partially graded attempt adds no mastery evidence,
-            // because the event cannot say which questions of a topic were marked.
-            var topics = message.PartiallyGraded
-                ? []
-                : message.Topics
-                    .Where(t => t.QuestionsTotal > 0 && !string.IsNullOrWhiteSpace(t.Topic) && TopicKeys.Key(t.Topic).Length > 0)
-                    .GroupBy(t => TopicKeys.Key(t.Topic), StringComparer.Ordinal)
-                    .Select(g => (Topic: g.First().Topic, Total: g.Sum(t => t.QuestionsTotal), Correct: g.Sum(t => Math.Clamp(t.QuestionsCorrect, 0, t.QuestionsTotal))))
-                    .ToList();
+            // Pending written answers are not wrong answers: only marked questions are evidence. A partly graded
+            // attempt counts its marked questions; one from before marked counts existed carries zero and adds none.
+            var topics = message.Topics
+                .Select(t => (t.Topic, Counted: message.PartiallyGraded ? Math.Clamp(t.QuestionsMarked, 0, t.QuestionsTotal) : t.QuestionsTotal, t.QuestionsCorrect))
+                .Where(t => t.Counted > 0 && !string.IsNullOrWhiteSpace(t.Topic) && TopicKeys.Key(t.Topic).Length > 0)
+                .GroupBy(t => TopicKeys.Key(t.Topic), StringComparer.Ordinal)
+                .Select(g => (Topic: g.First().Topic, Total: g.Sum(t => t.Counted), Correct: g.Sum(t => Math.Clamp(t.QuestionsCorrect, 0, t.Counted))))
+                .ToList();
 
             var summary = message.PartiallyGraded
                 ? "Practice test submitted, some answers not marked yet"

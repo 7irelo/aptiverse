@@ -6,7 +6,7 @@ namespace Aptiverse.Practice.Domain;
 internal sealed record MarkedQuestion(string Topic, int Marks, bool IsCorrect, int Awarded, bool Pending);
 
 /// <summary>Per-topic totals of one attempt.</summary>
-internal sealed record TopicTally(string Topic, int QuestionsTotal, int QuestionsCorrect, int MarksAvailable, int MarksAwarded);
+internal sealed record TopicTally(string Topic, int QuestionsTotal, int QuestionsCorrect, int MarksAvailable, int MarksAwarded, int QuestionsMarked);
 
 /// <summary>Pure marking rules: objective questions, per-topic totals, percentages and time on task.</summary>
 internal static class Marking
@@ -45,7 +45,8 @@ internal static class Marking
                 g.Count(),
                 g.Count(q => !q.Pending && q.IsCorrect),
                 g.Where(q => !q.Pending).Sum(q => q.Marks),
-                g.Where(q => !q.Pending).Sum(q => Math.Clamp(q.Awarded, 0, q.Marks))))
+                g.Where(q => !q.Pending).Sum(q => Math.Clamp(q.Awarded, 0, q.Marks)),
+                g.Count(q => !q.Pending)))
             .ToList();
     }
 

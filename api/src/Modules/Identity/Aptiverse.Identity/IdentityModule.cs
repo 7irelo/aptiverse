@@ -138,8 +138,11 @@ public static class IdentityModule
             opts.Discovery.IncludeType(typeof(ProcessScheduledErasureHandler));
         });
 
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer()
+            .AddJwtBearer(DelegatedMcpTokens.AuthenticationScheme);
         services.ConfigureOptions<ConfigureJwtBearerOptions>();
+        services.ConfigureOptions<ConfigureMcpBearerOptions>();
 
         // Fail closed: an endpoint that forgets RequirePermission still needs a signed-in caller. Public routes
         // opt out with AllowAnonymous.

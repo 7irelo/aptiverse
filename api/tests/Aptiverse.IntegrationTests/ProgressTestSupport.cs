@@ -55,7 +55,8 @@ internal sealed class ProgressTestSupport(ApiFactory factory)
             at.AddSeconds(1));
     }
 
-    public static TopicAccuracy Topic(string name, int total, int correct) => new(name, total, correct, total, correct);
+    public static TopicAccuracy Topic(string name, int total, int correct, int? marked = null) =>
+        new(name, total, correct, marked ?? total, correct, marked ?? total);
 
     public static AssessmentGraded Mark(ProgressStudent student, Guid assessmentId, decimal percent, DateTimeOffset occurredAt) =>
         new(student.UserId, assessmentId, student.UnitId, "test", percent, null, null, occurredAt, occurredAt);

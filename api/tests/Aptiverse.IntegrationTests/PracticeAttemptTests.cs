@@ -194,7 +194,8 @@ public sealed class PracticeAttemptTests(ApiFactory factory)
         Assert.Equal(28.57m, graded.ScorePercent);
         Assert.False(graded.PartiallyGraded);
         var topic = Assert.Single(graded.Topics);
-        Assert.Equal(new TopicAccuracy("Algebra", 3, 1, Generation.QuizMarks, 2), topic);
+        Assert.Equal(new TopicAccuracy("Algebra", 3, 1, Generation.QuizMarks, 2, 3), topic);
+        Assert.Equal(3, graded.QuestionsMarked);
 
         // No grading call: the written answer was blank, so it is a real zero without the model.
         Assert.DoesNotContain(factory.AiStub.For("/v1/grade"), r => r.Body.Contains(attemptId.ToString(), StringComparison.Ordinal));

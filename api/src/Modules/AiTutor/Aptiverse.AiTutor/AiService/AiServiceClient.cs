@@ -20,6 +20,9 @@ internal sealed class AiServiceClient(HttpClient http, IServiceTokenIssuer token
     public const string GenerateScope = "ai.generate";
     public const string GradeScope = "ai.grade";
 
+    /// <summary>Header that carries the student's delegated MCP token to the ai service (read by aptiverse_ai.auth).</summary>
+    public const string McpTokenHeader = "X-Aptiverse-Mcp-Token";
+
     public static readonly TimeSpan TokenLifetime = TimeSpan.FromSeconds(60);
 
     private static readonly MediaTypeHeaderValue JsonMediaType = new("application/json") { CharSet = "utf-8" };
@@ -28,15 +31,19 @@ internal sealed class AiServiceClient(HttpClient http, IServiceTokenIssuer token
     /// <summary>
     /// Streams the events of one tutor turn. The whole stream is bounded by the configured timeout. Throws
     /// <see cref="AiServiceException"/> when the ai service refuses the call or answers with something other
-    /// than an event stream.
+    /// than an event stream. When <paramref name="mcpScopes"/> is not empty, a delegated MCP token for the caller
+    /// with exactly those scopes rides along in <see cref="McpTokenHeader"/>; the ai service uses it as its MCP
+    /// client credential and holds no credential of its own.
     /// </summary>
     public async IAsyncEnumerable<AiTutorEvent> StreamTutorTurnAsync(
         AiCaller caller,
         TutorTurnRequest body,
+        IReadOnlyCollection<string> mcpScopes,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(caller);
         ArgumentNullException.ThrowIfNull(body);
+        ArgumentNullException.ThrowIfNull(mcpScopes);
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.TimeoutSeconds));
@@ -46,6 +53,16 @@ internal sealed class AiServiceClient(HttpClient http, IServiceTokenIssuer token
         request.Content.Headers.ContentType = JsonMediaType;
         request.Headers.Accept.Add(EventStream);
         Authorize(request, caller, TutorScope);
+        if (mcpScopes.Count > 0)
+        {
+            request.Headers.Add(McpTokenHeader, tokens.Issue(new ServiceTokenRequest(
+                caller.UserId,
+                caller.Roles,
+                mcpScopes,
+                DelegatedMcpTokens.Audience,
+                DelegatedMcpTokens.MaxLifetime,
+                caller.RequestId)));
+        }
 
         using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
         if (!response.IsSuccessStatusCode)

@@ -203,8 +203,8 @@ public sealed class PracticeValidatorTests
             new MarkedQuestion("Geometry", 4, true, 9, false),
         ]);
 
-        Assert.Equal(new TopicTally("Algebra", 3, 1, 5, 3), tallies[0]);
-        Assert.Equal(new TopicTally("Geometry", 1, 1, 4, 4), tallies[1]);
+        Assert.Equal(new TopicTally("Algebra", 3, 1, 5, 3, 2), tallies[0]);
+        Assert.Equal(new TopicTally("Geometry", 1, 1, 4, 4, 1), tallies[1]);
         Assert.Equal(28.57m, Marking.Percent(2, 7));
         Assert.Equal(0m, Marking.Percent(0, 0));
         Assert.Equal(100m, Marking.Percent(9, 4));

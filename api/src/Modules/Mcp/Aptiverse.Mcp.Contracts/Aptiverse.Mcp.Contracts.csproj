@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Aptiverse.Mcp.Contracts</RootNamespace>
+  </PropertyGroup>
+
+</Project>

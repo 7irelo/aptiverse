@@ -1,3 +1,4 @@
+using Aptiverse.Identity.Contracts;
 using Aptiverse.SharedKernel.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +23,13 @@ internal sealed class ConfigureJwtBearerOptions(IOptions<AuthOptions> authOption
 
         options.MapInboundClaims = false;
         options.RequireHttpsMetadata = false;
+
+        // The MCP server accepts delegated MCP tokens only. Forwarding by path (rather than letting the endpoint pick a
+        // scheme) also means the caller is known before rate limiting, so /mcp limits partition by user.
+        options.ForwardDefaultSelector = context =>
+            context.Request.Path.StartsWithSegments(DelegatedMcpTokens.Path, StringComparison.OrdinalIgnoreCase)
+                ? DelegatedMcpTokens.AuthenticationScheme
+                : null;
         options.TokenValidationParameters = AccessTokenIssuer.ValidationParameters(authOptions.Value, keys);
         options.Events = new JwtBearerEvents
         {

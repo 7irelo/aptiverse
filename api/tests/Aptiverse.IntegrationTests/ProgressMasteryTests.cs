@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Aptiverse.Academics.Contracts;
 using Aptiverse.Identity.Contracts;
+using Aptiverse.Practice.Contracts;
 using Aptiverse.Progress.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -97,11 +98,28 @@ public sealed class ProgressMasteryTests(ApiFactory factory)
     }
 
     [Fact]
-    public async Task A_partially_graded_attempt_adds_no_mastery_evidence()
+    public async Task A_partially_graded_attempt_counts_only_its_marked_questions()
     {
         SkipWithoutDocker();
         var student = await _support.StudentAsync();
-        await _support.DeliverAsync(Graded(student, 40m, partial: true, topics: [Topic("Algebra", 5, 2)]));
+
+        // 5 questions, 3 marked (2 of them correct), 2 still pending: the pending ones are neither right nor wrong.
+        await _support.DeliverAsync(Graded(student, 40m, partial: true, topics: [Topic("Algebra", 5, 2, marked: 3)]));
+
+        var unit = (await GetJsonAsync(student.Client, "/progress/mastery")).GetProperty("units")[0];
+        var algebra = TopicNamed(unit, "Algebra");
+        Assert.Equal(0.6667m, algebra.GetProperty("score").GetDecimal());
+        Assert.Equal(3, algebra.GetProperty("evidenceQuestions").GetInt32());
+    }
+
+    [Fact]
+    public async Task A_partially_graded_attempt_without_marked_counts_adds_no_mastery_evidence()
+    {
+        SkipWithoutDocker();
+        var student = await _support.StudentAsync();
+
+        // An event published before marked counts existed: nothing says which questions were marked.
+        await _support.DeliverAsync(Graded(student, 40m, partial: true, topics: [new TopicAccuracy("Algebra", 5, 2, 5, 2)]));
 
         var unit = (await GetJsonAsync(student.Client, "/progress/mastery")).GetProperty("units")[0];
         Assert.DoesNotContain(unit.GetProperty("topics").EnumerateArray(), t => t.GetProperty("score").ValueKind != JsonValueKind.Null);
@@ -233,14 +251,15 @@ public sealed class ProgressMasteryTests(ApiFactory factory)
         SkipWithoutDocker();
         var student = await _support.StudentAsync();
         await _support.DeliverAsync(Graded(student, 70m, topics: [Topic("Algebra", 10, 7)]));
-        await _support.DeliverAsync(Graded(student, 30m, partial: true, topics: [Topic("Algebra", 4, 1)]));
+        // Partly graded: only its 2 marked questions count towards mastery, and it stays out of the score average.
+        await _support.DeliverAsync(Graded(student, 30m, partial: true, topics: [Topic("Algebra", 4, 1, marked: 2)]));
 
         var dashboard = await GetJsonAsync(student.Client, "/progress/dashboard");
         var recent = dashboard.GetProperty("recentPractice");
         Assert.Equal(2, recent.GetProperty("attemptsGraded").GetInt32());
         Assert.Equal(70m, recent.GetProperty("averageScorePercent").GetDecimal());
         Assert.Equal(20, recent.GetProperty("minutesOnTask").GetInt32());
-        Assert.Equal(0.7m, dashboard.GetProperty("masteryScore").GetDecimal());
+        Assert.Equal(0.6667m, dashboard.GetProperty("masteryScore").GetDecimal());
         Assert.Equal("Algebra", dashboard.GetProperty("weakestTopics")[0].GetProperty("topic").GetString());
     }
 

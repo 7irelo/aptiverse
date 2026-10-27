@@ -5,6 +5,8 @@ using Aptiverse.AiTutor;
 using Aptiverse.AiTutor.Contracts;
 using Aptiverse.Identity;
 using Aptiverse.Identity.Contracts;
+using Aptiverse.Mcp;
+using Aptiverse.Mcp.Contracts;
 using Aptiverse.Notifications;
 using Aptiverse.Notifications.Contracts;
 using Aptiverse.Practice;
@@ -29,6 +31,7 @@ internal static class Modules
         new("Practice", typeof(PracticeModule).Assembly, typeof(PracticeAttemptGraded).Assembly),
         new("Progress", typeof(ProgressModule).Assembly, typeof(GoalCreated).Assembly),
         new("Notifications", typeof(NotificationsModule).Assembly, typeof(NotifyUser).Assembly),
+        new("Mcp", typeof(McpModule).Assembly, typeof(McpScopes).Assembly),
     ];
 
     public static readonly Assembly SharedKernel = typeof(Entity).Assembly;

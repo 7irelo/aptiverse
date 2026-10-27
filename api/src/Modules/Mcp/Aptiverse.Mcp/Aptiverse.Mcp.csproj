@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Aptiverse.Mcp</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Aptiverse.SharedKernel\Aptiverse.SharedKernel.csproj" />
+    <ProjectReference Include="..\Aptiverse.Mcp.Contracts\Aptiverse.Mcp.Contracts.csproj" />
+    <ProjectReference Include="..\..\Academics\Aptiverse.Academics.Contracts\Aptiverse.Academics.Contracts.csproj" />
+    <ProjectReference Include="..\..\Identity\Aptiverse.Identity.Contracts\Aptiverse.Identity.Contracts.csproj" />
+    <ProjectReference Include="..\..\Practice\Aptiverse.Practice.Contracts\Aptiverse.Practice.Contracts.csproj" />
+    <ProjectReference Include="..\..\Progress\Aptiverse.Progress.Contracts\Aptiverse.Progress.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Aptiverse.IntegrationTests" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+
+</Project>

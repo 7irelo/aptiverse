@@ -10,8 +10,10 @@ using Aptiverse.AiTutor.Contracts;
 using Aptiverse.AiTutor.Domain;
 using Aptiverse.AiTutor.Persistence;
 using Aptiverse.Identity.Contracts;
+using Aptiverse.Mcp.Contracts;
 using Aptiverse.Practice.Contracts;
 using Aptiverse.Progress.Contracts;
+using Aptiverse.SharedKernel.Authorization;
 using Aptiverse.SharedKernel.Persistence;
 using Aptiverse.SharedKernel.Results;
 using Aptiverse.SharedKernel.Time;
@@ -130,7 +132,7 @@ internal sealed partial class SendMessageHandler(
 
         var outcome = new TurnOutcome();
         var saved = false;
-        var events = ai.StreamTutorTurnAsync(caller, BuildRequest(turn), cancellationToken).GetAsyncEnumerator(cancellationToken);
+        var events = ai.StreamTutorTurnAsync(caller, BuildRequest(turn), McpScopesFor(turn, caller), cancellationToken).GetAsyncEnumerator(cancellationToken);
         try
         {
             while (outcome.Done is null && outcome.ErrorCode is null)
@@ -243,6 +245,24 @@ internal sealed partial class SendMessageHandler(
             default:
                 return null;
         }
+    }
+
+    /// <summary>
+    /// Least capability per turn: students get the read scopes, and the write scope only on the turn that carries
+    /// their confirmation of a create_practice_quiz proposal. Anyone else (parents, admins) gets no MCP token at all.
+    /// </summary>
+    internal static IReadOnlyCollection<string> McpScopesFor(PreparedTurn turn, AiCaller caller)
+    {
+        ArgumentNullException.ThrowIfNull(turn);
+        ArgumentNullException.ThrowIfNull(caller);
+        if (!caller.Roles.Contains(Roles.Student, StringComparer.Ordinal))
+        {
+            return [];
+        }
+
+        return turn.Request.ConfirmedAction?.Tool == McpToolNames.CreatePracticeQuiz
+            ? [McpScopes.ReadProgress, McpScopes.ReadAssessments, McpScopes.WritePractice]
+            : [McpScopes.ReadProgress, McpScopes.ReadAssessments];
     }
 
     private static SseItem<object>? RelayToken(string token, TurnOutcome outcome)
