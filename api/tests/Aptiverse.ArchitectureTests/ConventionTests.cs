@@ -59,7 +59,7 @@ public sealed class ConventionTests
             using (context)
             {
                 var schema = context.Model.GetDefaultSchema();
-                Assert.Equal(module.ToLowerInvariant(), schema);
+                Assert.Equal(Modules.Get(module).ExpectedSchema, schema);
 
                 foreach (var entity in context.Model.GetEntityTypes().Where(e => !e.IsOwned()))
                 {

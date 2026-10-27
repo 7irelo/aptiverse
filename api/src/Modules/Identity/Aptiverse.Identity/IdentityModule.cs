@@ -1,7 +1,9 @@
 using Aptiverse.Identity.Authentication;
+using Aptiverse.Identity.Contracts;
 using Aptiverse.Identity.Domain;
 using Aptiverse.Identity.Features.GetJwks;
 using Aptiverse.Identity.Persistence;
+using Aptiverse.Identity.Profiles;
 using Aptiverse.SharedKernel.Authorization;
 using Aptiverse.SharedKernel.Persistence;
 using FluentValidation;
@@ -56,11 +58,13 @@ public static class IdentityModule
 
         services.AddSingleton<SigningKeys>();
         services.AddSingleton<AccessTokenIssuer>();
+        services.AddSingleton<IServiceTokenIssuer, ServiceTokenIssuer>();
         services.AddSingleton<EmailRateLimiter>();
         services.AddSingleton<IGoogleTokenValidator, GoogleTokenValidator>();
         services.AddScoped<SessionRevocationCache>();
         services.AddScoped<SessionService>();
         services.AddScoped<OneTimeTokens>();
+        services.AddScoped<IStudentProfileLookup, StudentProfileLookup>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
         services.ConfigureOptions<ConfigureJwtBearerOptions>();

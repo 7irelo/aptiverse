@@ -1,4 +1,6 @@
 using System.Reflection;
+using Aptiverse.AiTutor;
+using Aptiverse.AiTutor.Contracts;
 using Aptiverse.Identity;
 using Aptiverse.Identity.Contracts;
 using Aptiverse.SharedKernel.Domain;
@@ -14,6 +16,7 @@ internal static class Modules
     [
         new("Identity", typeof(IdentityModule).Assembly, typeof(UserRegistered).Assembly),
         new("Support", typeof(SupportModule).Assembly, typeof(FaqPublished).Assembly),
+        new("AiTutor", typeof(AiTutorModule).Assembly, typeof(TutorTurnCompleted).Assembly, Schema: AiTutorModule.Schema),
     ];
 
     public static readonly Assembly SharedKernel = typeof(Entity).Assembly;
@@ -25,7 +28,10 @@ internal static class Modules
     public static ModuleInfo Get(string name) => All.Single(m => m.Name == name);
 }
 
-internal sealed record ModuleInfo(string Name, Assembly Implementation, Assembly Contracts)
+/// <summary>A registered module. Schema is set only when it differs from the lower-cased module name.</summary>
+internal sealed record ModuleInfo(string Name, Assembly Implementation, Assembly Contracts, string? Schema = null)
 {
     public string RootNamespace => Implementation.GetName().Name!;
+
+    public string ExpectedSchema => Schema ?? Name.ToLowerInvariant();
 }

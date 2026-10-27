@@ -59,7 +59,7 @@ jobs:
 
       - name: No pending EF model changes
         run: |
-          for module in Support; do
+          for module in Support AiTutor; do
             project="src/Modules/${module}/Aptiverse.${module}"
             dotnet ef migrations has-pending-model-changes \
               --project "$project" --startup-project "$project" --context "${module}DbContext" --no-build --configuration Release

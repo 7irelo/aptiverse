@@ -9,4 +9,5 @@ public enum ErrorType
     Forbidden,
     Unauthorized,
     TooManyRequests,
+    Unavailable,
 }

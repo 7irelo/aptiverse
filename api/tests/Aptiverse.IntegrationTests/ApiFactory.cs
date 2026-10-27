@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using Aptiverse.AiTutor.AiService;
 using Aptiverse.SharedKernel.Persistence;
 using Aptiverse.SharedKernel.Seeding;
 using JasperFx.CommandLine;
@@ -21,6 +23,12 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     private IHost? _host;
 
     public bool DockerAvailable { get; private set; }
+
+    /// <summary>The fake ai service every AiTutor call goes to.</summary>
+    public StubAiService AiStub { get; } = new();
+
+    /// <summary>Daily tutor message limit in tests, low so the limit is cheap to reach.</summary>
+    public const int DailyMessageLimit = 3;
 
     /// <summary>The running host, for Wolverine message tracking in tests.</summary>
     public IHost AppHost => _host ?? throw new InvalidOperationException("The host has not been created yet.");
@@ -65,6 +73,15 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         }
     }
 
+    /// <summary>A client signed in as the given user with the given role (student by default).</summary>
+    public HttpClient CreateUserClient(Guid userId, string role = "student")
+    {
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Add(TestAuthHandler.RoleHeader, role);
+        client.DefaultRequestHeaders.Add(TestAuthHandler.UserHeader, userId.ToString());
+        return client;
+    }
+
     public HttpClient CreateAdminClient()
     {
         var client = CreateClient();
@@ -79,10 +96,23 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Messaging:AutoBuildStorage", "true");
         builder.UseSetting("Messaging:SoloMode", "true");
         builder.UseSetting("RateLimiting:PermitLimit", "10000");
+        builder.UseSetting("AiService:BaseUrl", "http://ai.test:8080");
+        builder.UseSetting("AiService:DailyMessageLimit", DailyMessageLimit.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        builder.UseSetting("AiService:SendMessagePermitLimit", "1000");
+
+        // Outside Development the signing key is required; service tokens need it even though tests sign in with the test scheme.
+        using (var key = ECDsa.Create(ECCurve.NamedCurves.nistP256))
+        {
+            builder.UseSetting("Auth:SigningKey", key.ExportPkcs8PrivateKeyPem());
+        }
 
         builder.ConfigureTestServices(services =>
+        {
             services.AddAuthentication(TestAuthHandler.SchemeName)
-                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { }));
+                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
+            services.AddHttpClient(AiServiceClient.HttpClientName)
+                .ConfigurePrimaryHttpMessageHandler(() => new StubAiHandler(AiStub));
+        });
     }
 
     protected override IHost CreateHost(IHostBuilder builder)

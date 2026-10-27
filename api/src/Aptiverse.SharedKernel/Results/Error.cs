@@ -17,6 +17,9 @@ public sealed record Error(string Code, string Description, ErrorType Type)
 
     public static Error TooManyRequests(string code, string description) => new(code, description, ErrorType.TooManyRequests);
 
+    /// <summary>A dependency the use case needs is down. Maps to 503 so clients retry later.</summary>
+    public static Error Unavailable(string code, string description) => new(code, description, ErrorType.Unavailable);
+
     public static Error Validation(string code, string description, IReadOnlyDictionary<string, string[]>? errors = null) =>
         new(code, description, ErrorType.Validation) { ValidationErrors = errors };
 }

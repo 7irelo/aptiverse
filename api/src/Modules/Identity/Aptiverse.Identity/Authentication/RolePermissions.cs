@@ -9,7 +9,7 @@ internal static class RolePermissions
 {
     private static readonly FrozenDictionary<string, FrozenSet<string>> Map = new Dictionary<string, FrozenSet<string>>
     {
-        [Roles.Student] = new[] { Permissions.Account.Manage, Permissions.Notifications.Read }.ToFrozenSet(),
+        [Roles.Student] = new[] { Permissions.Account.Manage, Permissions.Notifications.Read, Permissions.Ai.Chat }.ToFrozenSet(),
         [Roles.Parent] = new[] { Permissions.Account.Manage, Permissions.Notifications.Read }.ToFrozenSet(),
         [Roles.Admin] = Permissions.All.ToFrozenSet(),
     }.ToFrozenDictionary(StringComparer.Ordinal);

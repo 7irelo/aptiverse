@@ -32,6 +32,12 @@ public static class Permissions
         public const string Manage = "content.manage";
     }
 
+    public static class Ai
+    {
+        /// <summary>Chat with the AI tutor in your own conversations.</summary>
+        public const string Chat = "ai.chat";
+    }
+
     public static IReadOnlyList<string> All { get; } = typeof(Permissions)
         .GetNestedTypes(BindingFlags.Public | BindingFlags.Static)
         .SelectMany(t => t.GetFields(BindingFlags.Public | BindingFlags.Static))

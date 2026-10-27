@@ -18,6 +18,7 @@ public static class ResultHttpExtensions
             ErrorType.Forbidden => StatusCodes.Status403Forbidden,
             ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
             ErrorType.TooManyRequests => StatusCodes.Status429TooManyRequests,
+            ErrorType.Unavailable => StatusCodes.Status503ServiceUnavailable,
             _ => StatusCodes.Status500InternalServerError,
         };
 
@@ -50,6 +51,7 @@ public static class ResultHttpExtensions
         ErrorType.Forbidden => "You do not have access to this resource.",
         ErrorType.Unauthorized => "Authentication is required.",
         ErrorType.TooManyRequests => "Too many requests. Please slow down and try again shortly.",
+        ErrorType.Unavailable => "The service is temporarily unavailable. Please try again shortly.",
         _ => "The request could not be completed.",
     };
 }

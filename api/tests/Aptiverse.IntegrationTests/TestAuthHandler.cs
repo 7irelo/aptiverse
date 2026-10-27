@@ -13,6 +13,7 @@ internal sealed class TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOption
 {
     public const string SchemeName = "Test";
     public const string RoleHeader = "X-Test-Role";
+    public const string UserHeader = "X-Test-User";
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
@@ -21,8 +22,13 @@ internal sealed class TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOption
             return Task.FromResult(AuthenticateResult.NoResult());
         }
 
+        // A fixed user id lets a test act as the same person across requests; otherwise every request is a stranger.
+        var userId = Request.Headers.TryGetValue(UserHeader, out var user) && Guid.TryParse(user, out var parsed)
+            ? parsed
+            : Guid.CreateVersion7();
+
         var identity = new ClaimsIdentity(
-            [new Claim(AptiverseClaims.Subject, Guid.CreateVersion7().ToString()), new Claim(AptiverseClaims.Roles, role.ToString())],
+            [new Claim(AptiverseClaims.Subject, userId.ToString()), new Claim(AptiverseClaims.Roles, role.ToString())],
             SchemeName,
             nameType: AptiverseClaims.Subject,
             roleType: AptiverseClaims.Roles);

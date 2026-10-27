@@ -1,3 +1,4 @@
+using Aptiverse.AiTutor;
 using Aptiverse.Host.Infrastructure;
 using Aptiverse.Identity;
 using Aptiverse.SharedKernel.Hosting;
@@ -20,6 +21,7 @@ builder.Services.AddApiPlatform(builder.Configuration);
 // Modules: each exposes AddXModule + MapXEndpoints and nothing else.
 builder.Services.AddIdentityModule(builder.Configuration);
 builder.Services.AddSupportModule(builder.Configuration);
+builder.Services.AddAiTutorModule(builder.Configuration);
 
 var app = builder.Build();
 
@@ -48,6 +50,7 @@ if (app.Environment.IsDevelopment())
 app.MapPlatformHealthChecks();
 app.MapIdentityEndpoints();
 app.MapSupportEndpoints();
+app.MapAiTutorEndpoints();
 
 if (PlatformHostingExtensions.IsBuildTimeDocumentGeneration)
 {
