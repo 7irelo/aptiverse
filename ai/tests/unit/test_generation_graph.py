@@ -170,3 +170,16 @@ def test_blueprint_marks_add_up_for_every_format() -> None:
         req = REQUEST.model_copy(update={"format": fmt, "total_marks": 75, "topics": ["a", "b", "c"]})
         assert sum(p.marks for p in blueprints.plan(req)) == 75, fmt
     assert json.dumps([p.model_dump() for p in blueprints.plan(REQUEST)])
+
+
+def test_difficulty_shifts_the_mix_but_keeps_it_a_distribution() -> None:
+    from aptiverse_ai.graphs.generation import blueprints
+
+    easy = blueprints.plan(REQUEST.model_copy(update={"difficulty": "easier"}))[0].cognitive_mix
+    hard = blueprints.plan(REQUEST.model_copy(update={"difficulty": "harder"}))[0].cognitive_mix
+    standard = blueprints.plan(REQUEST)[0].cognitive_mix
+    for mix in (easy, hard, standard):
+        assert abs(sum(mix.values()) - 1.0) < 1e-3
+        assert all(v >= 0 for v in mix.values())
+    assert hard["problem_solving"] > standard["problem_solving"] > easy["problem_solving"]
+    assert easy["knowledge"] > standard["knowledge"]

@@ -68,6 +68,9 @@ class GenerationRequest(BaseModel):
     assessment_title: str | None = Field(default=None, max_length=200)
     total_marks: int | None = Field(default=None, ge=5, le=300)
     avoid_question_stems: list[str] = Field(default_factory=list, max_length=200)
+    difficulty: Literal["easier", "standard", "harder"] = Field(
+        default="standard", description="Shifts the cognitive-level mix within the level; never changes the level."
+    )
 
 
 class LevelVerdict(BaseModel):

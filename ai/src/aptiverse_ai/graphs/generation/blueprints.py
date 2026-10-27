@@ -32,10 +32,33 @@ _NUMERIC_SUBJECTS = {"mathematics", "mathematical_literacy", "physical_sciences"
 _AVG_MARKS: dict[QuestionType, int] = {"mcq": 2, "short": 3, "numeric": 4, "long": 8, "flashcard": 1, "essay": 50}
 
 
+# Moves this share of marks between the lower (knowledge, routine) and higher (complex, problem solving)
+# cognitive levels. The level itself never changes: a harder Grade 10 test is still a Grade 10 test.
+_DIFFICULTY_SHIFT = {"easier": -0.15, "standard": 0.0, "harder": 0.15}
+
+
+def shifted(mix: dict[CognitiveLevel, float], difficulty: str) -> dict[CognitiveLevel, float]:
+    shift = _DIFFICULTY_SHIFT[difficulty]
+    if not shift:
+        return dict(mix)
+    low: tuple[CognitiveLevel, ...] = ("knowledge", "routine")
+    high: tuple[CognitiveLevel, ...] = ("complex", "problem_solving")
+    take_from, give_to = (high, low) if shift < 0 else (low, high)
+    amount = min(abs(shift), sum(mix[k] for k in take_from))
+    out = dict(mix)
+    pool = sum(mix[k] for k in take_from)
+    for k in take_from:
+        out[k] = mix[k] - amount * (mix[k] / pool)
+    for k in give_to:
+        out[k] = mix[k] + amount / len(give_to)
+    return {k: round(v, 4) for k, v in out.items()}
+
+
 def plan(request: GenerationRequest) -> list[SectionPlan]:
     total, sections = _FORMAT[request.format]
     total = request.total_marks or total
-    mix = _MIX["university"] if request.stage == "university" else _MIX.get(request.subject_key, _MIX["default"])
+    base = _MIX["university"] if request.stage == "university" else _MIX.get(request.subject_key, _MIX["default"])
+    mix = shifted(base, request.difficulty)
     plans: list[SectionPlan] = []
     for i, (name, share, types) in enumerate(sections):
         marks = round(total * share) if i < len(sections) - 1 else total - sum(p.marks for p in plans)
