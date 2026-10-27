@@ -57,20 +57,6 @@ async def call_remote(url: str, token: str, name: str, args: dict[str, Any], tim
         return await client.call_tool(name, args)
 
 
-async def discover(url: str, token: str, *, timeout: float = 5.0) -> list[Tool]:
-    """Reads tool schemas once at startup with a service token; per-call tokens are the student's."""
-    async with (
-        httpx2.AsyncClient(headers={"Authorization": f"Bearer {token}"}, timeout=timeout) as http,
-        Client(streamable_http_client(url, http_client=http), read_timeout_seconds=timeout) as client,
-    ):
-        listed = await client.list_tools()
-    return [
-        McpTool(t.name, t.description or "", dict(t.input_schema), url, timeout)
-        for t in listed.tools
-        if t.name in ALLOWED
-    ]
-
-
 _OBJ: dict[str, Any] = {"type": "object", "additionalProperties": False}
 PINNED: dict[str, tuple[str, dict[str, Any]]] = {
     "get_topic_mastery": (
