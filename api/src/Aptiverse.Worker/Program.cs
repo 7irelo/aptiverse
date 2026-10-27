@@ -3,6 +3,7 @@ using Aptiverse.AiTutor;
 using Aptiverse.Identity;
 using Aptiverse.Notifications;
 using Aptiverse.Practice;
+using Aptiverse.Progress;
 using Aptiverse.SharedKernel.Hosting;
 using Aptiverse.Support;
 using JasperFx;
@@ -23,6 +24,7 @@ builder.Services.AddSupportModule(builder.Configuration);
 builder.Services.AddAiTutorModule(builder.Configuration);
 builder.Services.AddAcademicsModule(builder.Configuration);
 builder.Services.AddPracticeModule(builder.Configuration);
+builder.Services.AddProgressModule(builder.Configuration);
 builder.Services.AddNotificationsModule(builder.Configuration);
 
 var app = builder.Build();

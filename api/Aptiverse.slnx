@@ -25,6 +25,10 @@
     <Project Path="src/Modules/Practice/Aptiverse.Practice.Contracts/Aptiverse.Practice.Contracts.csproj" />
     <Project Path="src/Modules/Practice/Aptiverse.Practice/Aptiverse.Practice.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Progress/">
+    <Project Path="src/Modules/Progress/Aptiverse.Progress.Contracts/Aptiverse.Progress.Contracts.csproj" />
+    <Project Path="src/Modules/Progress/Aptiverse.Progress/Aptiverse.Progress.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Support/">
     <Project Path="src/Modules/Support/Aptiverse.Support.Contracts/Aptiverse.Support.Contracts.csproj" />
     <Project Path="src/Modules/Support/Aptiverse.Support/Aptiverse.Support.csproj" />

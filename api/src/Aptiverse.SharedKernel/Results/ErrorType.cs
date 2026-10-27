@@ -10,4 +10,6 @@ public enum ErrorType
     Unauthorized,
     TooManyRequests,
     Unavailable,
+    PreconditionFailed,
+    PreconditionRequired,
 }

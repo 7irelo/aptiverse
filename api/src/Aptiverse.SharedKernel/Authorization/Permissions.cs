@@ -56,6 +56,15 @@ public static class Permissions
         public const string Read = "practice.read";
     }
 
+    public static class Progress
+    {
+        /// <summary>Read your own mastery, goals, dashboard, analytics and journey.</summary>
+        public const string Read = "progress.read";
+
+        /// <summary>Create, change and abandon your own goals and their milestones.</summary>
+        public const string ManageGoals = "progress.goals.manage";
+    }
+
     public static IReadOnlyList<string> All { get; } = typeof(Permissions)
         .GetNestedTypes(BindingFlags.Public | BindingFlags.Static)
         .SelectMany(t => t.GetFields(BindingFlags.Public | BindingFlags.Static))

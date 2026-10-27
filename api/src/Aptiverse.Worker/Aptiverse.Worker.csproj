@@ -12,6 +12,7 @@
     <ProjectReference Include="..\Modules\Identity\Aptiverse.Identity\Aptiverse.Identity.csproj" />
     <ProjectReference Include="..\Modules\Notifications\Aptiverse.Notifications\Aptiverse.Notifications.csproj" />
     <ProjectReference Include="..\Modules\Practice\Aptiverse.Practice\Aptiverse.Practice.csproj" />
+    <ProjectReference Include="..\Modules\Progress\Aptiverse.Progress\Aptiverse.Progress.csproj" />
     <ProjectReference Include="..\Modules\Support\Aptiverse.Support\Aptiverse.Support.csproj" />
   </ItemGroup>
 

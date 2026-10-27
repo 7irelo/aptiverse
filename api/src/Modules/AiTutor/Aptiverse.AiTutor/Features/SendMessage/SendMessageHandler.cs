@@ -11,6 +11,7 @@ using Aptiverse.AiTutor.Domain;
 using Aptiverse.AiTutor.Persistence;
 using Aptiverse.Identity.Contracts;
 using Aptiverse.Practice.Contracts;
+using Aptiverse.Progress.Contracts;
 using Aptiverse.SharedKernel.Persistence;
 using Aptiverse.SharedKernel.Results;
 using Aptiverse.SharedKernel.Time;
@@ -41,6 +42,7 @@ internal sealed partial class SendMessageHandler(
     IActiveAttemptLookup activeAttempts,
     IStudyUnitLookup studyUnits,
     IAssessmentLookup assessments,
+    IMasterySnapshot mastery,
     AiServiceClient ai,
     IClock clock,
     IOptions<AiServiceOptions> options,
@@ -67,6 +69,7 @@ internal sealed partial class SendMessageHandler(
     private const int MaxSaveAttempts = 3;
     private const int MaxContextItems = 20;
     private const int MaxContextItemLength = 160;
+    private const int WeakestTopicCount = 5;
 
     private AiTutorDbContext Db => outbox.DbContext;
 
@@ -258,8 +261,8 @@ internal sealed partial class SendMessageHandler(
     }
 
     /// <summary>
-    /// The student's context from their own records only: their study units and open assessments from Academics.
-    /// Weakest topics stay empty until the Progress module owns mastery.
+    /// The student's context from their own records only: their study units and open assessments from Academics,
+    /// and their weakest topics from Progress (topics with evidence only; a topic without marks is never sent as 0%).
     /// </summary>
     private async Task<StudentContext> BuildContextAsync(Guid userId, StudentProfile profile, CancellationToken cancellationToken)
     {
@@ -281,7 +284,22 @@ internal sealed partial class SendMessageHandler(
             .Select(a => Clip(string.Create(CultureInfo.InvariantCulture, $"{a.Title} ({a.UnitName}, due {a.DueAt:yyyy-MM-dd})")))
             .ToList();
 
-        return new StudentContext(profile.Stage, profile.Level, curriculum, subjects, [], openAssessments);
+        var unitNames = units.GroupBy(u => u.StudyUnitId).ToDictionary(g => g.Key, g => g.First().Name);
+        var weakest = (await mastery.GetWeakestTopicsAsync(userId, WeakestTopicCount, cancellationToken))
+            .Where(t => t.Score is not null)
+            .Select(t => Clip(DescribeTopic(t, unitNames.GetValueOrDefault(t.StudyUnitId))))
+            .ToList();
+
+        return new StudentContext(profile.Stage, profile.Level, curriculum, subjects, weakest, openAssessments);
+    }
+
+    private static string DescribeTopic(TopicMasteryView topic, string? unitName)
+    {
+        var where = unitName is null ? string.Empty : $" ({unitName})";
+        var read = topic.EarlyRead ? ", early read" : string.Empty;
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{topic.Topic}{where}: {topic.Score!.Value * 100m:0}% over {topic.EvidenceQuestions} questions{read}");
     }
 
     private static string Clip(string text) =>

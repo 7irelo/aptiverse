@@ -32,6 +32,12 @@ public sealed record Error(string Code, string Description, ErrorType Type)
     /// <summary>A dependency the use case needs is down. Maps to 503 so clients retry later.</summary>
     public static Error Unavailable(string code, string description) => new(code, description, ErrorType.Unavailable);
 
+    /// <summary>An If-Match value no longer matches the current version. Maps to 412.</summary>
+    public static Error PreconditionFailed(string code, string description) => new(code, description, ErrorType.PreconditionFailed);
+
+    /// <summary>A write that needs If-Match arrived without it. Maps to 428.</summary>
+    public static Error PreconditionRequired(string code, string description) => new(code, description, ErrorType.PreconditionRequired);
+
     public static Error Validation(string code, string description, IReadOnlyDictionary<string, string[]>? errors = null) =>
         new(code, description, ErrorType.Validation) { ValidationErrors = errors };
 }

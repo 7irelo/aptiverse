@@ -18,6 +18,8 @@ internal static class RolePermissions
             Permissions.Practice.Generate,
             Permissions.Practice.Take,
             Permissions.Practice.Read,
+            Permissions.Progress.Read,
+            Permissions.Progress.ManageGoals,
         }.ToFrozenSet(),
         [Roles.Parent] = new[] { Permissions.Account.Manage, Permissions.Notifications.Read }.ToFrozenSet(),
         [Roles.Admin] = Permissions.All.ToFrozenSet(),

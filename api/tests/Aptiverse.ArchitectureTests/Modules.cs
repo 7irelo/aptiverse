@@ -9,6 +9,8 @@ using Aptiverse.Notifications;
 using Aptiverse.Notifications.Contracts;
 using Aptiverse.Practice;
 using Aptiverse.Practice.Contracts;
+using Aptiverse.Progress;
+using Aptiverse.Progress.Contracts;
 using Aptiverse.SharedKernel.Domain;
 using Aptiverse.Support;
 using Aptiverse.Support.Contracts;
@@ -25,6 +27,7 @@ internal static class Modules
         new("AiTutor", typeof(AiTutorModule).Assembly, typeof(TutorTurnCompleted).Assembly, Schema: AiTutorModule.Schema),
         new("Academics", typeof(AcademicsModule).Assembly, typeof(StudyUnitEnrolled).Assembly),
         new("Practice", typeof(PracticeModule).Assembly, typeof(PracticeAttemptGraded).Assembly),
+        new("Progress", typeof(ProgressModule).Assembly, typeof(GoalCreated).Assembly),
         new("Notifications", typeof(NotificationsModule).Assembly, typeof(NotifyUser).Assembly),
     ];
 

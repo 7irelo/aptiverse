@@ -19,6 +19,8 @@ public static class ResultHttpExtensions
             ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
             ErrorType.TooManyRequests => StatusCodes.Status429TooManyRequests,
             ErrorType.Unavailable => StatusCodes.Status503ServiceUnavailable,
+            ErrorType.PreconditionFailed => StatusCodes.Status412PreconditionFailed,
+            ErrorType.PreconditionRequired => StatusCodes.Status428PreconditionRequired,
             _ => StatusCodes.Status500InternalServerError,
         };
 
@@ -59,6 +61,8 @@ public static class ResultHttpExtensions
         ErrorType.Unauthorized => "Authentication is required.",
         ErrorType.TooManyRequests => "Too many requests. Please slow down and try again shortly.",
         ErrorType.Unavailable => "The service is temporarily unavailable. Please try again shortly.",
+        ErrorType.PreconditionFailed => "The resource changed since you loaded it.",
+        ErrorType.PreconditionRequired => "This request must say which version it changes.",
         _ => "The request could not be completed.",
     };
 }
