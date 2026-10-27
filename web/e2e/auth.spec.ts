@@ -203,9 +203,7 @@ test.describe("other auth pages", () => {
   test("reset password removes the token from the address bar", async ({
     page,
   }) => {
-    await page.goto(
-      "/reset-password?token=Zq3f6x0Gm1wQ9tVb2nYc8kLp4sHj7aDe5rUo1iTyEwX",
-    );
+    await page.goto("/reset-password?token=test-token-not-a-secret-0000");
     await expect(page.getByLabel("New password")).toBeVisible();
     await expect(page).toHaveURL(/\/reset-password$/);
   });

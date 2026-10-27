@@ -90,9 +90,7 @@ describe("auth copy", () => {
   });
 
   it("checks one-time token shape", () => {
-    expect(
-      looksLikeOneTimeToken("Zq3f6x0Gm1wQ9tVb2nYc8kLp4sHj7aDe5rUo1iTyEwX"),
-    ).toBe(true);
+    expect(looksLikeOneTimeToken("test-token-not-a-secret-0000")).toBe(true);
     expect(looksLikeOneTimeToken("short")).toBe(false);
     expect(looksLikeOneTimeToken("has spaces in it and more")).toBe(false);
     expect(looksLikeOneTimeToken(["array"])).toBe(false);

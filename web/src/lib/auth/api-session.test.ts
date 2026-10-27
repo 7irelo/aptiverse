@@ -21,7 +21,7 @@ const accessToken = `eyJhbGciOiJFUzI1NiIsImtpZCI6ImtleS0yMDI2LTEwIiwidHlwIjoiSld
 const tokens = {
   accessToken,
   accessTokenExpiresAt: "2026-10-27T10:15:00Z",
-  refreshToken: "Zq3f6x0Gm1wQ9tVb2nYc8kLp4sHj7aDe5rUo1iTyEwX",
+  refreshToken: "test-token-not-a-secret-0000",
   refreshTokenExpiresAt: "2026-11-26T10:00:00Z",
   user: {
     id: "6f1c1b3e-7a52-4c1e-9d3c-1f0e2a3b4c5d",
@@ -35,7 +35,7 @@ const tokens = {
 
 const original = { ...process.env };
 beforeEach(() => {
-  process.env.AUTH_SECRET = "test-secret-with-enough-entropy-0123456789";
+  process.env.AUTH_SECRET = "test-auth-secret-not-a-real-value-0000000";
 });
 afterEach(() => {
   process.env = { ...original };
