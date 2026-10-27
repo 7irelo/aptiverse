@@ -11,6 +11,7 @@ export const BFF_ALLOWED_PREFIXES = [
   "legal",
   "me",
   "practice",
+  "progress",
   "support",
 ] as const;
 

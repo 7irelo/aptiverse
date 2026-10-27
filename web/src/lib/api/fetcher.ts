@@ -109,4 +109,73 @@ export async function apiFetch<T>(
   return body as T;
 }
 
+/**
+ * Like apiFetch, but also returns the ETag header. For resources that need
+ * If-Match on later changes (goals, assessments, units); the generated
+ * functions return the body only. Pass a URL from a generated get...Url().
+ */
+export async function apiFetchWithEtag<T>(
+  url: string,
+  init: RequestInit = {},
+): Promise<{ data: T; etag: string | null }> {
+  const target = `${resolveBaseUrl()}${url}`;
+  const headers = new Headers(init.headers);
+  if (!headers.has("accept")) headers.set("accept", "application/json");
+
+  const response = await fetch(target, { ...init, headers });
+  const body = await readBody(response);
+  if (!response.ok) {
+    const problem =
+      body && typeof body === "object" ? (body as ProblemDetails) : undefined;
+    throw new ApiError(
+      response.status,
+      problem,
+      url,
+      parseRetryAfter(response.headers.get("retry-after")),
+    );
+  }
+  return { data: body as T, etag: response.headers.get("etag") };
+}
+
+/** The API's machine readable code from any thrown value, if it has one. */
+export function errorCode(error: unknown): string | undefined {
+  return error instanceof ApiError ? error.code : undefined;
+}
+
+/** A number from the problem details extensions, for example currentRevision. */
+export function problemNumber(error: unknown, key: string): number | undefined {
+  if (!(error instanceof ApiError)) return undefined;
+  const value = error.problem?.[key];
+  return typeof value === "number" ? value : undefined;
+}
+
+/** A string from the problem details extensions, for example attemptId. */
+export function problemString(error: unknown, key: string): string | undefined {
+  if (!(error instanceof ApiError)) return undefined;
+  const value = error.problem?.[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+/** Field errors from a 400 validation problem, keyed by camelCase field. */
+export function fieldErrors(error: unknown): Record<string, string> {
+  if (!(error instanceof ApiError) || error.status !== 400) return {};
+  const errors = error.problem?.errors;
+  if (!errors || typeof errors !== "object") return {};
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(
+    errors as Record<string, unknown>,
+  )) {
+    const message = Array.isArray(value) ? value[0] : value;
+    if (typeof message !== "string") continue;
+    const name = key.charAt(0).toLowerCase() + key.slice(1);
+    out[name] = message;
+  }
+  return out;
+}
+
+/** A fresh Idempotency-Key (8 to 64 letters, digits and dashes). */
+export function newIdempotencyKey(): string {
+  return crypto.randomUUID();
+}
+
 export default apiFetch;
