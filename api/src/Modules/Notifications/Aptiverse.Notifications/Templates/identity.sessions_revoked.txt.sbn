@@ -1,0 +1,13 @@
+Hi {{ name }},
+
+On {{ revoked_at }}, {{ device_count }} of your devices {{ if device_count == "1" }}was{{ else }}were{{ end }} signed out of your {{ brand }} account. {{ reason_text }}
+
+If this was you, there is nothing more to do.
+
+If you do not recognise this, reset your password and review your signed in devices.
+
+Reset your password:
+{{ reset_link }}
+
+Review your devices:
+{{ security_link }}

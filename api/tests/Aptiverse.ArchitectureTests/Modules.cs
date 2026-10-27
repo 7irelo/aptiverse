@@ -5,6 +5,8 @@ using Aptiverse.AiTutor;
 using Aptiverse.AiTutor.Contracts;
 using Aptiverse.Identity;
 using Aptiverse.Identity.Contracts;
+using Aptiverse.Notifications;
+using Aptiverse.Notifications.Contracts;
 using Aptiverse.Practice;
 using Aptiverse.Practice.Contracts;
 using Aptiverse.SharedKernel.Domain;
@@ -23,6 +25,7 @@ internal static class Modules
         new("AiTutor", typeof(AiTutorModule).Assembly, typeof(TutorTurnCompleted).Assembly, Schema: AiTutorModule.Schema),
         new("Academics", typeof(AcademicsModule).Assembly, typeof(StudyUnitEnrolled).Assembly),
         new("Practice", typeof(PracticeModule).Assembly, typeof(PracticeAttemptGraded).Assembly),
+        new("Notifications", typeof(NotificationsModule).Assembly, typeof(NotifyUser).Assembly),
     ];
 
     public static readonly Assembly SharedKernel = typeof(Entity).Assembly;

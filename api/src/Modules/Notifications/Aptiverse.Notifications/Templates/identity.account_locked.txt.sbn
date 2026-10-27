@@ -1,0 +1,8 @@
+Hi {{ name }},
+
+Someone tried to sign in to your {{ brand }} account with the wrong password several times, so we locked it to protect you. You can sign in again after {{ locked_until }}.
+
+If this was you, wait until then and try again, or reset your password now:
+{{ reset_link }}
+
+If this was not you, those attempts did not get into your account, but someone may be guessing your password. We recommend choosing a new, strong one using the link above.

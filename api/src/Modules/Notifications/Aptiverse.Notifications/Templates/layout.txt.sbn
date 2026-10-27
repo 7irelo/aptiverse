@@ -1,0 +1,7 @@
+{{ brand }}
+
+{{ content }}
+
+You are receiving this email because it is about your {{ brand }} account. We send these messages even if you have turned off other emails.
+
+{{ brand }}: {{ home_link }}

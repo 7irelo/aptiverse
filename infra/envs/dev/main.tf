@@ -49,6 +49,7 @@ locals {
     Email__SesRegion                   = local.global.ses_region
     Email__ConfigurationSet            = local.global.ses_configuration_set_name
     Email__FromAddress                 = "noreply@${var.domain}"
+    Email__WebAppUrl                   = var.web_origins[0]
     OTEL_RESOURCE_ATTRIBUTES           = "deployment.environment=${var.environment}"
     Sentry__Environment                = var.environment
   }, { for i, origin in var.web_origins : "Cors__AllowedOrigins__${i}" => origin })
@@ -65,6 +66,7 @@ locals {
     Database__Password          = "${module.secrets.arns["db-app"]}:password::"
     Auth__SigningKey            = module.secrets.arns["jwt-signing-key"]
     Sentry__Dsn                 = module.secrets.arns["sentry-dsn"]
+    Email__AddressHashPepper    = module.secrets.arns["email-pepper"]
     OTEL_EXPORTER_OTLP_HEADERS  = "${module.secrets.arns["grafana-otlp"]}:otlp_headers::"
     OTEL_EXPORTER_OTLP_ENDPOINT = "${module.secrets.arns["grafana-otlp"]}:endpoint::"
   }

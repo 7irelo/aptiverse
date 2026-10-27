@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Aptiverse.AiTutor.AiService;
 using Aptiverse.Identity.Authentication;
+using Aptiverse.Notifications.Email;
 using Aptiverse.SharedKernel.Persistence;
 using Aptiverse.SharedKernel.Seeding;
 using JasperFx.CommandLine;
@@ -13,6 +14,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Testcontainers.PostgreSql;
 
 namespace Aptiverse.IntegrationTests;
@@ -30,6 +32,15 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     /// <summary>Stands in for Google's token validation in Google sign-in tests.</summary>
     internal StubGoogleTokenValidator Google { get; } = new();
+
+    /// <summary>Captures every email the Notifications module sends instead of handing it to SES or SMTP.</summary>
+    internal RecordingEmailSender Email { get; } = new();
+
+    /// <summary>Every log entry the app writes, for asserting that no personal data reaches the logs.</summary>
+    public CapturingLoggerProvider Logs { get; } = new();
+
+    /// <summary>The web app origin email links must use. Deliberately not Auth:WebAppUrl, so tests prove where links come from.</summary>
+    public const string EmailWebAppUrl = "https://app.aptiverse.test";
 
     /// <summary>The fake ai service every AiTutor call goes to.</summary>
     public StubAiService AiStub { get; } = new();
@@ -116,6 +127,11 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Practice:AutosavePermitLimit", "10000");
         builder.UseSetting("Practice:FocusPermitLimit", "10000");
 
+        builder.UseSetting("Email:Sender", "Smtp");
+        builder.UseSetting("Email:FromAddress", "noreply@aptiverse.test");
+        builder.UseSetting("Email:WebAppUrl", EmailWebAppUrl);
+        builder.UseSetting("Email:AddressHashPepper", "integration-test-pepper");
+
         // Tests drive polls and retries by hand; the scheduled ones must not race them.
         builder.UseSetting("Practice:GenerationPollSeconds", "3600");
         builder.UseSetting("Practice:RetryBaseSeconds", "3600");
@@ -137,6 +153,15 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.RemoveAll<IGoogleTokenValidator>();
             services.AddSingleton<IGoogleTokenValidator>(Google);
             services.AddSingleton<IStartupFilter, TestClientIpStartupFilter>();
+            services.RemoveAll<IEmailSender>();
+            services.AddSingleton<IEmailSender>(Email);
+            services.AddSingleton<ILoggerProvider>(Logs);
+            services.Configure<LoggerFilterOptions>(options =>
+            {
+                options.AddFilter<CapturingLoggerProvider>(null, LogLevel.Information);
+                options.AddFilter<CapturingLoggerProvider>("Aptiverse", LogLevel.Debug);
+                options.AddFilter<CapturingLoggerProvider>("Wolverine", LogLevel.Debug);
+            });
             services.AddHttpClient(AiServiceClient.HttpClientName)
                 .ConfigurePrimaryHttpMessageHandler(() => new StubAiHandler(AiStub));
         });

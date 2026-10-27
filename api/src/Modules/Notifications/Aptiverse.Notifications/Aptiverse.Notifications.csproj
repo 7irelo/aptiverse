@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Aptiverse.Notifications</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Aptiverse.SharedKernel\Aptiverse.SharedKernel.csproj" />
+    <ProjectReference Include="..\Aptiverse.Notifications.Contracts\Aptiverse.Notifications.Contracts.csproj" />
+    <ProjectReference Include="..\..\Identity\Aptiverse.Identity.Contracts\Aptiverse.Identity.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.SimpleEmailV2" />
+    <PackageReference Include="MailKit" />
+    <PackageReference Include="Scriban" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Templates ship inside the assembly so a deploy can never run with a missing or edited template file. -->
+    <EmbeddedResource Include="Templates\*.sbn" LogicalName="templates/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Aptiverse.IntegrationTests" />
+  </ItemGroup>
+
+</Project>

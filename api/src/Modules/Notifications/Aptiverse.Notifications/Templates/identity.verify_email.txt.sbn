@@ -1,0 +1,10 @@
+Hi {{ name }},
+
+Welcome to {{ brand }}. Please confirm that this is your email address so we can keep your account safe and reach you when it matters.
+
+Verify your email address:
+{{ link }}
+
+This link works once and expires on {{ expires_at }}. If it has expired, sign in and ask for a new one.
+
+If you did not create a {{ brand }} account, you can ignore this email.

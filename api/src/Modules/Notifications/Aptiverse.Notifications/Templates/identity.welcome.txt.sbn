@@ -1,0 +1,8 @@
+Hi {{ name }},
+
+Thank you for verifying your email address. Your {{ brand }} account is ready.
+
+{{ if is_parent == "true" }}Next, add your child so you can follow their progress and support their studies.{{ else }}Next, add your subjects or courses and your upcoming tests, and {{ brand }} will help you plan your studying and practise for them.{{ end }}
+
+Open {{ brand }}:
+{{ app_link }}

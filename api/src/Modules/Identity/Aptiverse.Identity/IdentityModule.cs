@@ -97,6 +97,7 @@ public static class IdentityModule
         services.AddScoped<SessionService>();
         services.AddScoped<OneTimeTokens>();
         services.AddScoped<IStudentProfileLookup, StudentProfileLookup>();
+        services.AddScoped<IUserDirectory, UserDirectory>();
 
         services.AddScoped<EmailAddresses>();
         services.AddScoped<PasswordVerifier>();

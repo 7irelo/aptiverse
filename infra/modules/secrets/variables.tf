@@ -15,6 +15,7 @@ variable "secrets" {
     "openai"          = "JSON: api_key. Used by the ai service for cross-family judging, second marking and embeddings."
     "ai-db"           = "JSON: username, password. Runtime Postgres login for the ai service; its migration task creates the role."
     "langfuse"        = "JSON: host, public_key, secret_key for LLM tracing (content redacted before export)."
+    "email-pepper"    = "Random 32+ byte value. Keys the HMAC that hashes email recipients in the delivery log."
     "sentry-dsn"      = "Sentry DSN for the api and worker."
     "google-oauth"    = "JSON: client_id, client_secret."
     "meta-capi"       = "JSON: pixel_id, access_token for the Meta Conversions API."
