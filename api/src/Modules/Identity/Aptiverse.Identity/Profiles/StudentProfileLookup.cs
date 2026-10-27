@@ -17,7 +17,7 @@ internal sealed class StudentProfileLookup(IdentityDbContext db) : IStudentProfi
         var row = await db.Users
             .AsNoTracking()
             .Where(u => u.Id == userId)
-            .Select(u => new { u.EducationLevel, u.Grade, u.YearOfStudy, u.Curriculum })
+            .Select(u => new { u.EducationLevel, u.Grade, u.YearOfStudy, u.Curriculum, u.InstitutionName })
             .SingleOrDefaultAsync(cancellationToken);
 
         return row?.EducationLevel switch
@@ -28,14 +28,16 @@ internal sealed class StudentProfileLookup(IdentityDbContext db) : IStudentProfi
                 null,
                 row.Curriculum,
                 HighSchoolStage,
-                row.Grade is { } grade ? string.Create(CultureInfo.InvariantCulture, $"Grade {grade}") : "High school"),
+                row.Grade is { } grade ? string.Create(CultureInfo.InvariantCulture, $"Grade {grade}") : "High school",
+                null),
             EducationLevels.Tertiary => new StudentProfile(
                 row.EducationLevel,
                 null,
                 row.YearOfStudy,
                 null,
                 UniversityStage,
-                row.YearOfStudy is { } year ? string.Create(CultureInfo.InvariantCulture, $"Year {year}") : "University"),
+                row.YearOfStudy is { } year ? string.Create(CultureInfo.InvariantCulture, $"Year {year}") : "University",
+                row.InstitutionName),
             _ => null,
         };
     }

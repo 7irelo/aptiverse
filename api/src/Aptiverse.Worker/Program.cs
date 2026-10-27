@@ -1,3 +1,4 @@
+using Aptiverse.Academics;
 using Aptiverse.AiTutor;
 using Aptiverse.Identity;
 using Aptiverse.SharedKernel.Hosting;
@@ -18,6 +19,7 @@ builder.AddPlatform("aptiverse-worker");
 builder.Services.AddIdentityModule(builder.Configuration);
 builder.Services.AddSupportModule(builder.Configuration);
 builder.Services.AddAiTutorModule(builder.Configuration);
+builder.Services.AddAcademicsModule(builder.Configuration);
 
 var app = builder.Build();
 

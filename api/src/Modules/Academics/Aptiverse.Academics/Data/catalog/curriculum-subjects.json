@@ -1,0 +1,711 @@
+[
+  {
+    "curriculum": "nsc",
+    "subject": "eng_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "eng_fal",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "afr_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "afr_fal",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "afr_sal",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "zul_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "zul_fal",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "xho_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "xho_fal",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "sep_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "sot_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "tsn_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "tso_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "ven_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "ssw_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "nbl_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "math",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false,
+    "notes": "Compulsory in Grades 8 and 9; from Grade 10 a learner takes Mathematics or Mathematical Literacy."
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "math_lit",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "physci",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "lifesci",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "agrsci",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "acc",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "bus",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "eco",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "geo",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "hist",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "religion",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "tourism",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "hosp",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "consumer",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "cat",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "it",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "egd",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "civil_tech",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "elec_tech",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "mech_tech",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "agri_mgmt",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "agri_tech",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "visual_arts",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "drama",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "music",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "dance",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "design",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "ns",
+    "minGrade": 8,
+    "maxGrade": 9,
+    "isCompulsory": true
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "ss",
+    "minGrade": 8,
+    "maxGrade": 9,
+    "isCompulsory": true
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "ems",
+    "minGrade": 8,
+    "maxGrade": 9,
+    "isCompulsory": true
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "tech",
+    "minGrade": 8,
+    "maxGrade": 9,
+    "isCompulsory": true
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "creative_arts",
+    "minGrade": 8,
+    "maxGrade": 9,
+    "isCompulsory": true
+  },
+  {
+    "curriculum": "nsc",
+    "subject": "lo",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": true
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "eng_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "eng_fal",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "afr_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "afr_fal",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "afr_sal",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "zul_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "zul_fal",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "xho_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "xho_fal",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "sep_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "sot_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "tsn_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "tso_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "ven_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "ssw_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "nbl_hl",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "math",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": false,
+    "notes": "Compulsory in Grades 8 and 9; from Grade 10 a learner takes Mathematics or Mathematical Literacy."
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "math_lit",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "physci",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "lifesci",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "agrsci",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "acc",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "bus",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "eco",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "geo",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "hist",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "religion",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "tourism",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "hosp",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "consumer",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "cat",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "it",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "egd",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "civil_tech",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "elec_tech",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "mech_tech",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "agri_mgmt",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "agri_tech",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "visual_arts",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "drama",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "music",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "dance",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "design",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "ns",
+    "minGrade": 8,
+    "maxGrade": 9,
+    "isCompulsory": true
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "ss",
+    "minGrade": 8,
+    "maxGrade": 9,
+    "isCompulsory": true
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "ems",
+    "minGrade": 8,
+    "maxGrade": 9,
+    "isCompulsory": true
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "tech",
+    "minGrade": 8,
+    "maxGrade": 9,
+    "isCompulsory": true
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "creative_arts",
+    "minGrade": 8,
+    "maxGrade": 9,
+    "isCompulsory": true
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "lo",
+    "minGrade": 8,
+    "maxGrade": 12,
+    "isCompulsory": true
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "ap_math",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "ap_eng",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  },
+  {
+    "curriculum": "ieb",
+    "subject": "ap_afr",
+    "minGrade": 10,
+    "maxGrade": 12,
+    "isCompulsory": false
+  }
+]

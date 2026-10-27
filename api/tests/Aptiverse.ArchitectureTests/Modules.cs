@@ -1,4 +1,6 @@
 using System.Reflection;
+using Aptiverse.Academics;
+using Aptiverse.Academics.Contracts;
 using Aptiverse.AiTutor;
 using Aptiverse.AiTutor.Contracts;
 using Aptiverse.Identity;
@@ -17,6 +19,7 @@ internal static class Modules
         new("Identity", typeof(IdentityModule).Assembly, typeof(UserRegistered).Assembly),
         new("Support", typeof(SupportModule).Assembly, typeof(FaqPublished).Assembly),
         new("AiTutor", typeof(AiTutorModule).Assembly, typeof(TutorTurnCompleted).Assembly, Schema: AiTutorModule.Schema),
+        new("Academics", typeof(AcademicsModule).Assembly, typeof(StudyUnitEnrolled).Assembly),
     ];
 
     public static readonly Assembly SharedKernel = typeof(Entity).Assembly;

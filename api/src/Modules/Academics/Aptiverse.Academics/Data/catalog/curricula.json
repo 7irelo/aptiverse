@@ -1,0 +1,14 @@
+[
+  {
+    "code": "nsc",
+    "name": "National Senior Certificate (CAPS)",
+    "shortName": "NSC",
+    "description": "South Africa's national matric qualification, set by the Department of Basic Education under the CAPS curriculum. Written by most public and many independent schools."
+  },
+  {
+    "code": "ieb",
+    "name": "Independent Examinations Board (CAPS)",
+    "shortName": "IEB",
+    "description": "NSC equivalent matric qualification on the CAPS curriculum, written by most independent schools in South Africa."
+  }
+]

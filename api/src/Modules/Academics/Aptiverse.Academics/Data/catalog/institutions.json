@@ -1,0 +1,184 @@
+[
+  {
+    "slug": "uct",
+    "name": "University of Cape Town",
+    "shortName": "UCT",
+    "type": "university",
+    "province": "western_cape"
+  },
+  {
+    "slug": "wits",
+    "name": "University of the Witwatersrand",
+    "shortName": "Wits",
+    "type": "university",
+    "province": "gauteng"
+  },
+  {
+    "slug": "up",
+    "name": "University of Pretoria",
+    "shortName": "UP",
+    "type": "university",
+    "province": "gauteng"
+  },
+  {
+    "slug": "su",
+    "name": "Stellenbosch University",
+    "shortName": "SU",
+    "type": "university",
+    "province": "western_cape"
+  },
+  {
+    "slug": "ukzn",
+    "name": "University of KwaZulu-Natal",
+    "shortName": "UKZN",
+    "type": "university",
+    "province": "kwazulu_natal"
+  },
+  {
+    "slug": "ufs",
+    "name": "University of the Free State",
+    "shortName": "UFS",
+    "type": "university",
+    "province": "free_state"
+  },
+  {
+    "slug": "ru",
+    "name": "Rhodes University",
+    "shortName": "RU",
+    "type": "university",
+    "province": "eastern_cape"
+  },
+  {
+    "slug": "uwc",
+    "name": "University of the Western Cape",
+    "shortName": "UWC",
+    "type": "university",
+    "province": "western_cape"
+  },
+  {
+    "slug": "ufh",
+    "name": "University of Fort Hare",
+    "shortName": "UFH",
+    "type": "university",
+    "province": "eastern_cape"
+  },
+  {
+    "slug": "ul",
+    "name": "University of Limpopo",
+    "shortName": "UL",
+    "type": "university",
+    "province": "limpopo"
+  },
+  {
+    "slug": "nwu",
+    "name": "North-West University",
+    "shortName": "NWU",
+    "type": "university",
+    "province": "north_west"
+  },
+  {
+    "slug": "cput",
+    "name": "Cape Peninsula University of Technology",
+    "shortName": "CPUT",
+    "type": "university_of_technology",
+    "province": "western_cape"
+  },
+  {
+    "slug": "cut",
+    "name": "Central University of Technology",
+    "shortName": "CUT",
+    "type": "university_of_technology",
+    "province": "free_state"
+  },
+  {
+    "slug": "dut",
+    "name": "Durban University of Technology",
+    "shortName": "DUT",
+    "type": "university_of_technology",
+    "province": "kwazulu_natal"
+  },
+  {
+    "slug": "mut",
+    "name": "Mangosuthu University of Technology",
+    "shortName": "MUT",
+    "type": "university_of_technology",
+    "province": "kwazulu_natal"
+  },
+  {
+    "slug": "tut",
+    "name": "Tshwane University of Technology",
+    "shortName": "TUT",
+    "type": "university_of_technology",
+    "province": "gauteng"
+  },
+  {
+    "slug": "vut",
+    "name": "Vaal University of Technology",
+    "shortName": "VUT",
+    "type": "university_of_technology",
+    "province": "gauteng"
+  },
+  {
+    "slug": "uj",
+    "name": "University of Johannesburg",
+    "shortName": "UJ",
+    "type": "comprehensive_university",
+    "province": "gauteng"
+  },
+  {
+    "slug": "nmu",
+    "name": "Nelson Mandela University",
+    "shortName": "NMU",
+    "type": "comprehensive_university",
+    "province": "eastern_cape"
+  },
+  {
+    "slug": "unisa",
+    "name": "University of South Africa",
+    "shortName": "UNISA",
+    "type": "comprehensive_university",
+    "province": "gauteng"
+  },
+  {
+    "slug": "univen",
+    "name": "University of Venda",
+    "shortName": "Univen",
+    "type": "comprehensive_university",
+    "province": "limpopo"
+  },
+  {
+    "slug": "wsu",
+    "name": "Walter Sisulu University",
+    "shortName": "WSU",
+    "type": "comprehensive_university",
+    "province": "eastern_cape"
+  },
+  {
+    "slug": "unizulu",
+    "name": "University of Zululand",
+    "shortName": "UniZulu",
+    "type": "comprehensive_university",
+    "province": "kwazulu_natal"
+  },
+  {
+    "slug": "spu",
+    "name": "Sol Plaatje University",
+    "shortName": "SPU",
+    "type": "university",
+    "province": "northern_cape"
+  },
+  {
+    "slug": "ump",
+    "name": "University of Mpumalanga",
+    "shortName": "UMP",
+    "type": "university",
+    "province": "mpumalanga"
+  },
+  {
+    "slug": "smu",
+    "name": "Sefako Makgatho Health Sciences University",
+    "shortName": "SMU",
+    "type": "university",
+    "province": "gauteng"
+  }
+]

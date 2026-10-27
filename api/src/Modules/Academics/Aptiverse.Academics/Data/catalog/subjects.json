@@ -1,0 +1,342 @@
+[
+  {
+    "slug": "eng_hl",
+    "code": "ENG HL",
+    "name": "English Home Language",
+    "category": "language",
+    "languageType": "home"
+  },
+  {
+    "slug": "eng_fal",
+    "code": "ENG FAL",
+    "name": "English First Additional Language",
+    "category": "language",
+    "languageType": "first_additional"
+  },
+  {
+    "slug": "afr_hl",
+    "code": "AFR HL",
+    "name": "Afrikaans Home Language",
+    "category": "language",
+    "languageType": "home"
+  },
+  {
+    "slug": "afr_fal",
+    "code": "AFR FAL",
+    "name": "Afrikaans First Additional Language",
+    "category": "language",
+    "languageType": "first_additional"
+  },
+  {
+    "slug": "afr_sal",
+    "code": "AFR SAL",
+    "name": "Afrikaans Second Additional Language",
+    "category": "language",
+    "languageType": "second_additional"
+  },
+  {
+    "slug": "zul_hl",
+    "code": "ZUL HL",
+    "name": "isiZulu Home Language",
+    "category": "language",
+    "languageType": "home"
+  },
+  {
+    "slug": "zul_fal",
+    "code": "ZUL FAL",
+    "name": "isiZulu First Additional Language",
+    "category": "language",
+    "languageType": "first_additional"
+  },
+  {
+    "slug": "xho_hl",
+    "code": "XHO HL",
+    "name": "isiXhosa Home Language",
+    "category": "language",
+    "languageType": "home"
+  },
+  {
+    "slug": "xho_fal",
+    "code": "XHO FAL",
+    "name": "isiXhosa First Additional Language",
+    "category": "language",
+    "languageType": "first_additional"
+  },
+  {
+    "slug": "sep_hl",
+    "code": "SEP HL",
+    "name": "Sepedi Home Language",
+    "category": "language",
+    "languageType": "home"
+  },
+  {
+    "slug": "sot_hl",
+    "code": "SOT HL",
+    "name": "Sesotho Home Language",
+    "category": "language",
+    "languageType": "home"
+  },
+  {
+    "slug": "tsn_hl",
+    "code": "TSN HL",
+    "name": "Setswana Home Language",
+    "category": "language",
+    "languageType": "home"
+  },
+  {
+    "slug": "tso_hl",
+    "code": "TSO HL",
+    "name": "Xitsonga Home Language",
+    "category": "language",
+    "languageType": "home"
+  },
+  {
+    "slug": "ven_hl",
+    "code": "VEN HL",
+    "name": "Tshivenda Home Language",
+    "category": "language",
+    "languageType": "home"
+  },
+  {
+    "slug": "ssw_hl",
+    "code": "SSW HL",
+    "name": "siSwati Home Language",
+    "category": "language",
+    "languageType": "home"
+  },
+  {
+    "slug": "nbl_hl",
+    "code": "NBL HL",
+    "name": "isiNdebele Home Language",
+    "category": "language",
+    "languageType": "home"
+  },
+  {
+    "slug": "math",
+    "code": "MATH",
+    "name": "Mathematics",
+    "category": "mathematics"
+  },
+  {
+    "slug": "math_lit",
+    "code": "MLIT",
+    "name": "Mathematical Literacy",
+    "category": "mathematics"
+  },
+  {
+    "slug": "physci",
+    "code": "PHSC",
+    "name": "Physical Sciences",
+    "category": "natural_science",
+    "description": "Combined physics and chemistry course."
+  },
+  {
+    "slug": "lifesci",
+    "code": "LSCI",
+    "name": "Life Sciences",
+    "category": "natural_science",
+    "description": "Biology course."
+  },
+  {
+    "slug": "agrsci",
+    "code": "AGRI",
+    "name": "Agricultural Sciences",
+    "category": "natural_science"
+  },
+  {
+    "slug": "acc",
+    "code": "ACC",
+    "name": "Accounting",
+    "category": "commerce"
+  },
+  {
+    "slug": "bus",
+    "code": "BUS",
+    "name": "Business Studies",
+    "category": "commerce"
+  },
+  {
+    "slug": "eco",
+    "code": "ECO",
+    "name": "Economics",
+    "category": "commerce"
+  },
+  {
+    "slug": "geo",
+    "code": "GEO",
+    "name": "Geography",
+    "category": "humanities"
+  },
+  {
+    "slug": "hist",
+    "code": "HIST",
+    "name": "History",
+    "category": "humanities"
+  },
+  {
+    "slug": "religion",
+    "code": "RELS",
+    "name": "Religion Studies",
+    "category": "humanities"
+  },
+  {
+    "slug": "tourism",
+    "code": "TOUR",
+    "name": "Tourism",
+    "category": "services"
+  },
+  {
+    "slug": "hosp",
+    "code": "HOSP",
+    "name": "Hospitality Studies",
+    "category": "services"
+  },
+  {
+    "slug": "consumer",
+    "code": "CONS",
+    "name": "Consumer Studies",
+    "category": "services"
+  },
+  {
+    "slug": "cat",
+    "code": "CAT",
+    "name": "Computer Applications Technology",
+    "category": "technical",
+    "description": "Office applications and digital literacy."
+  },
+  {
+    "slug": "it",
+    "code": "IT",
+    "name": "Information Technology",
+    "category": "technical",
+    "description": "Programming focused IT."
+  },
+  {
+    "slug": "egd",
+    "code": "EGD",
+    "name": "Engineering Graphics and Design",
+    "category": "technical"
+  },
+  {
+    "slug": "civil_tech",
+    "code": "CTEC",
+    "name": "Civil Technology",
+    "category": "technical"
+  },
+  {
+    "slug": "elec_tech",
+    "code": "ETEC",
+    "name": "Electrical Technology",
+    "category": "technical"
+  },
+  {
+    "slug": "mech_tech",
+    "code": "MTEC",
+    "name": "Mechanical Technology",
+    "category": "technical"
+  },
+  {
+    "slug": "agri_mgmt",
+    "code": "AMP",
+    "name": "Agricultural Management Practices",
+    "category": "technical"
+  },
+  {
+    "slug": "agri_tech",
+    "code": "ATEC",
+    "name": "Agricultural Technology",
+    "category": "technical"
+  },
+  {
+    "slug": "visual_arts",
+    "code": "VART",
+    "name": "Visual Arts",
+    "category": "arts"
+  },
+  {
+    "slug": "drama",
+    "code": "DRAM",
+    "name": "Dramatic Arts",
+    "category": "arts"
+  },
+  {
+    "slug": "music",
+    "code": "MUSI",
+    "name": "Music",
+    "category": "arts"
+  },
+  {
+    "slug": "dance",
+    "code": "DANC",
+    "name": "Dance Studies",
+    "category": "arts"
+  },
+  {
+    "slug": "design",
+    "code": "DESI",
+    "name": "Design",
+    "category": "arts"
+  },
+  {
+    "slug": "lo",
+    "code": "LO",
+    "name": "Life Orientation",
+    "category": "life_orientation"
+  },
+  {
+    "slug": "ap_math",
+    "code": "AP MATH",
+    "name": "Advanced Programme Mathematics",
+    "category": "mathematics",
+    "description": "IEB enrichment course alongside Mathematics."
+  },
+  {
+    "slug": "ap_eng",
+    "code": "AP ENG",
+    "name": "Advanced Programme English",
+    "category": "language",
+    "description": "IEB enrichment course alongside English Home Language."
+  },
+  {
+    "slug": "ap_afr",
+    "code": "AP AFR",
+    "name": "Advanced Programme Afrikaans",
+    "category": "language",
+    "description": "IEB enrichment course alongside Afrikaans Home Language."
+  },
+  {
+    "slug": "ns",
+    "code": "NS",
+    "name": "Natural Sciences",
+    "category": "natural_science",
+    "description": "Senior Phase (Grades 8 and 9) science."
+  },
+  {
+    "slug": "ss",
+    "code": "SS",
+    "name": "Social Sciences",
+    "category": "humanities",
+    "description": "Senior Phase (Grades 8 and 9) history and geography."
+  },
+  {
+    "slug": "ems",
+    "code": "EMS",
+    "name": "Economic and Management Sciences",
+    "category": "commerce",
+    "description": "Senior Phase (Grades 8 and 9)."
+  },
+  {
+    "slug": "tech",
+    "code": "TECH",
+    "name": "Technology",
+    "category": "technical",
+    "description": "Senior Phase (Grades 8 and 9)."
+  },
+  {
+    "slug": "creative_arts",
+    "code": "CART",
+    "name": "Creative Arts",
+    "category": "arts",
+    "description": "Senior Phase (Grades 8 and 9)."
+  }
+]

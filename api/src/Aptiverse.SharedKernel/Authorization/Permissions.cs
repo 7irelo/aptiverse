@@ -38,6 +38,12 @@ public static class Permissions
         public const string Chat = "ai.chat";
     }
 
+    public static class Academics
+    {
+        /// <summary>Manage your own study units (subjects or courses), their topics and your assessments and marks.</summary>
+        public const string Manage = "academics.manage";
+    }
+
     public static IReadOnlyList<string> All { get; } = typeof(Permissions)
         .GetNestedTypes(BindingFlags.Public | BindingFlags.Static)
         .SelectMany(t => t.GetFields(BindingFlags.Public | BindingFlags.Static))

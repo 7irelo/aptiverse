@@ -16,10 +16,12 @@ public interface IStudentProfileLookup
 /// <param name="Curriculum">High school exam body ("nsc" or "ieb"), otherwise null.</param>
 /// <param name="Stage">"high_school" or "university".</param>
 /// <param name="Level">Human readable level, for example "Grade 11" or "Year 2".</param>
+/// <param name="InstitutionName">The institution a tertiary student named at onboarding, as typed or picked; otherwise null.</param>
 public sealed record StudentProfile(
     string EducationLevel,
     int? Grade,
     int? YearOfStudy,
     string? Curriculum,
     string Stage,
-    string Level);
+    string Level,
+    string? InstitutionName);

@@ -99,6 +99,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("AiService:BaseUrl", "http://ai.test:8080");
         builder.UseSetting("AiService:DailyMessageLimit", DailyMessageLimit.ToString(System.Globalization.CultureInfo.InvariantCulture));
         builder.UseSetting("AiService:SendMessagePermitLimit", "1000");
+        builder.UseSetting("Academics:WritePermitLimit", "10000");
 
         // Outside Development the signing key is required; service tokens need it even though tests sign in with the test scheme.
         using (var key = ECDsa.Create(ECCurve.NamedCurves.nistP256))

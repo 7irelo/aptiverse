@@ -5,6 +5,10 @@
     <Project Path="src/Aptiverse.Worker/Aptiverse.Worker.csproj" />
   </Folder>
   <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Academics/">
+    <Project Path="src/Modules/Academics/Aptiverse.Academics.Contracts/Aptiverse.Academics.Contracts.csproj" />
+    <Project Path="src/Modules/Academics/Aptiverse.Academics/Aptiverse.Academics.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/AiTutor/">
     <Project Path="src/Modules/AiTutor/Aptiverse.AiTutor.Contracts/Aptiverse.AiTutor.Contracts.csproj" />
     <Project Path="src/Modules/AiTutor/Aptiverse.AiTutor/Aptiverse.AiTutor.csproj" />

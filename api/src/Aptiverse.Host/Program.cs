@@ -1,3 +1,4 @@
+using Aptiverse.Academics;
 using Aptiverse.AiTutor;
 using Aptiverse.Host.Infrastructure;
 using Aptiverse.Identity;
@@ -22,6 +23,7 @@ builder.Services.AddApiPlatform(builder.Configuration);
 builder.Services.AddIdentityModule(builder.Configuration);
 builder.Services.AddSupportModule(builder.Configuration);
 builder.Services.AddAiTutorModule(builder.Configuration);
+builder.Services.AddAcademicsModule(builder.Configuration);
 
 var app = builder.Build();
 
@@ -51,6 +53,7 @@ app.MapPlatformHealthChecks();
 app.MapIdentityEndpoints();
 app.MapSupportEndpoints();
 app.MapAiTutorEndpoints();
+app.MapAcademicsEndpoints();
 
 if (PlatformHostingExtensions.IsBuildTimeDocumentGeneration)
 {
