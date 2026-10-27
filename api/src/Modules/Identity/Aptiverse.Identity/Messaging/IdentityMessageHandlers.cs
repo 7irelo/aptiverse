@@ -1,3 +1,4 @@
+using Aptiverse.Family.Contracts;
 using Aptiverse.Identity.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -40,5 +41,29 @@ public static class ProcessScheduledErasureHandler
         ArgumentNullException.ThrowIfNull(scopes);
         await using var scope = scopes.CreateAsyncScope();
         await scope.ServiceProvider.GetRequiredService<ScheduledErasureProcessor>().ProcessAsync(message.RequestId, cancellationToken);
+    }
+}
+
+/// <summary>Records the parental_consent document Family's consent stands for, so a minor may pay.</summary>
+public static class IdentityParentalConsentGrantedHandler
+{
+    public static async Task HandleAsync(ParentalConsentGranted message, IServiceScopeFactory scopes, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentNullException.ThrowIfNull(scopes);
+        await using var scope = scopes.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<ParentalConsentRecorder>().GrantedAsync(message, cancellationToken);
+    }
+}
+
+/// <summary>Withdraws the student's parental_consent document when the consenting parent withdraws.</summary>
+public static class IdentityParentalConsentWithdrawnHandler
+{
+    public static async Task HandleAsync(ParentalConsentWithdrawn message, IServiceScopeFactory scopes, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentNullException.ThrowIfNull(scopes);
+        await using var scope = scopes.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<ParentalConsentRecorder>().WithdrawnAsync(message, cancellationToken);
     }
 }

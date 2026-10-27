@@ -27,8 +27,17 @@ internal static class EmailTemplates
     public static readonly EmailTemplate SessionsRevoked =
         new("identity.sessions_revoked", SecurityCategory, ["name", "revoked_at", "device_count", "reason_text", "security_link", "reset_link"]);
 
+    public static readonly EmailTemplate FamilyInvite =
+        new("family.invite", AccountCategory, ["name", "link", "expires_at"]);
+
+    public static readonly EmailTemplate FamilyLinkCreated =
+        new("family.link_created", AccountCategory, ["name", "other_name", "family_link"]);
+
+    public static readonly EmailTemplate FamilyLinkRemoved =
+        new("family.link_removed", AccountCategory, ["name", "other_name", "is_parent", "family_link"]);
+
     public static IReadOnlyList<EmailTemplate> All { get; } =
-        [VerifyEmail, ResetPassword, PasswordChanged, AccountLocked, Welcome, SessionsRevoked];
+        [VerifyEmail, ResetPassword, PasswordChanged, AccountLocked, Welcome, SessionsRevoked, FamilyInvite, FamilyLinkCreated, FamilyLinkRemoved];
 
     public static IReadOnlyList<string> Categories { get; } = [SecurityCategory, AccountCategory];
 }

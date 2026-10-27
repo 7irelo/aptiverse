@@ -10,6 +10,7 @@
     <ProjectReference Include="..\Modules\Academics\Aptiverse.Academics\Aptiverse.Academics.csproj" />
     <ProjectReference Include="..\Modules\AiTutor\Aptiverse.AiTutor\Aptiverse.AiTutor.csproj" />
     <ProjectReference Include="..\Modules\Billing\Aptiverse.Billing\Aptiverse.Billing.csproj" />
+    <ProjectReference Include="..\Modules\Family\Aptiverse.Family\Aptiverse.Family.csproj" />
     <ProjectReference Include="..\Modules\Identity\Aptiverse.Identity\Aptiverse.Identity.csproj" />
     <ProjectReference Include="..\Modules\Mcp\Aptiverse.Mcp\Aptiverse.Mcp.csproj" />
     <ProjectReference Include="..\Modules\Notifications\Aptiverse.Notifications\Aptiverse.Notifications.csproj" />

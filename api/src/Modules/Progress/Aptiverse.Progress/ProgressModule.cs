@@ -63,6 +63,7 @@ public static class ProgressModule
         services.AddScoped<MilestoneWrites>();
         services.AddScoped<ProgressUserDataEraser>();
         services.AddScoped<IMasterySnapshot, MasterySnapshot>();
+        services.AddScoped<IProgressSummary, ProgressSummary>();
 
         services.AddScoped<GetGoalBaselineHandler>();
         services.AddScoped<CreateGoalHandler>();

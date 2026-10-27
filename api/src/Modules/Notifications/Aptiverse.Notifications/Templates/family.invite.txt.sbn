@@ -1,0 +1,8 @@
+{{ name }} invited you to link your {{ brand }} account to theirs as your parent or guardian.
+
+If you accept, {{ name }} can see the parts of your studies you choose to share, such as your subjects, practice results and goals. Your tutor conversations are never shared. You can change what you share, or remove the link, at any time.
+
+Sign in with this email address, then open the link to accept:
+{{ link }}
+
+The link works once and expires on {{ expires_at }}. If you do not know {{ name }}, ignore this email and nothing will change.

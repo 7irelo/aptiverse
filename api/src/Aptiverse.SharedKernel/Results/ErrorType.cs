@@ -13,4 +13,5 @@ public enum ErrorType
     PreconditionFailed,
     PreconditionRequired,
     BadGateway,
+    Gone,
 }

@@ -6,6 +6,7 @@ using Aptiverse.AiTutor.Features.EraseUserData;
 using Aptiverse.AiTutor.Features.GetConversation;
 using Aptiverse.AiTutor.Features.ListConversations;
 using Aptiverse.AiTutor.Features.SendMessage;
+using Aptiverse.AiTutor.Lookups;
 using Aptiverse.AiTutor.Persistence;
 using Aptiverse.SharedKernel.Persistence;
 using FluentValidation;
@@ -50,6 +51,7 @@ public static class AiTutorModule
         services.AddScoped<DeleteConversationHandler>();
         services.AddScoped<SendMessageHandler>();
         services.AddScoped<UserDataEraser>();
+        services.AddScoped<ITutorActivityLookup, TutorActivityLookup>();
 
         // Practice generates and grades through this module's ai service edge.
         services.AddScoped<PracticeAiGateway>();

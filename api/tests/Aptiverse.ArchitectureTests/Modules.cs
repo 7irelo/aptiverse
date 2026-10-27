@@ -5,6 +5,8 @@ using Aptiverse.AiTutor;
 using Aptiverse.AiTutor.Contracts;
 using Aptiverse.Billing;
 using Aptiverse.Billing.Contracts;
+using Aptiverse.Family;
+using Aptiverse.Family.Contracts;
 using Aptiverse.Identity;
 using Aptiverse.Identity.Contracts;
 using Aptiverse.Mcp;
@@ -35,6 +37,7 @@ internal static class Modules
         new("Notifications", typeof(NotificationsModule).Assembly, typeof(NotifyUser).Assembly),
         new("Mcp", typeof(McpModule).Assembly, typeof(McpScopes).Assembly),
         new("Billing", typeof(BillingModule).Assembly, typeof(PaymentSucceeded).Assembly),
+        new("Family", typeof(FamilyModule).Assembly, typeof(FamilyLinkCreated).Assembly),
     ];
 
     public static readonly Assembly SharedKernel = typeof(Entity).Assembly;

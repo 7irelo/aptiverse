@@ -21,8 +21,15 @@ internal static class RolePermissions
             Permissions.Progress.Read,
             Permissions.Progress.ManageGoals,
             Permissions.Billing.Manage,
+            Permissions.Family.Student,
         }.ToFrozenSet(),
-        [Roles.Parent] = new[] { Permissions.Account.Manage, Permissions.Notifications.Read, Permissions.Billing.Manage }.ToFrozenSet(),
+        [Roles.Parent] = new[]
+        {
+            Permissions.Account.Manage,
+            Permissions.Notifications.Read,
+            Permissions.Billing.Manage,
+            Permissions.Family.Parent,
+        }.ToFrozenSet(),
         [Roles.Admin] = Permissions.All.ToFrozenSet(),
     }.ToFrozenDictionary(StringComparer.Ordinal);
 

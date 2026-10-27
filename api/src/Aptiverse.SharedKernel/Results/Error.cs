@@ -41,6 +41,9 @@ public sealed record Error(string Code, string Description, ErrorType Type)
     /// <summary>An upstream provider answered with an error. Maps to 502; the request may be retried.</summary>
     public static Error BadGateway(string code, string description) => new(code, description, ErrorType.BadGateway);
 
+    /// <summary>The resource existed but is no longer usable, for example an expired single-use link. Maps to 410.</summary>
+    public static Error Gone(string code, string description) => new(code, description, ErrorType.Gone);
+
     public static Error Validation(string code, string description, IReadOnlyDictionary<string, string[]>? errors = null) =>
         new(code, description, ErrorType.Validation) { ValidationErrors = errors };
 }

@@ -6113,10 +6113,1030 @@
           }
         }
       }
+    },
+    "/family/invites": {
+      "post": {
+        "tags": [
+          "Family"
+        ],
+        "summary": "Invite your child to link their account to yours",
+        "description": "Emails a single-use link that is valid for 7 days. The child accepts while signed in with that email, and only then are the accounts linked. The answer is the same whether or not the address has an account. A second invite to the same address while one is pending is 409 family.invite_duplicate (inviteId extension).",
+        "operationId": "sendFamilyInvite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendInviteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Family"
+        ],
+        "summary": "List the invites you sent",
+        "description": "Newest first, at most 50. A pending invite past its expiry reads as expired. Addresses are masked.",
+        "operationId": "listFamilyInvites",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InviteView"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/family/invites/accept": {
+      "post": {
+        "tags": [
+          "Family"
+        ],
+        "summary": "Accept a parent's invite and link your accounts",
+        "description": "Sign in with the invited email address first (403 family.invite_email_mismatch otherwise). An expired invite is 410 family.invite_expired; an unknown, cancelled or used one is 404. Accepting again returns the same link. You choose what this parent sees and can change it or remove the link at any time.",
+        "operationId": "acceptFamilyInvite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptInviteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/family/invites/{id}": {
+      "delete": {
+        "tags": [
+          "Family"
+        ],
+        "summary": "Cancel an invite you sent",
+        "description": "The emailed link stops working. Cancelling an invite that is no longer pending is 204.",
+        "operationId": "cancelFamilyInvite",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/family/link-codes": {
+      "post": {
+        "tags": [
+          "Family"
+        ],
+        "summary": "Get a code your parent can enter to link to you",
+        "description": "A 12 character code shown as XXXX-XXXX-XXXX, valid for 15 minutes and usable once. A new code replaces any code you had before. Give it only to a parent: entering it links their account to yours.",
+        "operationId": "createFamilyLinkCode",
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkCodeView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/family/link-codes/redeem": {
+      "post": {
+        "tags": [
+          "Family"
+        ],
+        "summary": "Link to your child with the code they gave you",
+        "description": "A wrong code is 404 family.link_code_invalid and counts against you: after 5 wrong codes in an hour redeeming is blocked with 429 family.too_many_attempts (Retry-After header). An expired code is 410. Linking more children than your plan covers is 409 family.limit_reached.",
+        "operationId": "redeemFamilyLinkCode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedeemLinkCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/family/children": {
+      "get": {
+        "tags": [
+          "Family"
+        ],
+        "summary": "List the children linked to you",
+        "description": "Oldest link first, with what each child shares with you (read only) and their parental consent status.",
+        "operationId": "listFamilyChildren",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChildrenView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/family/parents": {
+      "get": {
+        "tags": [
+          "Family"
+        ],
+        "summary": "List the parents linked to you",
+        "description": "Oldest link first, with what you share with each one and which parent gave parental consent.",
+        "operationId": "listFamilyParents",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ParentView"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/family/children/{studentId}/summary": {
+      "get": {
+        "tags": [
+          "Family"
+        ],
+        "summary": "See what one of your children shares with you",
+        "description": "Each block has shared: false and no data when the child does not share it. A student who is not linked to you is 404 family.child_not_found, never 403. Tutor conversations are never shown, only counts.",
+        "operationId": "getFamilyChildSummary",
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChildSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/family/parents/{parentId}/sharing": {
+      "put": {
+        "tags": [
+          "Family"
+        ],
+        "summary": "Choose what a linked parent can see",
+        "description": "Send all four flags. Takes effect on the parent's next read. Tutor conversations are never shared; the tutor flag shares counts only. A parent you are not linked to is 404.",
+        "operationId": "updateFamilySharing",
+        "parameters": [
+          {
+            "name": "parentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSharingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/family/children/{studentId}": {
+      "delete": {
+        "tags": [
+          "Family"
+        ],
+        "summary": "Unlink one of your children",
+        "description": "You stop seeing anything of theirs immediately. A child you are not linked to is 404; unlinking again is 204.",
+        "operationId": "unlinkFamilyChild",
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/family/parents/{parentId}": {
+      "delete": {
+        "tags": [
+          "Family"
+        ],
+        "summary": "Remove a parent's access to your account",
+        "description": "Takes effect immediately: the parent sees nothing more. Parental consent they gave stays on record until they withdraw it. A parent you are not linked to is 404; revoking again is 204.",
+        "operationId": "revokeFamilyParent",
+        "parameters": [
+          {
+            "name": "parentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/family/children/{studentId}/consent": {
+      "post": {
+        "tags": [
+          "Family"
+        ],
+        "summary": "Give parental consent for a child under 18",
+        "description": "Only a linked parent with a verified email can consent, and only for a child under 18 (409 family.consent_not_needed otherwise). documentVersion must be the current consent text version (409 family.consent_version_outdated, currentVersion extension). Consenting again is 200; another parent's consent already on record is 409. Consent lets your child subscribe and stays until you withdraw it.",
+        "operationId": "grantFamilyParentalConsent",
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantConsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Family"
+        ],
+        "summary": "Withdraw the parental consent you gave",
+        "description": "Only the parent who consented can withdraw (403 family.consent_not_parent), even after the link is removed. With no consent on record it is 404.",
+        "operationId": "withdrawFamilyParentalConsent",
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AcademicsBlock": {
+        "required": [
+          "shared",
+          "units",
+          "upcoming"
+        ],
+        "type": "object",
+        "properties": {
+          "shared": {
+            "type": "boolean"
+          },
+          "units": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/UnitItem"
+            }
+          },
+          "upcoming": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/UpcomingAssessmentItem"
+            }
+          }
+        }
+      },
       "AcceptConsentsRequest": {
         "required": [
           "termsVersion",
@@ -6134,6 +7154,31 @@
             "type": [
               "null",
               "boolean"
+            ]
+          }
+        }
+      },
+      "AcceptInviteRequest": {
+        "required": [
+          "token",
+          "sharing"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sharing": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SharingFlags"
+              }
             ]
           }
         }
@@ -7036,6 +8081,127 @@
           },
           "planCode": {
             "type": "string"
+          }
+        }
+      },
+      "ChildrenView": {
+        "required": [
+          "children",
+          "childLimit"
+        ],
+        "type": "object",
+        "properties": {
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChildView"
+            }
+          },
+          "childLimit": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "ChildSummary": {
+        "required": [
+          "studentId",
+          "displayName",
+          "stage",
+          "level",
+          "academics",
+          "mastery",
+          "practice",
+          "goals",
+          "tutor"
+        ],
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "stage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "level": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "academics": {
+            "$ref": "#/components/schemas/AcademicsBlock"
+          },
+          "mastery": {
+            "$ref": "#/components/schemas/MasteryBlock"
+          },
+          "practice": {
+            "$ref": "#/components/schemas/PracticeBlock"
+          },
+          "goals": {
+            "$ref": "#/components/schemas/GoalsBlock"
+          },
+          "tutor": {
+            "$ref": "#/components/schemas/TutorBlock"
+          }
+        }
+      },
+      "ChildView": {
+        "required": [
+          "studentId",
+          "linkId",
+          "displayName",
+          "stage",
+          "level",
+          "relationship",
+          "linkedAt",
+          "sharing",
+          "consent"
+        ],
+        "type": "object",
+        "properties": {
+          "studentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "linkId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "stage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "level": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "relationship": {
+            "type": "string"
+          },
+          "linkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sharing": {
+            "$ref": "#/components/schemas/SharingFlags"
+          },
+          "consent": {
+            "$ref": "#/components/schemas/ConsentView"
           }
         }
       },
@@ -8000,6 +9166,50 @@
           }
         }
       },
+      "GoalItem": {
+        "required": [
+          "title",
+          "criteriaType",
+          "status",
+          "targetValue",
+          "currentValue",
+          "dueAt",
+          "unitName"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "criteriaType": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "targetValue": {
+            "type": "number",
+            "format": "double"
+          },
+          "currentValue": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "unitName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "GoalPreview": {
         "required": [
           "baselineValue",
@@ -8025,6 +9235,27 @@
           },
           "earlyRead": {
             "type": "boolean"
+          }
+        }
+      },
+      "GoalsBlock": {
+        "required": [
+          "shared",
+          "active"
+        ],
+        "type": "object",
+        "properties": {
+          "shared": {
+            "type": "boolean"
+          },
+          "active": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/GoalItem"
+            }
           }
         }
       },
@@ -8252,6 +9483,24 @@
           }
         }
       },
+      "GrantConsentRequest": {
+        "required": [
+          "documentVersion",
+          "confirmIsParentOrGuardian"
+        ],
+        "type": "object",
+        "properties": {
+          "documentVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "confirmIsParentOrGuardian": {
+            "type": "boolean"
+          }
+        }
+      },
       "HttpValidationProblemDetails": {
         "type": "object",
         "properties": {
@@ -8332,6 +9581,40 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "InviteView": {
+        "required": [
+          "id",
+          "inviteeEmailMasked",
+          "relationship",
+          "status",
+          "expiresAt",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "inviteeEmailMasked": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -8522,6 +9805,61 @@
           }
         }
       },
+      "LinkCodeView": {
+        "required": [
+          "code",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "LinkView": {
+        "required": [
+          "linkId",
+          "parentUserId",
+          "studentUserId",
+          "relationship",
+          "method",
+          "linkedAt",
+          "sharing"
+        ],
+        "type": "object",
+        "properties": {
+          "linkId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parentUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "studentUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "relationship": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "linkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sharing": {
+            "$ref": "#/components/schemas/SharingFlags"
+          }
+        }
+      },
       "LoginRequest": {
         "required": [
           "email",
@@ -8534,6 +9872,27 @@
           },
           "password": {
             "type": "string"
+          }
+        }
+      },
+      "MasteryBlock": {
+        "required": [
+          "shared",
+          "weakestTopics"
+        ],
+        "type": "object",
+        "properties": {
+          "shared": {
+            "type": "boolean"
+          },
+          "weakestTopics": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/TopicItem"
+            }
           }
         }
       },
@@ -9145,6 +10504,44 @@
           }
         }
       },
+      "ParentView": {
+        "required": [
+          "parentId",
+          "linkId",
+          "displayName",
+          "relationship",
+          "linkedAt",
+          "sharing",
+          "isConsentingParent"
+        ],
+        "type": "object",
+        "properties": {
+          "parentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "linkId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string"
+          },
+          "linkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sharing": {
+            "$ref": "#/components/schemas/SharingFlags"
+          },
+          "isConsentingParent": {
+            "type": "boolean"
+          }
+        }
+      },
       "PlanCatalog": {
         "required": [
           "vatInclusive",
@@ -9268,6 +10665,72 @@
             "items": {
               "$ref": "#/components/schemas/QuotaView"
             }
+          }
+        }
+      },
+      "PracticeBlock": {
+        "required": [
+          "shared",
+          "completedLast30Days",
+          "averageScorePercent",
+          "recent"
+        ],
+        "type": "object",
+        "properties": {
+          "shared": {
+            "type": "boolean"
+          },
+          "completedLast30Days": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "averageScorePercent": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "recent": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/PracticeItem"
+            }
+          }
+        }
+      },
+      "PracticeItem": {
+        "required": [
+          "studyUnitId",
+          "unitName",
+          "scorePercent",
+          "gradedHour"
+        ],
+        "type": "object",
+        "properties": {
+          "studyUnitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "unitName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scorePercent": {
+            "type": "number",
+            "format": "double"
+          },
+          "gradedHour": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -9654,6 +11117,27 @@
               "integer"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "RedeemLinkCodeRequest": {
+        "required": [
+          "code",
+          "relationship"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "relationship": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -10077,6 +11561,27 @@
           }
         }
       },
+      "SendInviteRequest": {
+        "required": [
+          "email",
+          "relationship"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "relationship": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "SendMessageRequest": {
         "required": [
           "message"
@@ -10156,6 +11661,33 @@
         "properties": {
           "educationLevel": {
             "type": "string"
+          }
+        }
+      },
+      "SharingFlags": {
+        "required": [
+          "academics",
+          "practice",
+          "goals",
+          "tutorActivity"
+        ],
+        "type": "object",
+        "properties": {
+          "academics": {
+            "type": "boolean",
+            "description": "Subjects or courses, upcoming assessments and topic mastery."
+          },
+          "practice": {
+            "type": "boolean",
+            "description": "Practice tests completed and their scores."
+          },
+          "goals": {
+            "type": "boolean",
+            "description": "Active goals and their verified progress."
+          },
+          "tutorActivity": {
+            "type": "boolean",
+            "description": "How often the tutor was used (counts only; conversation content is never shared)."
           }
         }
       },
@@ -10305,6 +11837,37 @@
           }
         }
       },
+      "TopicItem": {
+        "required": [
+          "studyUnitId",
+          "topic",
+          "score",
+          "band"
+        ],
+        "type": "object",
+        "properties": {
+          "studyUnitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "topic": {
+            "type": "string"
+          },
+          "score": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "band": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "TopicMasteryItem": {
         "required": [
           "topic",
@@ -10425,6 +11988,33 @@
           }
         }
       },
+      "TutorBlock": {
+        "required": [
+          "shared",
+          "conversationsLast30Days",
+          "questionsLast30Days"
+        ],
+        "type": "object",
+        "properties": {
+          "shared": {
+            "type": "boolean"
+          },
+          "conversationsLast30Days": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "questionsLast30Days": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "UnitDetailResponse": {
         "required": [
           "unit",
@@ -10447,6 +12037,30 @@
             "items": {
               "$ref": "#/components/schemas/TopicView"
             }
+          }
+        }
+      },
+      "UnitItem": {
+        "required": [
+          "studyUnitId",
+          "name",
+          "kind",
+          "level"
+        ],
+        "type": "object",
+        "properties": {
+          "studyUnitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
           }
         }
       },
@@ -10634,6 +12248,31 @@
           "topicCount": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "UpcomingAssessmentItem": {
+        "required": [
+          "assessmentId",
+          "title",
+          "unitName",
+          "dueAt"
+        ],
+        "type": "object",
+        "properties": {
+          "assessmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "unitName": {
+            "type": "string"
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -10857,6 +12496,41 @@
           }
         }
       },
+      "UpdateSharingRequest": {
+        "required": [
+          "academics",
+          "practice",
+          "goals",
+          "tutorActivity"
+        ],
+        "type": "object",
+        "properties": {
+          "academics": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "practice": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "goals": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "tutorActivity": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
       "UsageItem": {
         "required": [
           "quotaKey",
@@ -11004,6 +12678,9 @@
     },
     {
       "name": "Billing"
+    },
+    {
+      "name": "Family"
     }
   ]
 }

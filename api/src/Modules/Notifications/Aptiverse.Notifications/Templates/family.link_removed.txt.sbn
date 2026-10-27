@@ -1,0 +1,6 @@
+Hi {{ name }},
+
+{{ if is_parent == "true" }}{{ other_name }} removed the link between your {{ brand }} accounts, so you no longer see their studies. If this is unexpected, talk to {{ other_name }}; they can link again with a new code or invite.{{ else }}{{ other_name }} removed the link between your {{ brand }} accounts, so they no longer see anything of yours.{{ end }}
+
+See your family page:
+{{ family_link }}

@@ -22,6 +22,7 @@ public static class ResultHttpExtensions
             ErrorType.PreconditionFailed => StatusCodes.Status412PreconditionFailed,
             ErrorType.PreconditionRequired => StatusCodes.Status428PreconditionRequired,
             ErrorType.BadGateway => StatusCodes.Status502BadGateway,
+            ErrorType.Gone => StatusCodes.Status410Gone,
             _ => StatusCodes.Status500InternalServerError,
         };
 
@@ -65,6 +66,7 @@ public static class ResultHttpExtensions
         ErrorType.PreconditionFailed => "The resource changed since you loaded it.",
         ErrorType.PreconditionRequired => "This request must say which version it changes.",
         ErrorType.BadGateway => "An upstream provider could not complete the request.",
+        ErrorType.Gone => "The resource is no longer available.",
         _ => "The request could not be completed.",
     };
 }

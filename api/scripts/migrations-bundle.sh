@@ -17,7 +17,7 @@ RUNTIME="${1:-linux-arm64}"
 OUT_DIR="bundles"
 
 # Add a module here when it gets its own DbContext.
-MODULES=(Identity Support AiTutor Academics Practice Progress Notifications Mcp)
+MODULES=(Identity Support AiTutor Academics Practice Progress Notifications Mcp Billing Family)
 
 dotnet tool restore >/dev/null
 mkdir -p "${OUT_DIR}"

@@ -12,6 +12,8 @@ internal sealed class EmailLinks(IOptions<EmailOptions> options)
     public const string ResetPasswordPath = "reset-password";
     public const string ForgotPasswordPath = "forgot-password";
     public const string SecuritySettingsPath = "settings/security";
+    public const string FamilyInvitePath = "family/invite";
+    public const string FamilyPath = "family";
 
     private Uri Base => options.Value.WebAppUrl ?? throw new InvalidOperationException("Email:WebAppUrl is not configured.");
 

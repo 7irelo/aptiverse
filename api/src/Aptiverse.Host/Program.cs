@@ -1,6 +1,7 @@
 using Aptiverse.Academics;
 using Aptiverse.AiTutor;
 using Aptiverse.Billing;
+using Aptiverse.Family;
 using Aptiverse.Host.Infrastructure;
 using Aptiverse.Identity;
 using Aptiverse.Mcp;
@@ -34,6 +35,7 @@ builder.Services.AddProgressModule(builder.Configuration);
 builder.Services.AddNotificationsModule(builder.Configuration);
 builder.Services.AddMcpModule(builder.Configuration);
 builder.Services.AddBillingModule(builder.Configuration);
+builder.Services.AddFamilyModule(builder.Configuration);
 
 var app = builder.Build();
 
@@ -69,6 +71,7 @@ app.MapProgressEndpoints();
 app.MapNotificationsEndpoints();
 app.MapMcpEndpoints();
 app.MapBillingEndpoints();
+app.MapFamilyEndpoints();
 
 if (PlatformHostingExtensions.IsBuildTimeDocumentGeneration)
 {

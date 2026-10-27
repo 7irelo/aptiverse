@@ -131,12 +131,15 @@ public static class IdentityModule
         services.AddScoped<PasswordResetIssuer>();
         services.AddScoped<EmailVerificationIssuer>();
         services.AddScoped<ScheduledErasureProcessor>();
+        services.AddScoped<ParentalConsentRecorder>();
 
         services.ConfigureWolverine(opts =>
         {
             opts.Discovery.IncludeType(typeof(IssuePasswordResetHandler));
             opts.Discovery.IncludeType(typeof(IssueEmailVerificationHandler));
             opts.Discovery.IncludeType(typeof(ProcessScheduledErasureHandler));
+            opts.Discovery.IncludeType(typeof(IdentityParentalConsentGrantedHandler));
+            opts.Discovery.IncludeType(typeof(IdentityParentalConsentWithdrawnHandler));
         });
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

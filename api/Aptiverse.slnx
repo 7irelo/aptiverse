@@ -17,6 +17,10 @@
     <Project Path="src/Modules/Billing/Aptiverse.Billing.Contracts/Aptiverse.Billing.Contracts.csproj" />
     <Project Path="src/Modules/Billing/Aptiverse.Billing/Aptiverse.Billing.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Family/">
+    <Project Path="src/Modules/Family/Aptiverse.Family.Contracts/Aptiverse.Family.Contracts.csproj" />
+    <Project Path="src/Modules/Family/Aptiverse.Family/Aptiverse.Family.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Identity/">
     <Project Path="src/Modules/Identity/Aptiverse.Identity.Contracts/Aptiverse.Identity.Contracts.csproj" />
     <Project Path="src/Modules/Identity/Aptiverse.Identity/Aptiverse.Identity.csproj" />
@@ -43,6 +47,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Aptiverse.ArchitectureTests/Aptiverse.ArchitectureTests.csproj" />
+    <Project Path="tests/Aptiverse.Family.UnitTests/Aptiverse.Family.UnitTests.csproj" />
     <Project Path="tests/Aptiverse.IntegrationTests/Aptiverse.IntegrationTests.csproj" />
     <Project Path="tests/Aptiverse.Support.UnitTests/Aptiverse.Support.UnitTests.csproj" />
   </Folder>

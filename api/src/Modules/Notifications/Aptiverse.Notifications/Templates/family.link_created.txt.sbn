@@ -1,0 +1,6 @@
+Hi {{ name }},
+
+Your {{ brand }} account is now linked with {{ other_name }}. You can see what {{ other_name }} chooses to share with you, and {{ other_name }} can change that or remove the link at any time.
+
+See your family page:
+{{ family_link }}

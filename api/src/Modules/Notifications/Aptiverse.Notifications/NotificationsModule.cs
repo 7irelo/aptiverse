@@ -19,7 +19,7 @@ namespace Aptiverse.Notifications;
 
 /// <summary>
 /// The only public surface of the Notifications module besides its Contracts project. This first pass owns
-/// transactional email: Identity events in, rendered templates out through SES (Mailpit locally), with a delivery
+/// transactional email: Identity and Family events in, rendered templates out through SES (Mailpit locally), with a delivery
 /// log that makes every email idempotent. The in-app feed and preferences come later.
 /// </summary>
 public static class NotificationsModule
@@ -80,6 +80,7 @@ public static class NotificationsModule
 
         services.AddScoped<EmailDispatcher>();
         services.AddScoped<IdentityEmails>();
+        services.AddScoped<FamilyEmails>();
 
         services.ConfigureWolverine(opts =>
         {
@@ -89,6 +90,9 @@ public static class NotificationsModule
             opts.Discovery.IncludeType(typeof(AccountLockedOutEmailHandler));
             opts.Discovery.IncludeType(typeof(EmailVerifiedEmailHandler));
             opts.Discovery.IncludeType(typeof(SessionsRevokedEmailHandler));
+            opts.Discovery.IncludeType(typeof(FamilyInviteSentEmailHandler));
+            opts.Discovery.IncludeType(typeof(FamilyLinkCreatedEmailHandler));
+            opts.Discovery.IncludeType(typeof(FamilyLinkRemovedEmailHandler));
 
             // Only this module throws this type, so the policy cannot change how other modules' failures are handled.
             opts.Policies.OnException<EmailDeliveryDeferredException>()

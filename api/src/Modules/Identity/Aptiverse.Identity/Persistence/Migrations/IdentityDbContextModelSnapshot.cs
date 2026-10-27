@@ -602,7 +602,7 @@ namespace Aptiverse.Identity.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_user_consents_document_key", "document_key IN ('terms', 'privacy', 'marketing_email', 'adult_confirmation', 'parental_consent')");
 
-                            t.HasCheckConstraint("ck_user_consents_source", "source IN ('register', 'google', 'reconsent', 'migration', 'onboarding', 'profile')");
+                            t.HasCheckConstraint("ck_user_consents_source", "source IN ('register', 'google', 'reconsent', 'migration', 'onboarding', 'profile', 'family')");
                         });
                 });
 

@@ -175,6 +175,8 @@ public sealed partial class NotificationsTemplateTests
             ["reset_link"] = $"{Base}/forgot-password",
             ["security_link"] = $"{Base}/settings/security",
             ["app_link"] = $"{Base}/",
+            ["other_name"] = "Sipho",
+            ["family_link"] = $"{Base}/family",
         };
         return template.ModelKeys.ToDictionary(k => k, k => values[k]);
     }

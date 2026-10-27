@@ -8,6 +8,7 @@
     <ProjectReference Include="..\..\..\Aptiverse.SharedKernel\Aptiverse.SharedKernel.csproj" />
     <ProjectReference Include="..\Aptiverse.Notifications.Contracts\Aptiverse.Notifications.Contracts.csproj" />
     <ProjectReference Include="..\..\Identity\Aptiverse.Identity.Contracts\Aptiverse.Identity.Contracts.csproj" />
+    <ProjectReference Include="..\..\Family\Aptiverse.Family.Contracts\Aptiverse.Family.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

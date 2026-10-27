@@ -74,6 +74,15 @@ public static class Permissions
         public const string Admin = "billing.admin";
     }
 
+    public static class Family
+    {
+        /// <summary>Link to your children, read what each one shares with you and record parental consent.</summary>
+        public const string Parent = "family.parent";
+
+        /// <summary>Link to your parents, choose what each one sees and revoke a link at any time.</summary>
+        public const string Student = "family.student";
+    }
+
     public static IReadOnlyList<string> All { get; } = typeof(Permissions)
         .GetNestedTypes(BindingFlags.Public | BindingFlags.Static)
         .SelectMany(t => t.GetFields(BindingFlags.Public | BindingFlags.Static))

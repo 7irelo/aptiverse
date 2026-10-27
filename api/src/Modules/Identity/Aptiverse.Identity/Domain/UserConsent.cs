@@ -69,5 +69,8 @@ internal static class ConsentSources
     public const string Onboarding = "onboarding";
     public const string Profile = "profile";
 
-    public static IReadOnlyList<string> All { get; } = [Register, Google, Reconsent, Migration, Onboarding, Profile];
+    /// <summary>Recorded from the Family module: a linked parent's consent for a minor.</summary>
+    public const string Family = "family";
+
+    public static IReadOnlyList<string> All { get; } = [Register, Google, Reconsent, Migration, Onboarding, Profile, Family];
 }
