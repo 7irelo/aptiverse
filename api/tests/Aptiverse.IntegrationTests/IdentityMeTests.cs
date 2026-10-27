@@ -29,6 +29,7 @@ public sealed class IdentityMeTests(ApiFactory factory)
         var studentPermissions = Strings(student.GetProperty("permissions"));
         Assert.Contains("account.manage", studentPermissions);
         Assert.Contains("practice.generate", studentPermissions);
+        Assert.Contains("billing.manage", studentPermissions);
         Assert.DoesNotContain("audit.read", studentPermissions);
         Assert.Empty(student.GetProperty("entitlements").EnumerateArray());
         Assert.Equal(JsonValueKind.Null, student.GetProperty("isMinor").ValueKind);
@@ -36,7 +37,7 @@ public sealed class IdentityMeTests(ApiFactory factory)
         Assert.False(student.GetProperty("consent").GetProperty("reconsentRequired").GetBoolean());
 
         var parent = await _support.MeAsync(await _support.RegisterAsync("parent"));
-        Assert.Equal(["account.manage", "notifications.read"], Strings(parent.GetProperty("permissions")));
+        Assert.Equal(["account.manage", "billing.manage", "notifications.read"], Strings(parent.GetProperty("permissions")));
         Assert.False(parent.GetProperty("isMinor").GetBoolean());
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await _support.Anonymous().GetAsync("/me", Ct)).StatusCode);

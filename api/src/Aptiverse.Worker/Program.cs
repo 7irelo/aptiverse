@@ -1,5 +1,6 @@
 using Aptiverse.Academics;
 using Aptiverse.AiTutor;
+using Aptiverse.Billing;
 using Aptiverse.Identity;
 using Aptiverse.Mcp;
 using Aptiverse.Notifications;
@@ -28,6 +29,7 @@ builder.Services.AddPracticeModule(builder.Configuration);
 builder.Services.AddProgressModule(builder.Configuration);
 builder.Services.AddNotificationsModule(builder.Configuration);
 builder.Services.AddMcpModule(builder.Configuration);
+builder.Services.AddBillingModule(builder.Configuration);
 
 var app = builder.Build();
 

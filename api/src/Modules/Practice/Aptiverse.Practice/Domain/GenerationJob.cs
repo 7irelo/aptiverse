@@ -44,6 +44,9 @@ internal sealed class GenerationJob : Entity
     /// <summary>Provider cost reported by the ai service, in millionths of a US dollar.</summary>
     public long CostUsdMicros { get; private set; }
 
+    /// <summary>The Billing quota reservation for this test; confirmed when it is ready, refunded when it fails. No FK (another module).</summary>
+    public Guid? QuotaReservationId { get; private set; }
+
     public bool IsActive => Status is JobStatuses.Queued or JobStatuses.Running;
 
     public static GenerationJob Queue(Guid userId, Guid testId, string? idempotencyKey) => new()
@@ -60,6 +63,8 @@ internal sealed class GenerationJob : Entity
         ArgumentException.ThrowIfNullOrWhiteSpace(requestJson);
         Request = requestJson;
     }
+
+    public void AttachReservation(Guid reservationId) => QuotaReservationId = reservationId;
 
     public void MarkStarted(DateTimeOffset now, DateTimeOffset pollDeadline)
     {

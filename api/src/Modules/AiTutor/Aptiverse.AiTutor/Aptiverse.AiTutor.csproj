@@ -7,6 +7,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Aptiverse.SharedKernel\Aptiverse.SharedKernel.csproj" />
     <ProjectReference Include="..\Aptiverse.AiTutor.Contracts\Aptiverse.AiTutor.Contracts.csproj" />
+    <ProjectReference Include="..\..\Billing\Aptiverse.Billing.Contracts\Aptiverse.Billing.Contracts.csproj" />
     <ProjectReference Include="..\..\Identity\Aptiverse.Identity.Contracts\Aptiverse.Identity.Contracts.csproj" />
     <ProjectReference Include="..\..\Academics\Aptiverse.Academics.Contracts\Aptiverse.Academics.Contracts.csproj" />
     <ProjectReference Include="..\..\Mcp\Aptiverse.Mcp.Contracts\Aptiverse.Mcp.Contracts.csproj" />

@@ -163,8 +163,9 @@ public sealed class AcademicsAssessmentsTests(ApiFactory factory)
             Assert.Equal(["Soon"], byState.RootElement.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("title").GetString()));
         }
 
-        var from = DateOnly.FromDateTime(Now.AddDays(3).UtcDateTime);
-        var to = DateOnly.FromDateTime(Now.AddDays(10).UtcDateTime);
+        // Date filters are SAST calendar days, so derive them in SAST (UTC+2, no DST).
+        var from = DateOnly.FromDateTime(Now.AddDays(3).ToOffset(TimeSpan.FromHours(2)).DateTime);
+        var to = DateOnly.FromDateTime(Now.AddDays(10).ToOffset(TimeSpan.FromHours(2)).DateTime);
         using (var byDate = await ReadJsonAsync(await learner.GetAsync($"/academics/assessments?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}", Ct)))
         {
             Assert.Equal(["Other unit"], byDate.RootElement.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("title").GetString()));

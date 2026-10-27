@@ -13,6 +13,9 @@ internal sealed class UserConsent : Entity
     public const string MarketingEmail = "marketing_email";
     public const string AdultConfirmation = "adult_confirmation";
 
+    /// <summary>A parent's consent for a minor (decision 31: it lets an under-18 pay). Never self-accepted through the consent routes.</summary>
+    public const string ParentalConsent = "parental_consent";
+
     /// <summary>Marketing and adult confirmation are not versioned legal documents; they carry this fixed version.</summary>
     public const string UnversionedDocument = "1";
 
@@ -24,7 +27,7 @@ internal sealed class UserConsent : Entity
     {
     }
 
-    public static IReadOnlyList<string> DocumentKeys { get; } = [Terms, Privacy, MarketingEmail, AdultConfirmation];
+    public static IReadOnlyList<string> DocumentKeys { get; } = [Terms, Privacy, MarketingEmail, AdultConfirmation, ParentalConsent];
 
     public Guid UserId { get; private set; }
 

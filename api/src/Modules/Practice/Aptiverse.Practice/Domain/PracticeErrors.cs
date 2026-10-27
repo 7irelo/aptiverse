@@ -38,6 +38,14 @@ internal static class PracticeErrors
         "practice.daily_limit_reached",
         "You have reached today's practice test limit. It resets at midnight UTC.");
 
+    public static readonly Error QuotaExhausted = Error.TooManyRequests(
+        "practice.quota_exhausted",
+        "You have used this month's practice tests on your plan. Upgrade or wait for the allowance to reset.");
+
+    public static readonly Error QuotaUnavailable = Error.Unavailable(
+        "practice.quota_unavailable",
+        "Your practice allowance could not be checked right now. Please try again in a moment.");
+
     public static readonly Error LimitUnavailable = Error.Unavailable(
         "practice.limit_unavailable",
         "Practice test generation is unavailable right now. Please try again in a moment.");

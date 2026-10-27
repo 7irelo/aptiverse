@@ -38,6 +38,9 @@ public sealed record Error(string Code, string Description, ErrorType Type)
     /// <summary>A write that needs If-Match arrived without it. Maps to 428.</summary>
     public static Error PreconditionRequired(string code, string description) => new(code, description, ErrorType.PreconditionRequired);
 
+    /// <summary>An upstream provider answered with an error. Maps to 502; the request may be retried.</summary>
+    public static Error BadGateway(string code, string description) => new(code, description, ErrorType.BadGateway);
+
     public static Error Validation(string code, string description, IReadOnlyDictionary<string, string[]>? errors = null) =>
         new(code, description, ErrorType.Validation) { ValidationErrors = errors };
 }

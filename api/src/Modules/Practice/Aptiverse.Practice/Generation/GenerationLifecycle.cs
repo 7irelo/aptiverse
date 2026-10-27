@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Aptiverse.AiTutor.Contracts;
+using Aptiverse.Billing.Contracts;
 using Aptiverse.Practice.Contracts;
 using Aptiverse.Practice.Domain;
 using Aptiverse.Practice.Persistence;
@@ -38,9 +39,14 @@ internal sealed class PollingGenerationWatcher(IOptions<PracticeOptions> options
     }
 }
 
-/// <summary>Finishes a job either way: stores the questions and readies the test, or fails both. Idempotent.</summary>
+/// <summary>
+/// Finishes a job either way: stores the questions and readies the test, or fails both. Idempotent. The quota
+/// reservation is confirmed (ready) or refunded (failed) before the save; both are idempotent at Billing, so a retry
+/// after a failed save settles it once.
+/// </summary>
 internal sealed partial class GenerationCompletion(
     IDbContextOutbox<PracticeDbContext> outbox,
+    IUsageMeter meter,
     IClock clock,
     ILogger<GenerationCompletion> logger)
 {
@@ -63,6 +69,11 @@ internal sealed partial class GenerationCompletion(
             return;
         }
 
+        if (job.QuotaReservationId is { } reservationId)
+        {
+            await meter.ConfirmAsync(reservationId, 1, costUsdMicros, cancellationToken);
+        }
+
         var now = clock.UtcNow;
         Db.Questions.AddRange(questions);
         test.MarkReady(questions.Count, test.IsScored ? questions.Sum(q => q.Marks) : 0);
@@ -78,6 +89,11 @@ internal sealed partial class GenerationCompletion(
         if (!job.IsActive)
         {
             return;
+        }
+
+        if (job.QuotaReservationId is { } reservationId)
+        {
+            await meter.RefundAsync(reservationId, errorCode, cancellationToken);
         }
 
         var now = clock.UtcNow;

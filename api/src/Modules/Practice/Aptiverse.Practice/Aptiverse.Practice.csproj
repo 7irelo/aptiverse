@@ -9,6 +9,7 @@
     <ProjectReference Include="..\Aptiverse.Practice.Contracts\Aptiverse.Practice.Contracts.csproj" />
     <ProjectReference Include="..\..\Academics\Aptiverse.Academics.Contracts\Aptiverse.Academics.Contracts.csproj" />
     <ProjectReference Include="..\..\AiTutor\Aptiverse.AiTutor.Contracts\Aptiverse.AiTutor.Contracts.csproj" />
+    <ProjectReference Include="..\..\Billing\Aptiverse.Billing.Contracts\Aptiverse.Billing.Contracts.csproj" />
     <ProjectReference Include="..\..\Identity\Aptiverse.Identity.Contracts\Aptiverse.Identity.Contracts.csproj" />
   </ItemGroup>
 

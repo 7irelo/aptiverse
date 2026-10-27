@@ -21,6 +21,7 @@ public static class ResultHttpExtensions
             ErrorType.Unavailable => StatusCodes.Status503ServiceUnavailable,
             ErrorType.PreconditionFailed => StatusCodes.Status412PreconditionFailed,
             ErrorType.PreconditionRequired => StatusCodes.Status428PreconditionRequired,
+            ErrorType.BadGateway => StatusCodes.Status502BadGateway,
             _ => StatusCodes.Status500InternalServerError,
         };
 
@@ -63,6 +64,7 @@ public static class ResultHttpExtensions
         ErrorType.Unavailable => "The service is temporarily unavailable. Please try again shortly.",
         ErrorType.PreconditionFailed => "The resource changed since you loaded it.",
         ErrorType.PreconditionRequired => "This request must say which version it changes.",
+        ErrorType.BadGateway => "An upstream provider could not complete the request.",
         _ => "The request could not be completed.",
     };
 }

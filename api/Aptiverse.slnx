@@ -13,6 +13,10 @@
     <Project Path="src/Modules/AiTutor/Aptiverse.AiTutor.Contracts/Aptiverse.AiTutor.Contracts.csproj" />
     <Project Path="src/Modules/AiTutor/Aptiverse.AiTutor/Aptiverse.AiTutor.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Billing/">
+    <Project Path="src/Modules/Billing/Aptiverse.Billing.Contracts/Aptiverse.Billing.Contracts.csproj" />
+    <Project Path="src/Modules/Billing/Aptiverse.Billing/Aptiverse.Billing.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Identity/">
     <Project Path="src/Modules/Identity/Aptiverse.Identity.Contracts/Aptiverse.Identity.Contracts.csproj" />
     <Project Path="src/Modules/Identity/Aptiverse.Identity/Aptiverse.Identity.csproj" />

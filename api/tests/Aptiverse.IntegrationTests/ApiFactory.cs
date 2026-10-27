@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Aptiverse.AiTutor.AiService;
+using Aptiverse.Billing.Paystack;
 using Aptiverse.Identity.Authentication;
 using Aptiverse.Notifications.Email;
 using Aptiverse.SharedKernel.Persistence;
@@ -11,6 +12,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -44,6 +46,20 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     /// <summary>The fake ai service every AiTutor call goes to.</summary>
     public StubAiService AiStub { get; } = new();
+
+    /// <summary>The fake Paystack every Billing call goes to.</summary>
+    public StubPaystack Paystack { get; } = new();
+
+    /// <summary>A fake test key, never a real one. Webhooks in tests are signed with it.</summary>
+    public const string PaystackSecret = "sk_test_integration_only_not_a_real_key";
+
+    public const string BillingCallbackUrl = "https://app.aptiverse.test/welcome";
+
+    /// <summary>
+    /// The free plan's monthly allowances are raised to this in tests, so suites that exercise the daily caps are not
+    /// stopped by the (much smaller) real free allowance first. Billing tests exhaust it on purpose.
+    /// </summary>
+    public const int TestFreeAllowance = 1000;
 
     /// <summary>Daily tutor message limit in tests, low so the limit is cheap to reach.</summary>
     public const int DailyMessageLimit = 3;
@@ -92,6 +108,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         {
             await seeder.SeedAsync(CancellationToken.None);
         }
+
+        var billing = scope.ServiceProvider.GetRequiredService<Aptiverse.Billing.Persistence.BillingDbContext>();
+        await billing.Database.ExecuteSqlAsync(
+            $"UPDATE billing.plan_quotas SET per_period = {TestFreeAllowance} WHERE plan_id = (SELECT id FROM billing.plans WHERE code = 'free')");
     }
 
     /// <summary>A client signed in as the given user with the given role (student by default).</summary>
@@ -126,6 +146,13 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Practice:SubmitPermitLimit", "10000");
         builder.UseSetting("Practice:AutosavePermitLimit", "10000");
         builder.UseSetting("Practice:FocusPermitLimit", "10000");
+
+        builder.UseSetting("Billing:Paystack:SecretKey", PaystackSecret);
+        builder.UseSetting("Billing:CallbackUrl", BillingCallbackUrl);
+        builder.UseSetting("Billing:ScheduleReconciliation", "false");
+        builder.UseSetting("Billing:CheckoutPermitLimit", "10000");
+        builder.UseSetting("Billing:VerifyPermitLimit", "10000");
+        builder.UseSetting("Billing:InboxRetrySeconds", "3600");
 
         builder.UseSetting("Email:Sender", "Smtp");
         builder.UseSetting("Email:FromAddress", "noreply@aptiverse.test");
@@ -164,6 +191,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             });
             services.AddHttpClient(AiServiceClient.HttpClientName)
                 .ConfigurePrimaryHttpMessageHandler(() => new StubAiHandler(AiStub));
+            services.AddHttpClient(PaystackClient.HttpClientName)
+                .ConfigurePrimaryHttpMessageHandler(() => new StubPaystackHandler(Paystack));
         });
     }
 

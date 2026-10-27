@@ -600,7 +600,7 @@ namespace Aptiverse.Identity.Persistence.Migrations
 
                     b.ToTable("user_consents", "identity", t =>
                         {
-                            t.HasCheckConstraint("ck_user_consents_document_key", "document_key IN ('terms', 'privacy', 'marketing_email', 'adult_confirmation')");
+                            t.HasCheckConstraint("ck_user_consents_document_key", "document_key IN ('terms', 'privacy', 'marketing_email', 'adult_confirmation', 'parental_consent')");
 
                             t.HasCheckConstraint("ck_user_consents_source", "source IN ('register', 'google', 'reconsent', 'migration', 'onboarding', 'profile')");
                         });

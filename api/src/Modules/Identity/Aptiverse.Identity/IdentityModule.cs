@@ -98,6 +98,7 @@ public static class IdentityModule
         services.AddScoped<OneTimeTokens>();
         services.AddScoped<IStudentProfileLookup, StudentProfileLookup>();
         services.AddScoped<IUserDirectory, UserDirectory>();
+        services.AddScoped<IPayerEligibilityLookup, PayerEligibilityLookup>();
 
         services.AddScoped<EmailAddresses>();
         services.AddScoped<PasswordVerifier>();

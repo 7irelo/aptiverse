@@ -65,6 +65,15 @@ public static class Permissions
         public const string ManageGoals = "progress.goals.manage";
     }
 
+    public static class Billing
+    {
+        /// <summary>Buy, verify, cancel and resume your own subscription; read your own usage and invoices.</summary>
+        public const string Manage = "billing.manage";
+
+        /// <summary>Sync plans to Paystack and run reconciliation.</summary>
+        public const string Admin = "billing.admin";
+    }
+
     public static IReadOnlyList<string> All { get; } = typeof(Permissions)
         .GetNestedTypes(BindingFlags.Public | BindingFlags.Static)
         .SelectMany(t => t.GetFields(BindingFlags.Public | BindingFlags.Static))

@@ -9,6 +9,7 @@ using Aptiverse.AiTutor.AiService;
 using Aptiverse.AiTutor.Contracts;
 using Aptiverse.AiTutor.Domain;
 using Aptiverse.AiTutor.Persistence;
+using Aptiverse.Billing.Contracts;
 using Aptiverse.Identity.Contracts;
 using Aptiverse.Mcp.Contracts;
 using Aptiverse.Practice.Contracts;
@@ -24,19 +25,25 @@ using Wolverine.EntityFrameworkCore;
 
 namespace Aptiverse.AiTutor.Features.SendMessage;
 
-/// <summary>A turn that passed every check: the user message is saved and counted against the daily limit.</summary>
+/// <summary>
+/// A turn that passed every check: one unit of the monthly allowance is reserved, and the user message is saved and
+/// counted against the daily safety cap.
+/// </summary>
 internal sealed record PreparedTurn(
     Conversation Conversation,
     Message UserMessage,
     SendMessageRequest Request,
     StudentProfile Profile,
     StudentContext Context,
-    IReadOnlyList<HistoryTurn> History);
+    IReadOnlyList<HistoryTurn> History,
+    Guid QuotaReservationId);
 
 /// <summary>
-/// Runs one tutor turn in two steps. <see cref="PrepareAsync"/> checks ownership, the profile and the daily
-/// limit and saves the user message, so failures are plain ProblemDetails. <see cref="StreamAsync"/> then
-/// relays the ai service's events to the client and always saves the assistant message, complete or not.
+/// Runs one tutor turn in two steps. <see cref="PrepareAsync"/> checks ownership, the profile, reserves the monthly
+/// allowance with Billing (failing closed) and checks the daily cap, and saves the user message, so failures are plain
+/// ProblemDetails. <see cref="StreamAsync"/> then relays the ai service's events to the client, always saves the
+/// assistant message, complete or not, and settles the reservation exactly once: confirmed with the cost the ai
+/// service reported in done, refunded on failure or cancellation.
 /// </summary>
 internal sealed partial class SendMessageHandler(
     IDbContextOutbox<AiTutorDbContext> outbox,
@@ -45,6 +52,7 @@ internal sealed partial class SendMessageHandler(
     IStudyUnitLookup studyUnits,
     IAssessmentLookup assessments,
     IMasterySnapshot mastery,
+    IUsageMeter meter,
     AiServiceClient ai,
     IClock clock,
     IOptions<AiServiceOptions> options,
@@ -53,6 +61,14 @@ internal sealed partial class SendMessageHandler(
     public static readonly Error DailyLimitReached = Error.TooManyRequests(
         "ai.daily_limit_reached",
         "You have reached today's tutor message limit. It resets at midnight UTC.");
+
+    public static readonly Error QuotaExhausted = Error.TooManyRequests(
+        "ai.quota_exhausted",
+        "You have used this month's tutor allowance on your plan. Upgrade or wait for it to reset.");
+
+    public static readonly Error QuotaUnavailable = Error.Unavailable(
+        "ai.quota_unavailable",
+        "The tutor is unavailable right now. Please try again in a moment.");
 
     public static readonly Error LimitUnavailable = Error.Unavailable(
         "ai.limit_unavailable",
@@ -114,13 +130,27 @@ internal sealed partial class SendMessageHandler(
         var context = await BuildContextAsync(userId, profile, cancellationToken);
         var history = await LoadHistoryAsync(conversation, cancellationToken);
 
+        var quotaKey = conversation.Mode == ConversationModes.Deep ? QuotaKeys.AiDeep : QuotaKeys.AiQuick;
+        var quota = await meter.ReserveAsync(userId, quotaKey, 1, $"conversation:{conversation.Id}", cancellationToken);
+        switch (quota.Status)
+        {
+            case ReserveStatus.Exhausted:
+                return QuotaExhausted.With("quotaKey", quota.QuotaKey).With("resetsAt", quota.ResetsAt);
+            case ReserveStatus.Unavailable:
+                return QuotaUnavailable;
+            case ReserveStatus.Reserved:
+            default:
+                break;
+        }
+
         var reserved = await ReserveAsync(conversation, request.Message.Trim(), cancellationToken);
         if (reserved.IsFailure)
         {
+            await RefundQuotaAsync(quota.ReservationId!.Value, "not_sent");
             return reserved.Error!;
         }
 
-        return new PreparedTurn(conversation, reserved.Value, request, profile, context, history);
+        return new PreparedTurn(conversation, reserved.Value, request, profile, context, history, quota.ReservationId!.Value);
     }
 
     public async IAsyncEnumerable<SseItem<object>> StreamAsync(
@@ -157,6 +187,7 @@ internal sealed partial class SendMessageHandler(
 
             var message = await PersistAsync(turn, outcome);
             saved = true;
+            await SettleQuotaAsync(turn, outcome);
 
             if (outcome.ErrorCode is null && message is not null)
             {
@@ -176,6 +207,7 @@ internal sealed partial class SendMessageHandler(
             {
                 outcome.ErrorCode ??= TutorStreamErrorCodes.Cancelled;
                 await PersistAsync(turn, outcome);
+                await SettleQuotaAsync(turn, outcome);
             }
 
             await events.DisposeAsync();
@@ -405,6 +437,41 @@ internal sealed partial class SendMessageHandler(
         }
     }
 
+    /// <summary>
+    /// Confirms one unit with the reported cost when the turn completed, otherwise refunds it. Never throws into the
+    /// stream: if Billing is down, the reservation expires on its own and releases the unit.
+    /// </summary>
+    private async Task SettleQuotaAsync(PreparedTurn turn, TurnOutcome outcome)
+    {
+        try
+        {
+            if (outcome.ErrorCode is null && outcome.Done is { } done)
+            {
+                await meter.ConfirmAsync(turn.QuotaReservationId, 1, done.CostUsdMicros, CancellationToken.None);
+            }
+            else
+            {
+                await meter.RefundAsync(turn.QuotaReservationId, outcome.ErrorCode ?? TutorStreamErrorCodes.TurnFailed, CancellationToken.None);
+            }
+        }
+        catch (Exception ex) when (ex is DbException or DbUpdateException or InvalidOperationException or TimeoutException)
+        {
+            LogSettleFailed(logger, turn.QuotaReservationId, ex);
+        }
+    }
+
+    private async Task RefundQuotaAsync(Guid reservationId, string reason)
+    {
+        try
+        {
+            await meter.RefundAsync(reservationId, reason, CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is DbException or DbUpdateException or InvalidOperationException or TimeoutException)
+        {
+            LogSettleFailed(logger, reservationId, ex);
+        }
+    }
+
     private async Task<Message?> PersistAsync(PreparedTurn turn, TurnOutcome outcome)
     {
         var text = outcome.Text.ToString();
@@ -495,6 +562,9 @@ internal sealed partial class SendMessageHandler(
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Could not check the daily tutor limit; refusing the message")]
     private static partial void LogLimitUnavailable(ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not settle tutor quota reservation {ReservationId}; it will expire")]
+    private static partial void LogSettleFailed(ILogger logger, Guid reservationId, Exception exception);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Could not save the assistant message of conversation {ConversationId}")]
     private static partial void LogPersistFailed(ILogger logger, Guid conversationId, Exception exception);

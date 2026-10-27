@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Aptiverse.Academics.Contracts;
 using Aptiverse.AiTutor.Contracts;
+using Aptiverse.Billing.Contracts;
 using Aptiverse.Practice.Contracts;
 using Aptiverse.Practice.Domain;
 using Aptiverse.Practice.Features.Common;
@@ -20,13 +21,16 @@ namespace Aptiverse.Practice.Features.GenerateTest;
 /// <summary>
 /// Creates a practice test for one of the caller's assessments. Everything the ai service sees is built here from
 /// the student's own records (the assessment, its unit, level and topics); nothing in the request names a user, a
-/// unit or a level. The test and its job are inserted under a per-user lock that also enforces the daily limit and
-/// the one-active-generation rule, and the start message goes out through the outbox in the same transaction.
+/// unit or a level. One unit of the monthly practice.generate allowance is reserved with Billing first (failing closed);
+/// the test and its job are then inserted under a per-user lock that also enforces the daily safety cap and the
+/// one-active-generation rule, and the start message goes out through the outbox in the same transaction. If the
+/// insert does not happen, the reservation is refunded; the job confirms or refunds it when generation ends.
 /// </summary>
 internal sealed partial class GeneratePracticeTestHandler(
     IDbContextOutbox<PracticeDbContext> outbox,
     IAssessmentLookup assessments,
     IStudyUnitLookup units,
+    IUsageMeter meter,
     IClock clock,
     IOptions<PracticeOptions> options,
     ILogger<GeneratePracticeTestHandler> logger)
@@ -34,6 +38,9 @@ internal sealed partial class GeneratePracticeTestHandler(
     private const int WeakestTopicCount = 3;
     private const int AvoidStemCount = 30;
     private const int AvoidStemLength = 300;
+
+    /// <summary>Long enough for start retries plus the poll timeout; a confirm after expiry still charges.</summary>
+    private static readonly TimeSpan QuotaHold = TimeSpan.FromHours(2);
 
     private static readonly string[] OpenAssessmentStates = ["scheduled", "in_progress"];
 
@@ -114,7 +121,47 @@ internal sealed partial class GeneratePracticeTestHandler(
             new StoredGenerationRequest(assessment.AssessmentId, unit.StudyUnitId, request.Format, mode, difficulty, questionCount, request.PaperMarks, aiRequest),
             JsonSerializerOptions.Web));
 
-        return await ReserveAsync(test, job, idempotencyKey, cancellationToken);
+        var quota = await meter.ReserveAsync(userId, QuotaKeys.PracticeGenerate, 1, $"practice_job:{job.Id}", QuotaHold, cancellationToken);
+        switch (quota.Status)
+        {
+            case ReserveStatus.Exhausted:
+                return PracticeErrors.QuotaExhausted.With("quotaKey", quota.QuotaKey).With("resetsAt", quota.ResetsAt);
+            case ReserveStatus.Unavailable:
+                return PracticeErrors.QuotaUnavailable;
+            case ReserveStatus.Reserved:
+            default:
+                break;
+        }
+
+        var reservationId = quota.ReservationId!.Value;
+        job.AttachReservation(reservationId);
+        Result<GenerationAccepted>? result = null;
+        try
+        {
+            result = await ReserveAsync(test, job, idempotencyKey, cancellationToken);
+            return result;
+        }
+        finally
+        {
+            // Nothing was queued for this reservation (limit, active job, replay or an exception): give it back.
+            if (result is null || result.IsFailure || result.Value.JobId != job.Id)
+            {
+                await RefundAsync(reservationId);
+            }
+        }
+    }
+
+    private async Task RefundAsync(Guid reservationId)
+    {
+        try
+        {
+            await meter.RefundAsync(reservationId, "not_queued", CancellationToken.None);
+        }
+        catch (Exception ex) when (DbErrors.IsUnavailable(ex))
+        {
+            // The reservation expires on its own and releases the unit.
+            LogRefundFailed(logger, reservationId, ex);
+        }
     }
 
     /// <summary>
@@ -254,6 +301,9 @@ internal sealed partial class GeneratePracticeTestHandler(
         Level = LogLevel.Information,
         Message = "User {UserId} requested practice test {TestId} (job {JobId}) for unit {StudyUnitId}: {TopicCount} topics, {Format}, {Mode}")]
     private static partial void LogRequested(ILogger logger, Guid userId, Guid testId, Guid jobId, Guid studyUnitId, int topicCount, string format, string mode);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not refund practice quota reservation {ReservationId}; it will expire")]
+    private static partial void LogRefundFailed(ILogger logger, Guid reservationId, Exception exception);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Could not check the daily practice limit; refusing the request")]
     private static partial void LogLimitUnavailable(ILogger logger, Exception exception);

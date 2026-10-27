@@ -401,6 +401,10 @@ namespace Aptiverse.Practice.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("poll_deadline_at");
 
+                    b.Property<Guid?>("QuotaReservationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("quota_reservation_id");
+
                     b.Property<string>("Request")
                         .IsRequired()
                         .HasColumnType("jsonb")
