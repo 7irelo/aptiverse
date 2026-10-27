@@ -73,9 +73,11 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Vulnerability scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          # The action has no input for this; Trivy reads it from the environment.
+          TRIVY_SECRET_CONFIG: ai/trivy-secret.yaml
         with:
           image-ref: aptiverse-ai:${{ github.sha }}
-          secret-config: ai/trivy-secret.yaml
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: "1"
