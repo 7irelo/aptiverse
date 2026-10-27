@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import TypedDict
+from typing import Any, TypedDict
 
 import pytest
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
@@ -17,7 +17,7 @@ class S(TypedDict):
     n: int
 
 
-def inc(s: S) -> S:
+async def inc(s: S) -> dict[str, Any]:
     return {"n": s["n"] + 1}
 
 
@@ -33,7 +33,7 @@ async def test_purge_removes_old_checkpoint_threads(
         saver = AsyncPostgresSaver(conn)  # pyright: ignore[reportArgumentType]
         await saver.setup()
         g = StateGraph(S)
-        g.add_node("inc", inc)
+        g.add_node("inc", inc)  # type: ignore[arg-type]  # LangGraph overloads do not narrow a TypedDict input
         g.add_edge(START, "inc")
         g.add_edge("inc", END)
         graph = g.compile(checkpointer=saver)
