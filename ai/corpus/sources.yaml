@@ -1,0 +1,115 @@
+# Licence register for the retrieval corpus (AI-40). Ingestion refuses any key that is not listed here.
+#
+# display_rule:
+#   display     text may be shown to students, with attribution
+#   cite        may be quoted briefly with a link to the original
+#   index_only  used for search and grounding only; students get a reference, never the text
+#
+# DBE material stays index_only until the Department of Basic Education's reuse terms are confirmed in
+# writing (DECISIONS.md row 14 links out to the archive). IEB papers are not listed (row 40).
+sources:
+  - key: siyavula-maths-g10
+    title: Siyavula Mathematics Grade 10
+    source: Siyavula Education
+    url: https://www.siyavula.com/read/za/mathematics/grade-10
+    licence: CC BY 4.0 (attribute Siyavula Education)
+    display_rule: display
+    doc_type: textbook
+    subject: mathematics
+    grade: 10
+    checked_on: "2026-10-27"
+  - key: siyavula-maths-g11
+    title: Siyavula Mathematics Grade 11
+    source: Siyavula Education
+    url: https://www.siyavula.com/read/za/mathematics/grade-11
+    licence: CC BY 4.0 (attribute Siyavula Education)
+    display_rule: display
+    doc_type: textbook
+    subject: mathematics
+    grade: 11
+    checked_on: "2026-10-27"
+  - key: siyavula-maths-g12
+    title: Siyavula Mathematics Grade 12
+    source: Siyavula Education
+    url: https://www.siyavula.com/read/za/mathematics/grade-12
+    licence: CC BY 4.0 (attribute Siyavula Education)
+    display_rule: display
+    doc_type: textbook
+    subject: mathematics
+    grade: 12
+    checked_on: "2026-10-27"
+  - key: siyavula-physical-sciences-g10
+    title: Siyavula Physical Sciences Grade 10
+    source: Siyavula Education
+    url: https://www.siyavula.com/read/za/physical-sciences/grade-10
+    licence: CC BY 4.0 (attribute Siyavula Education)
+    display_rule: display
+    doc_type: textbook
+    subject: physical_sciences
+    grade: 10
+    checked_on: "2026-10-27"
+  - key: siyavula-physical-sciences-g11
+    title: Siyavula Physical Sciences Grade 11
+    source: Siyavula Education
+    url: https://www.siyavula.com/read/za/physical-sciences/grade-11
+    licence: CC BY 4.0 (attribute Siyavula Education)
+    display_rule: display
+    doc_type: textbook
+    subject: physical_sciences
+    grade: 11
+    checked_on: "2026-10-27"
+  - key: siyavula-physical-sciences-g12
+    title: Siyavula Physical Sciences Grade 12
+    source: Siyavula Education
+    url: https://www.siyavula.com/read/za/physical-sciences/grade-12
+    licence: CC BY 4.0 (attribute Siyavula Education)
+    display_rule: display
+    doc_type: textbook
+    subject: physical_sciences
+    grade: 12
+    checked_on: "2026-10-27"
+  - key: siyavula-life-sciences-g10
+    title: Siyavula Life Sciences Grade 10
+    source: Siyavula Education
+    url: https://www.siyavula.com/read/za/life-sciences/grade-10
+    licence: CC BY 4.0 (attribute Siyavula Education)
+    display_rule: display
+    doc_type: textbook
+    subject: life_sciences
+    grade: 10
+    checked_on: "2026-10-27"
+  - key: dbe-caps-fet-mathematics
+    title: CAPS FET Mathematics (Grades 10 to 12)
+    source: Department of Basic Education
+    url: https://www.education.gov.za/Curriculum/CurriculumAssessmentPolicyStatements(CAPS).aspx
+    licence: DBE terms (reuse terms to confirm)
+    display_rule: index_only
+    doc_type: caps
+    subject: mathematics
+    checked_on: "2026-10-27"
+  - key: dbe-caps-fet-physical-sciences
+    title: CAPS FET Physical Sciences (Grades 10 to 12)
+    source: Department of Basic Education
+    url: https://www.education.gov.za/Curriculum/CurriculumAssessmentPolicyStatements(CAPS).aspx
+    licence: DBE terms (reuse terms to confirm)
+    display_rule: index_only
+    doc_type: caps
+    subject: physical_sciences
+    checked_on: "2026-10-27"
+  - key: dbe-caps-fet-life-sciences
+    title: CAPS FET Life Sciences (Grades 10 to 12)
+    source: Department of Basic Education
+    url: https://www.education.gov.za/Curriculum/CurriculumAssessmentPolicyStatements(CAPS).aspx
+    licence: DBE terms (reuse terms to confirm)
+    display_rule: index_only
+    doc_type: caps
+    subject: life_sciences
+    checked_on: "2026-10-27"
+  - key: dbe-nsc-past-papers
+    title: NSC past examination papers and memoranda
+    source: Department of Basic Education
+    url: https://www.education.gov.za/Curriculum/NationalSeniorCertificate(NSC)Examinations/NSCPastExaminationpapers.aspx
+    licence: DBE terms (reuse terms to confirm)
+    display_rule: index_only
+    doc_type: exam_paper
+    checked_on: "2026-10-27"
