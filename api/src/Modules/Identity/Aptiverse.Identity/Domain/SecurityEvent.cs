@@ -31,7 +31,7 @@ internal sealed class SecurityEvent : Entity
         Email = email is { Length: > User.EmailMaxLength } ? email[..User.EmailMaxLength] : email,
         IpAddress = request.IpAddress,
         UserAgent = request.UserAgent,
-        Detail = detail,
+        Detail = detail is { Length: > DetailMaxLength } ? detail[..DetailMaxLength] : detail,
     };
 }
 
@@ -50,10 +50,14 @@ internal static class SecurityEventTypes
     public const string PasswordReset = "password_reset";
     public const string GoogleLinked = "google_linked";
     public const string AccountDeletionRequested = "account_deletion_requested";
+    public const string AccountDeletionCancelled = "account_deletion_cancelled";
+    public const string DateOfBirthSet = "date_of_birth_set";
+    public const string AdultConfirmed = "adult_confirmed";
 
     public static IReadOnlyList<string> All { get; } =
     [
         Registered, LoginSucceeded, LoginFailed, Lockout, Logout, SessionRevoked, RefreshReuseDetected, EmailVerified,
         PasswordChanged, PasswordResetRequested, PasswordReset, GoogleLinked, AccountDeletionRequested,
+        AccountDeletionCancelled, DateOfBirthSet, AdultConfirmed,
     ];
 }

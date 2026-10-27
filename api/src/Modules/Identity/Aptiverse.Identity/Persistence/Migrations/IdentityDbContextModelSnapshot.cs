@@ -29,9 +29,17 @@ namespace Aptiverse.Identity.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("DecidedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at");
 
                     b.Property<DateTimeOffset?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
@@ -41,6 +49,14 @@ namespace Aptiverse.Identity.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("reason");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<DateTimeOffset?>("ScheduledErasureAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("scheduled_erasure_at");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -68,7 +84,15 @@ namespace Aptiverse.Identity.Persistence.Migrations
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_account_deletion_requests_user_id");
 
-                    b.ToTable("account_deletion_requests", "identity");
+                    b.HasIndex(new[] { "UserId" }, "ix_account_deletion_requests_user_id_pending")
+                        .IsUnique()
+                        .HasDatabaseName("ix_account_deletion_requests_user_id_pending")
+                        .HasFilter("status = 'pending' AND deleted_at IS NULL");
+
+                    b.ToTable("account_deletion_requests", "identity", t =>
+                        {
+                            t.HasCheckConstraint("ck_account_deletion_requests_status", "status IN ('pending', 'approved', 'completed', 'cancelled')");
+                        });
                 });
 
             modelBuilder.Entity("Aptiverse.Identity.Domain.OneTimeToken", b =>
@@ -268,7 +292,7 @@ namespace Aptiverse.Identity.Persistence.Migrations
 
                     b.ToTable("security_events", "identity", t =>
                         {
-                            t.HasCheckConstraint("ck_security_events_type", "type IN ('registered', 'login_succeeded', 'login_failed', 'lockout', 'logout', 'session_revoked', 'refresh_reuse_detected', 'email_verified', 'password_changed', 'password_reset_requested', 'password_reset', 'google_linked', 'account_deletion_requested')");
+                            t.HasCheckConstraint("ck_security_events_type", "type IN ('registered', 'login_succeeded', 'login_failed', 'lockout', 'logout', 'session_revoked', 'refresh_reuse_detected', 'email_verified', 'password_changed', 'password_reset_requested', 'password_reset', 'google_linked', 'account_deletion_requested', 'account_deletion_cancelled', 'date_of_birth_set', 'adult_confirmed')");
                         });
                 });
 
@@ -364,6 +388,10 @@ namespace Aptiverse.Identity.Persistence.Migrations
                         .HasColumnType("character varying(16)")
                         .HasColumnName("curriculum");
 
+                    b.Property<DateOnly?>("DateOfBirth")
+                        .HasColumnType("date")
+                        .HasColumnName("date_of_birth");
+
                     b.Property<DateTimeOffset?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
@@ -442,11 +470,21 @@ namespace Aptiverse.Identity.Persistence.Migrations
                         .HasColumnType("character varying(32)")
                         .HasColumnName("phone_number");
 
+                    b.Property<string>("Programme")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("programme");
+
                     b.Property<string>("SecurityStamp")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
                         .HasColumnName("security_stamp");
+
+                    b.Property<string>("StudyLevel")
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("study_level");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -474,9 +512,17 @@ namespace Aptiverse.Identity.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_users_curriculum", "curriculum IS NULL OR curriculum IN ('nsc', 'ieb')");
 
+                            t.HasCheckConstraint("ck_users_date_of_birth", "date_of_birth IS NULL OR date_of_birth BETWEEN '1900-01-01' AND '2100-01-01'");
+
                             t.HasCheckConstraint("ck_users_education_level", "education_level IS NULL OR education_level IN ('high_school', 'tertiary')");
 
                             t.HasCheckConstraint("ck_users_grade", "grade IS NULL OR grade BETWEEN 8 AND 12");
+
+                            t.HasCheckConstraint("ck_users_stage_shape", "education_level IS NULL OR (education_level = 'high_school' AND year_of_study IS NULL AND study_level IS NULL AND programme IS NULL) OR (education_level = 'tertiary' AND grade IS NULL AND curriculum IS NULL)");
+
+                            t.HasCheckConstraint("ck_users_study_level", "study_level IS NULL OR study_level IN ('first_year', 'second_year', 'third_year', 'fourth_year', 'honours', 'masters', 'phd')");
+
+                            t.HasCheckConstraint("ck_users_year_matches_level", "year_of_study IS NULL OR study_level IN ('first_year', 'second_year', 'third_year', 'fourth_year')");
 
                             t.HasCheckConstraint("ck_users_year_of_study", "year_of_study IS NULL OR year_of_study BETWEEN 1 AND 7");
                         });
@@ -542,13 +588,22 @@ namespace Aptiverse.Identity.Persistence.Migrations
                         .HasColumnType("xid")
                         .HasColumnName("xmin");
 
+                    b.Property<DateTimeOffset?>("WithdrawnAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("withdrawn_at");
+
                     b.HasKey("Id")
                         .HasName("pk_user_consents");
 
                     b.HasIndex("UserId", "DocumentKey")
                         .HasDatabaseName("ix_user_consents_user_id_document_key");
 
-                    b.ToTable("user_consents", "identity");
+                    b.ToTable("user_consents", "identity", t =>
+                        {
+                            t.HasCheckConstraint("ck_user_consents_document_key", "document_key IN ('terms', 'privacy', 'marketing_email', 'adult_confirmation')");
+
+                            t.HasCheckConstraint("ck_user_consents_source", "source IN ('register', 'google', 'reconsent', 'migration', 'onboarding', 'profile')");
+                        });
                 });
 
             modelBuilder.Entity("Aptiverse.Identity.Domain.UserLogin", b =>

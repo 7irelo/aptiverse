@@ -44,7 +44,7 @@ internal sealed class SessionService(
     {
         var hash = SecureTokens.Hash(presentedToken);
         var token = await db.RefreshTokens.SingleOrDefaultAsync(t => t.TokenHash == hash, cancellationToken);
-        if (token is null)
+        if (token is null || !SecureTokens.HashEquals(token.TokenHash, hash))
         {
             return InvalidRefreshToken;
         }

@@ -45,6 +45,14 @@ internal sealed class OneTimeTokens(IdentityDbContext db, IClock clock, IOptions
         return new IssuedOneTimeToken(value, new Uri(settings.WebAppUrl, $"{path}?token={Uri.EscapeDataString(value)}"), expiresAt);
     }
 
+    /// <summary>When the user's newest token for <paramref name="purpose"/> was issued, or null if none was.</summary>
+    public Task<DateTimeOffset?> LastIssuedAtAsync(Guid userId, string purpose, CancellationToken cancellationToken) =>
+        db.OneTimeTokens
+            .Where(t => t.UserId == userId && t.Purpose == purpose)
+            .OrderByDescending(t => t.CreatedAt)
+            .Select(t => (DateTimeOffset?)t.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
     /// <summary>Marks a valid token consumed and returns its user id. The caller saves.</summary>
     public async Task<Result<Guid>> RedeemAsync(string token, string purpose, CancellationToken cancellationToken)
     {
@@ -52,7 +60,7 @@ internal sealed class OneTimeTokens(IdentityDbContext db, IClock clock, IOptions
         var row = await db.OneTimeTokens.SingleOrDefaultAsync(t => t.TokenHash == hash && t.Purpose == purpose, cancellationToken);
         var now = clock.UtcNow;
 
-        if (row is null || row.ConsumedAt is not null || row.ExpiresAt <= now)
+        if (row is null || !SecureTokens.HashEquals(row.TokenHash, hash) || row.ConsumedAt is not null || row.ExpiresAt <= now)
         {
             return InvalidToken;
         }

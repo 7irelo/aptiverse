@@ -15,6 +15,14 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
             t.HasCheckConstraint("ck_users_curriculum", "curriculum IS NULL OR " + CheckConstraints.In("curriculum", Curricula.All));
             t.HasCheckConstraint("ck_users_grade", "grade IS NULL OR grade BETWEEN 8 AND 12");
             t.HasCheckConstraint("ck_users_year_of_study", "year_of_study IS NULL OR year_of_study BETWEEN 1 AND 7");
+            t.HasCheckConstraint("ck_users_study_level", "study_level IS NULL OR " + CheckConstraints.In("study_level", StudyLevels.All));
+            t.HasCheckConstraint("ck_users_year_matches_level", "year_of_study IS NULL OR " + CheckConstraints.In("study_level", StudyLevels.Undergraduate));
+            t.HasCheckConstraint("ck_users_date_of_birth", "date_of_birth IS NULL OR date_of_birth BETWEEN '1900-01-01' AND '2100-01-01'");
+            t.HasCheckConstraint(
+                "ck_users_stage_shape",
+                "education_level IS NULL"
+                + " OR (education_level = 'high_school' AND year_of_study IS NULL AND study_level IS NULL AND programme IS NULL)"
+                + " OR (education_level = 'tertiary' AND grade IS NULL AND curriculum IS NULL)");
         });
 
         builder.Property(u => u.Email).HasMaxLength(User.EmailMaxLength).IsRequired();
@@ -26,7 +34,11 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.EducationLevel).HasMaxLength(16);
         builder.Property(u => u.Curriculum).HasMaxLength(16);
         builder.Property(u => u.InstitutionName).HasMaxLength(User.InstitutionMaxLength);
+        builder.Property(u => u.StudyLevel).HasMaxLength(User.StudyLevelMaxLength);
+        builder.Property(u => u.Programme).HasMaxLength(User.ProgrammeMaxLength);
         builder.Ignore(u => u.RoleNames);
+        builder.Ignore(u => u.IsStudent);
+        builder.Ignore(u => u.IsParent);
         builder.Ignore(u => u.RequiresOnboarding);
 
         builder.HasIndex(u => u.NormalizedEmail).IsUnique().HasFilter("deleted_at IS NULL");
@@ -104,7 +116,11 @@ internal sealed class UserConsentConfiguration : IEntityTypeConfiguration<UserCo
 {
     public void Configure(EntityTypeBuilder<UserConsent> builder)
     {
-        builder.ToTable("user_consents");
+        builder.ToTable("user_consents", t =>
+        {
+            t.HasCheckConstraint("ck_user_consents_document_key", CheckConstraints.In("document_key", UserConsent.DocumentKeys));
+            t.HasCheckConstraint("ck_user_consents_source", CheckConstraints.In("source", ConsentSources.All));
+        });
         builder.Property(c => c.DocumentKey).HasMaxLength(UserConsent.DocumentKeyMaxLength).IsRequired();
         builder.Property(c => c.DocumentVersion).HasMaxLength(UserConsent.DocumentVersionMaxLength).IsRequired();
         builder.Property(c => c.Source).HasMaxLength(UserConsent.SourceMaxLength).IsRequired();
@@ -135,10 +151,17 @@ internal sealed class AccountDeletionRequestConfiguration : IEntityTypeConfigura
 {
     public void Configure(EntityTypeBuilder<AccountDeletionRequest> builder)
     {
-        builder.ToTable("account_deletion_requests");
+        builder.ToTable("account_deletion_requests", t =>
+            t.HasCheckConstraint("ck_account_deletion_requests_status", CheckConstraints.In("status", AccountDeletionRequest.Statuses)));
         builder.Property(r => r.Reason).HasMaxLength(AccountDeletionRequest.ReasonMaxLength);
         builder.Property(r => r.Status).HasMaxLength(AccountDeletionRequest.StatusMaxLength).IsRequired();
         builder.HasIndex(r => r.UserId);
+
+        // One pending request per user, so two racing requests cannot schedule two erasures.
+        builder.HasIndex(r => r.UserId, "ix_account_deletion_requests_user_id_pending")
+            .HasDatabaseName("ix_account_deletion_requests_user_id_pending")
+            .IsUnique()
+            .HasFilter("status = 'pending' AND deleted_at IS NULL");
         builder.HasOne<User>().WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Restrict);
     }
 }

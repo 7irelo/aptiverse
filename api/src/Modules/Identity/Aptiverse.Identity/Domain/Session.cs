@@ -78,6 +78,7 @@ internal static class RevocationReasons
     public const string PasswordChanged = "password_changed";
     public const string PasswordReset = "password_reset";
     public const string AccountLinked = "account_linked";
+    public const string AccountDeleted = "account_deleted";
 }
 
 /// <summary>Where a request came from, recorded on sessions, consents and security events.</summary>

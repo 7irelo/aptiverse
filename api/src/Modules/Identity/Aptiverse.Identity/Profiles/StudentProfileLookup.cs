@@ -16,7 +16,7 @@ internal sealed class StudentProfileLookup(IdentityDbContext db) : IStudentProfi
     {
         var row = await db.Users
             .AsNoTracking()
-            .Where(u => u.Id == userId)
+            .Where(u => u.Id == userId && u.OnboardingCompletedAt != null)
             .Select(u => new { u.EducationLevel, u.Grade, u.YearOfStudy, u.Curriculum, u.InstitutionName })
             .SingleOrDefaultAsync(cancellationToken);
 

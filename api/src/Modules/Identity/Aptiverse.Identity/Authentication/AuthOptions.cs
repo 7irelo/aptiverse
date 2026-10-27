@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.Extensions.Options;
 
 namespace Aptiverse.Identity.Authentication;
 
@@ -42,6 +43,10 @@ internal sealed class AuthOptions
     [Range(1, 1440)]
     public int LockoutMinutes { get; set; } = 15;
 
+    /// <summary>Days between a deletion request and erasure, during which the user can sign in and cancel (decision 38).</summary>
+    [Range(1, 90)]
+    public int DeletionCoolingOffDays { get; set; } = 14;
+
     /// <summary>Base URL of the web app, used to build the links in verification and reset emails.</summary>
     [Required]
     public Uri WebAppUrl { get; set; } = null!;
@@ -67,13 +72,19 @@ internal sealed class AuthRateLimitOptions
 
     public RateLimitWindow Login { get; set; } = new() { PermitLimit = 30, WindowSeconds = 300 };
 
-    public RateLimitWindow LoginPerEmail { get; set; } = new() { PermitLimit = 10, WindowSeconds = 900 };
+    /// <summary>
+    /// Failed sign-ins per email, not attempts. Must equal the Identity lockout (threshold and window) so a locked
+    /// real account and a hammered unknown email answer the same way; checked at startup.
+    /// </summary>
+    public RateLimitWindow LoginPerEmail { get; set; } = new() { PermitLimit = 5, WindowSeconds = 900 };
 
     public RateLimitWindow PasswordReset { get; set; } = new() { PermitLimit = 10, WindowSeconds = 900 };
 
     public RateLimitWindow PasswordResetPerEmail { get; set; } = new() { PermitLimit = 3, WindowSeconds = 900 };
 
     public RateLimitWindow Verification { get; set; } = new() { PermitLimit = 5, WindowSeconds = 900 };
+
+    public RateLimitWindow VerificationPerEmail { get; set; } = new() { PermitLimit = 3, WindowSeconds = 900 };
 
     public RateLimitWindow Refresh { get; set; } = new() { PermitLimit = 120, WindowSeconds = 60 };
 }
@@ -94,8 +105,35 @@ internal sealed class LegalOptions
     public const string SectionName = "Legal";
 
     [Required(AllowEmptyStrings = false)]
+    [MaxLength(32)]
     public string TermsVersion { get; set; } = string.Empty;
 
     [Required(AllowEmptyStrings = false)]
+    [MaxLength(32)]
     public string PrivacyVersion { get; set; } = string.Empty;
+
+    [Required]
+    public Uri TermsUrl { get; set; } = null!;
+
+    [Required]
+    public Uri PrivacyUrl { get; set; } = null!;
+
+    /// <summary>The date the current versions took effect.</summary>
+    [Required]
+    public DateOnly? EffectiveFrom { get; set; }
+}
+
+/// <summary>Cross-field rules DataAnnotations cannot express.</summary>
+internal sealed class AuthOptionsValidator : IValidateOptions<AuthOptions>
+{
+    public ValidateOptionsResult Validate(string? name, AuthOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        var perEmail = options.RateLimits.LoginPerEmail;
+        return perEmail.PermitLimit == options.MaxFailedAccessAttempts && perEmail.WindowSeconds == options.LockoutMinutes * 60
+            ? ValidateOptionsResult.Success
+            : ValidateOptionsResult.Fail(
+                "Auth:RateLimits:LoginPerEmail must equal the lockout (PermitLimit = MaxFailedAccessAttempts, WindowSeconds = LockoutMinutes * 60) "
+                + "so a locked account and an unknown email give the same answer.");
+    }
 }

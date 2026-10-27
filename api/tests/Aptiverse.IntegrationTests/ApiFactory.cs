@@ -1,13 +1,17 @@
 using System.Security.Cryptography;
 using Aptiverse.AiTutor.AiService;
+using Aptiverse.Identity.Authentication;
 using Aptiverse.SharedKernel.Persistence;
 using Aptiverse.SharedKernel.Seeding;
 using JasperFx.CommandLine;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Testcontainers.PostgreSql;
 
@@ -23,6 +27,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     private IHost? _host;
 
     public bool DockerAvailable { get; private set; }
+
+    /// <summary>Stands in for Google's token validation in Google sign-in tests.</summary>
+    internal StubGoogleTokenValidator Google { get; } = new();
 
     /// <summary>The fake ai service every AiTutor call goes to.</summary>
     public StubAiService AiStub { get; } = new();
@@ -121,8 +128,15 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
         builder.ConfigureTestServices(services =>
         {
+            // Requests without the test headers go to the real ES256 bearer handler, so the identity tests exercise
+            // genuine access tokens and session revocation.
             services.AddAuthentication(TestAuthHandler.SchemeName)
-                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
+                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, options =>
+                    options.ForwardDefaultSelector = context =>
+                        context.Request.Headers.ContainsKey(TestAuthHandler.RoleHeader) ? null : JwtBearerDefaults.AuthenticationScheme);
+            services.RemoveAll<IGoogleTokenValidator>();
+            services.AddSingleton<IGoogleTokenValidator>(Google);
+            services.AddSingleton<IStartupFilter, TestClientIpStartupFilter>();
             services.AddHttpClient(AiServiceClient.HttpClientName)
                 .ConfigurePrimaryHttpMessageHandler(() => new StubAiHandler(AiStub));
         });
@@ -142,6 +156,29 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             await _postgres.DisposeAsync();
         }
     }
+}
+
+/// <summary>
+/// Sets the client address from a test header before anything else runs, so rate limits partitioned by IP can be
+/// exercised per test instead of every request sharing one "unknown" address.
+/// </summary>
+internal sealed class TestClientIpStartupFilter : IStartupFilter
+{
+    public const string Header = "X-Test-Client-Ip";
+
+    public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+    {
+        app.Use((context, nextMiddleware) =>
+        {
+            if (context.Request.Headers.TryGetValue(Header, out var value) && System.Net.IPAddress.TryParse(value.ToString(), out var address))
+            {
+                context.Connection.RemoteIpAddress = address;
+            }
+
+            return nextMiddleware(context);
+        });
+        next(app);
+    };
 }
 
 [CollectionDefinition(Name)]
