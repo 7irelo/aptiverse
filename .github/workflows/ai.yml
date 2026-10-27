@@ -29,6 +29,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0  # gitleaks scans every commit in the push, not just the last one
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true

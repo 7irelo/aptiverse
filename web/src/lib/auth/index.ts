@@ -1,13 +1,15 @@
 /**
  * Auth placeholder. Phase 2 adds Auth.js v5 here: the session config, an
  * encrypted httpOnly cookie holding the API access and refresh tokens, and
- * helpers such as getSession() for Server Components and the BFF proxy.
+ * helpers for Server Components and the BFF proxy.
+ *
+ * The shell only depends on getSessionUser() and the SessionUser type, so
+ * swapping in the real session does not touch any UI.
  */
-export type Session = {
-  userId: string;
-  roles: string[];
-};
-
-export async function getSession(): Promise<Session | null> {
-  return null;
-}
+export {
+  DEV_SESSION_COOKIE,
+  getSessionUser,
+  isRole,
+  type Role,
+  type SessionUser,
+} from "./session-user";
