@@ -1,0 +1,133 @@
+name: checks
+
+# Build, test and static checks for api, web and infra on every push and pull request. Deploy pipelines
+# (image push, terraform apply) are separate and need AWS access through GitHub OIDC.
+on:
+  push:
+    branches: [main]
+    paths: ["api/**", "web/**", "infra/**", ".github/workflows/checks.yml"]
+  pull_request:
+    paths: ["api/**", "web/**", "infra/**", ".github/workflows/checks.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      web: ${{ steps.filter.outputs.web }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            api: ["api/**", ".github/workflows/checks.yml"]
+            web: ["web/**", ".github/workflows/checks.yml"]
+            infra: ["infra/**", ".github/workflows/checks.yml"]
+
+  api:
+    needs: changes
+    if: needs.changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: api/global.json
+      - run: dotnet restore Aptiverse.slnx
+      - run: dotnet format Aptiverse.slnx --verify-no-changes --no-restore
+      - run: dotnet build Aptiverse.slnx -c Release --no-restore
+      - name: OpenAPI document is up to date
+        run: git diff --exit-code -- openapi/v1.json
+      - run: dotnet test --solution Aptiverse.slnx -c Release --no-build
+      - name: Vulnerable packages
+        run: |
+          dotnet list Aptiverse.slnx package --vulnerable --include-transitive | tee vuln.txt
+          ! grep -E "\b(High|Critical)\b" vuln.txt
+
+  web:
+    needs: changes
+    if: needs.changes.outputs.web == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run format:check
+      - run: npm test
+      - run: npm audit --audit-level=high --omit=dev
+
+  infra:
+    needs: changes
+    if: needs.changes.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive
+      - name: Environment stacks share one main.tf
+        run: |
+          diff envs/dev/main.tf envs/staging/main.tf
+          diff envs/dev/main.tf envs/prod/main.tf
+          diff envs/dev/outputs.tf envs/staging/outputs.tf
+          diff envs/dev/outputs.tf envs/prod/outputs.tf
+      - name: Validate every stack
+        run: |
+          for dir in bootstrap envs/global envs/dev envs/staging envs/prod; do
+            (cd "$dir" && terraform init -backend=false -input=false >/dev/null && terraform validate -no-color)
+          done
+      - uses: terraform-linters/setup-tflint@v4
+      - run: tflint --init && tflint --recursive --minimum-failure-severity=warning
+      - name: Misconfiguration scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: infra
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+
+  secrets:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
