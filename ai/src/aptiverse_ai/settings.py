@@ -129,7 +129,9 @@ class EmbeddingSettings(BaseModel):
 
 
 class RerankSettings(BaseModel):
-    provider: Literal["none", "lexical-overlap", "cross-encoder"] = "lexical-overlap"
+    # "none" by default: on the live eval the overlap reranker slightly hurt strong embeddings. A cross-encoder
+    # has to beat plain hybrid on the labelled set before it is switched on.
+    provider: Literal["none", "lexical-overlap", "cross-encoder"] = "none"
     model: str = "BAAI/bge-reranker-v2-m3"
     candidates: int = 50
     top_k: int = 8

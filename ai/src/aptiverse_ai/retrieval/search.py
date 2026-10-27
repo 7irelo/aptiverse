@@ -112,6 +112,12 @@ _PUBLIC_SELECT = """
 """
 
 
+def _any_term(config: str) -> str:
+    """A tsquery matching any query term (ranking still rewards matching more of them). websearch_to_tsquery
+    requires every term, which conversational questions rarely satisfy: 40% recall on the live eval."""
+    return f"to_tsquery('simple', replace(plainto_tsquery('{config}', %s)::text, ' & ', ' | '))"
+
+
 def _public_where(filters: Filters) -> tuple[str, list[Any]]:
     clauses = ["d.active"]
     params: list[Any] = []
@@ -184,7 +190,7 @@ class HybridRetriever:
             rows = await (
                 await conn.execute(
                     sql(
-                        f"{_PUBLIC_SELECT}, websearch_to_tsquery('english', %s) q "
+                        f"{_PUBLIC_SELECT}, {_any_term('english')} q "
                         f"where {where} and c.tsv @@ q order by ts_rank_cd(c.tsv, q) desc limit %s"
                     ),
                     [query, *params, limit],
@@ -204,7 +210,7 @@ class HybridRetriever:
             lexical = await (
                 await conn.execute(
                     sql(
-                        f"{select}, websearch_to_tsquery('simple', %s) q where c.tsv @@ q "
+                        f"{select}, {_any_term('simple')} q where c.tsv @@ q "
                         "order by ts_rank_cd(c.tsv, q) desc limit %s"
                     ),
                     [query, limit],
