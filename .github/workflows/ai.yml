@@ -41,7 +41,7 @@ jobs:
       - name: Type check
         run: uv run pyright
       - name: Dependency audit
-        run: uvx pip-audit --strict --progress-spinner off -r <(uv export --frozen --no-dev --no-hashes)
+        run: uvx pip-audit --strict --progress-spinner off -r <(uv export --frozen --no-dev --no-hashes --no-emit-project)
         shell: bash
       - name: Unit, integration and offline eval gates
         run: uv run pytest -q
@@ -67,7 +67,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Vulnerability scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: aptiverse-ai:${{ github.sha }}
           severity: CRITICAL,HIGH
