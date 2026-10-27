@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Aptiverse.Practice</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Aptiverse.SharedKernel\Aptiverse.SharedKernel.csproj" />
+    <ProjectReference Include="..\Aptiverse.Practice.Contracts\Aptiverse.Practice.Contracts.csproj" />
+    <ProjectReference Include="..\..\Academics\Aptiverse.Academics.Contracts\Aptiverse.Academics.Contracts.csproj" />
+    <ProjectReference Include="..\..\AiTutor\Aptiverse.AiTutor.Contracts\Aptiverse.AiTutor.Contracts.csproj" />
+    <ProjectReference Include="..\..\Identity\Aptiverse.Identity.Contracts\Aptiverse.Identity.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Aptiverse.IntegrationTests" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+
+</Project>

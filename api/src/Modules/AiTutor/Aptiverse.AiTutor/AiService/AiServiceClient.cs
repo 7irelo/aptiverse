@@ -17,6 +17,8 @@ internal sealed class AiServiceClient(HttpClient http, IServiceTokenIssuer token
     public const string HttpClientName = "aptiverse-ai";
     public const string TutorScope = "ai.tutor";
     public const string NotesScope = "ai.notes";
+    public const string GenerateScope = "ai.generate";
+    public const string GradeScope = "ai.grade";
 
     public static readonly TimeSpan TokenLifetime = TimeSpan.FromSeconds(60);
 
@@ -80,6 +82,87 @@ internal sealed class AiServiceClient(HttpClient http, IServiceTokenIssuer token
         {
             throw new AiServiceException($"The ai service refused to delete user data with {(int)response.StatusCode}.", response.StatusCode);
         }
+    }
+
+    /// <summary>Starts a generation job; the ai service answers 202 and runs it in the background.</summary>
+    public async Task StartGenerationAsync(Guid userId, GenerationStartBody body, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(body);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.TimeoutSeconds));
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "v1/generations");
+        request.Content = JsonContent(body);
+        Authorize(request, new AiCaller(userId, [], null), GenerateScope);
+
+        using var response = await http.SendAsync(request, timeout.Token);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new AiServiceException($"The ai service refused the generation with {(int)response.StatusCode}.", response.StatusCode);
+        }
+    }
+
+    /// <summary>The job's status, or null when the ai service does not know the job (404).</summary>
+    public async Task<GenerationStatusWire?> GetGenerationAsync(Guid userId, string jobId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(jobId);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.TimeoutSeconds));
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "v1/generations/" + Uri.EscapeDataString(jobId));
+        Authorize(request, new AiCaller(userId, [], null), GenerateScope);
+
+        using var response = await http.SendAsync(request, timeout.Token);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new AiServiceException($"The ai service refused the generation status with {(int)response.StatusCode}.", response.StatusCode);
+        }
+
+        return await ReadJsonAsync<GenerationStatusWire>(response, timeout.Token);
+    }
+
+    /// <summary>Marks answers. Safe to repeat for the same attempt id: the ai service returns the stored result.</summary>
+    public async Task<GradeResultWire> GradeAsync(Guid userId, GradeBody body, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(body);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.TimeoutSeconds));
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "v1/grade");
+        request.Content = JsonContent(body);
+        Authorize(request, new AiCaller(userId, [], null), GradeScope);
+
+        using var response = await http.SendAsync(request, timeout.Token);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new AiServiceException($"The ai service refused to grade with {(int)response.StatusCode}.", response.StatusCode);
+        }
+
+        return await ReadJsonAsync<GradeResultWire>(response, timeout.Token);
+    }
+
+    private static ByteArrayContent JsonContent<T>(T body)
+    {
+        var content = new ByteArrayContent(JsonSerializer.SerializeToUtf8Bytes(body, AiServiceJson.Options));
+        content.Headers.ContentType = JsonMediaType;
+        return content;
+    }
+
+    private static async Task<T> ReadJsonAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        if (response.Content.Headers.ContentType?.MediaType != "application/json")
+        {
+            throw new AiServiceException("The ai service did not answer with JSON.", response.StatusCode);
+        }
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        return await JsonSerializer.DeserializeAsync<T>(stream, AiServiceJson.Options, cancellationToken)
+            ?? throw new AiServiceException("The ai service sent an empty body.", response.StatusCode);
     }
 
     private void Authorize(HttpRequestMessage request, AiCaller caller, string scope)

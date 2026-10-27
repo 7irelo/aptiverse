@@ -1,13 +1,16 @@
 using System.Data.Common;
+using System.Globalization;
 using System.Net.ServerSentEvents;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using Aptiverse.Academics.Contracts;
 using Aptiverse.AiTutor.AiService;
 using Aptiverse.AiTutor.Contracts;
 using Aptiverse.AiTutor.Domain;
 using Aptiverse.AiTutor.Persistence;
 using Aptiverse.Identity.Contracts;
+using Aptiverse.Practice.Contracts;
 using Aptiverse.SharedKernel.Persistence;
 using Aptiverse.SharedKernel.Results;
 using Aptiverse.SharedKernel.Time;
@@ -24,6 +27,7 @@ internal sealed record PreparedTurn(
     Message UserMessage,
     SendMessageRequest Request,
     StudentProfile Profile,
+    StudentContext Context,
     IReadOnlyList<HistoryTurn> History);
 
 /// <summary>
@@ -34,6 +38,9 @@ internal sealed record PreparedTurn(
 internal sealed partial class SendMessageHandler(
     IDbContextOutbox<AiTutorDbContext> outbox,
     IStudentProfileLookup profiles,
+    IActiveAttemptLookup activeAttempts,
+    IStudyUnitLookup studyUnits,
+    IAssessmentLookup assessments,
     AiServiceClient ai,
     IClock clock,
     IOptions<AiServiceOptions> options,
@@ -47,6 +54,10 @@ internal sealed partial class SendMessageHandler(
         "ai.limit_unavailable",
         "The tutor is unavailable right now. Please try again in a moment.");
 
+    public static readonly Error BlockedDuringAttempt = Error.Conflict(
+        "ai.blocked_during_attempt",
+        "The tutor is unavailable while you have a practice test in progress. Submit the test to chat again.");
+
     public static readonly Error ProfileRequired = Error.Conflict(
         "ai.profile_required",
         "Finish setting up your study profile before chatting with the tutor.");
@@ -54,6 +65,8 @@ internal sealed partial class SendMessageHandler(
     // Keeps the advisory lock keys of this module apart from any other module's.
     private const long LockNamespace = 0x0041_6954_7574_6F72;
     private const int MaxSaveAttempts = 3;
+    private const int MaxContextItems = 20;
+    private const int MaxContextItemLength = 160;
 
     private AiTutorDbContext Db => outbox.DbContext;
 
@@ -72,12 +85,28 @@ internal sealed partial class SendMessageHandler(
             return ConversationErrors.NotFound;
         }
 
+        // Checked before anything is counted or sent to a model: the tutor never helps with a test in progress.
+        // Fails closed: if the check cannot be made, the message is refused.
+        try
+        {
+            if (await activeAttempts.GetActiveAttemptAsync(userId, cancellationToken) is not null)
+            {
+                return BlockedDuringAttempt;
+            }
+        }
+        catch (Exception ex) when (ex is DbException or InvalidOperationException or TimeoutException)
+        {
+            LogLimitUnavailable(logger, ex);
+            return LimitUnavailable;
+        }
+
         var profile = await profiles.GetAsync(userId, cancellationToken);
         if (profile is null)
         {
             return ProfileRequired;
         }
 
+        var context = await BuildContextAsync(userId, profile, cancellationToken);
         var history = await LoadHistoryAsync(conversation, cancellationToken);
 
         var reserved = await ReserveAsync(conversation, request.Message.Trim(), cancellationToken);
@@ -86,7 +115,7 @@ internal sealed partial class SendMessageHandler(
             return reserved.Error!;
         }
 
-        return new PreparedTurn(conversation, reserved.Value, request, profile, history);
+        return new PreparedTurn(conversation, reserved.Value, request, profile, context, history);
     }
 
     public async IAsyncEnumerable<SseItem<object>> StreamAsync(
@@ -228,16 +257,40 @@ internal sealed partial class SendMessageHandler(
         return new SseItem<object>(new TutorTokenEvent(text), "token");
     }
 
-    private static TutorTurnRequest BuildRequest(PreparedTurn turn)
+    /// <summary>
+    /// The student's context from their own records only: their study units and open assessments from Academics.
+    /// Weakest topics stay empty until the Progress module owns mastery.
+    /// </summary>
+    private async Task<StudentContext> BuildContextAsync(Guid userId, StudentProfile profile, CancellationToken cancellationToken)
     {
-        var profile = turn.Profile;
         var university = profile.Stage == "university";
         var curriculum = university
             ? "tertiary"
             : profile.Curriculum is { Length: > 0 } examBody ? $"caps ({examBody})" : "caps";
 
-        // Subjects, weakest topics and open assessments join once the modules that own them exist.
-        var context = new StudentContext(profile.Stage, profile.Level, curriculum, [], [], []);
+        var units = await studyUnits.GetForUserAsync(userId, cancellationToken);
+        var subjects = units
+            .Select(u => Clip(u.Name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(MaxContextItems)
+            .ToList();
+
+        var open = await assessments.GetOpenForUserAsync(userId, cancellationToken);
+        var openAssessments = open
+            .Take(MaxContextItems)
+            .Select(a => Clip(string.Create(CultureInfo.InvariantCulture, $"{a.Title} ({a.UnitName}, due {a.DueAt:yyyy-MM-dd})")))
+            .ToList();
+
+        return new StudentContext(profile.Stage, profile.Level, curriculum, subjects, [], openAssessments);
+    }
+
+    private static string Clip(string text) =>
+        text.Length <= MaxContextItemLength ? text : text[..MaxContextItemLength];
+
+    private static TutorTurnRequest BuildRequest(PreparedTurn turn)
+    {
+        var university = turn.Profile.Stage == "university";
+        var context = turn.Context;
         var action = turn.Request.ConfirmedAction is { } confirmed
             ? new ConfirmedActionPayload(confirmed.Tool, confirmed.Arguments.Clone())
             : null;

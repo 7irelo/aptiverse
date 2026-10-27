@@ -4,6 +4,7 @@ using Aptiverse.Academics.Features.CreateAssessment;
 using Aptiverse.Academics.Features.CreateTertiaryCourse;
 using Aptiverse.Academics.Features.DeleteMyAssessment;
 using Aptiverse.Academics.Features.EnrolInCapsSubjects;
+using Aptiverse.Academics.Features.EraseUserData;
 using Aptiverse.Academics.Features.GetCatalog;
 using Aptiverse.Academics.Features.GetMyAssessment;
 using Aptiverse.Academics.Features.GetMyUnit;
@@ -30,6 +31,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Wolverine;
 
 namespace Aptiverse.Academics;
 
@@ -83,6 +85,9 @@ public static class AcademicsModule
         services.AddScoped<IAssessmentLookup, AssessmentLookup>();
 
         services.AddScoped<IDataSeeder, AcademicsReferenceSeeder>();
+        services.AddScoped<AcademicsUserDataEraser>();
+
+        services.ConfigureWolverine(opts => opts.Discovery.IncludeType(typeof(AccountDeletionRequestedHandler)));
 
         services.AddOptions<RateLimiterOptions>()
             .Configure<IOptions<AcademicsOptions>>((limiter, academics) => AcademicsRateLimiting.AddPolicies(limiter, academics.Value));

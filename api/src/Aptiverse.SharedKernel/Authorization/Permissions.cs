@@ -44,6 +44,18 @@ public static class Permissions
         public const string Manage = "academics.manage";
     }
 
+    public static class Practice
+    {
+        /// <summary>Generate, archive and recover your own practice tests.</summary>
+        public const string Generate = "practice.generate";
+
+        /// <summary>Start and take attempts on your own practice tests.</summary>
+        public const string Take = "practice.take";
+
+        /// <summary>Read your own practice tests, their status and your results.</summary>
+        public const string Read = "practice.read";
+    }
+
     public static IReadOnlyList<string> All { get; } = typeof(Permissions)
         .GetNestedTypes(BindingFlags.Public | BindingFlags.Static)
         .SelectMany(t => t.GetFields(BindingFlags.Public | BindingFlags.Static))

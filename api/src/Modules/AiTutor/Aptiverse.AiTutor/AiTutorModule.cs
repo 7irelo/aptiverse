@@ -1,4 +1,5 @@
 using Aptiverse.AiTutor.AiService;
+using Aptiverse.AiTutor.Contracts;
 using Aptiverse.AiTutor.Features.CreateConversation;
 using Aptiverse.AiTutor.Features.DeleteConversation;
 using Aptiverse.AiTutor.Features.EraseUserData;
@@ -49,6 +50,11 @@ public static class AiTutorModule
         services.AddScoped<DeleteConversationHandler>();
         services.AddScoped<SendMessageHandler>();
         services.AddScoped<UserDataEraser>();
+
+        // Practice generates and grades through this module's ai service edge.
+        services.AddScoped<PracticeAiGateway>();
+        services.AddScoped<IQuestionGenerator>(sp => sp.GetRequiredService<PracticeAiGateway>());
+        services.AddScoped<IGrader>(sp => sp.GetRequiredService<PracticeAiGateway>());
 
         services.AddHttpClient<AiServiceClient>(AiServiceClient.HttpClientName, (sp, client) =>
             {

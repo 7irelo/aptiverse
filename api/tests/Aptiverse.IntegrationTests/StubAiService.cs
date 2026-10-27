@@ -1,13 +1,16 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
+using System.Text.Json;
 
 namespace Aptiverse.IntegrationTests;
 
 /// <summary>
-/// Stands in for the Python ai service behind the typed client. The student's message picks the scenario:
-/// "[break]" ends the stream without done, "[error]" sends an error event, "[down]" answers 503, anything
-/// else streams a complete turn. Every request is recorded so tests can inspect the token and the body.
+/// Stands in for the Python ai service behind the typed client. For tutor turns the student's message picks the
+/// scenario: "[break]" ends the stream without done, "[error]" sends an error event, "[down]" answers 503, anything
+/// else streams a complete turn. For generation the first requested topic picks it (see <see cref="Generation"/>);
+/// for grading a student answer containing "[down]" makes the call fail. Every request is recorded so tests can
+/// inspect the token and the body.
 /// </summary>
 public sealed class StubAiService
 {
@@ -21,11 +24,29 @@ public sealed class StubAiService
 
     public IEnumerable<RecordedRequest> For(string path) => Requests.Where(r => r.Path == path);
 
-    internal static HttpResponseMessage Respond(RecordedRequest request)
+    /// <summary>Generation start bodies by job id, as the ai service would remember them.</summary>
+    public ConcurrentDictionary<string, JsonElement> Jobs { get; } = new();
+
+    internal HttpResponseMessage Respond(RecordedRequest request)
     {
         if (request.Path == "/v1/users/me/data" && request.Method == HttpMethod.Delete)
         {
             return new HttpResponseMessage(HttpStatusCode.NoContent);
+        }
+
+        if (request.Path == "/v1/generations" && request.Method == HttpMethod.Post)
+        {
+            return Generation.Start(this, request);
+        }
+
+        if (request.Path.StartsWith("/v1/generations/", StringComparison.Ordinal) && request.Method == HttpMethod.Get)
+        {
+            return Generation.Status(this, request.Path["/v1/generations/".Length..]);
+        }
+
+        if (request.Path == "/v1/grade" && request.Method == HttpMethod.Post)
+        {
+            return Generation.Grade(request);
         }
 
         if (request.Path != "/v1/tutor/turn" || request.Method != HttpMethod.Post)
@@ -85,6 +106,6 @@ internal sealed class StubAiHandler(StubAiService stub) : HttpMessageHandler
             request.Headers.Authorization?.ToString(),
             body);
         stub.Requests.Enqueue(recorded);
-        return StubAiService.Respond(recorded);
+        return stub.Respond(recorded);
     }
 }

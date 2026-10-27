@@ -101,3 +101,61 @@ internal static class AiServiceJson
     private static T Deserialize<T>(string data) =>
         JsonSerializer.Deserialize<T>(data, Options) ?? throw new JsonException($"The ai service sent an empty {typeof(T).Name}.");
 }
+
+// Wire models for question generation and grading (aptiverse_ai.graphs.generation and aptiverse_ai.graphs.grading).
+// Optional strings are nullable so a missing field becomes a dropped question, never a deserialisation crash.
+
+/// <summary>Body of POST /v1/generations.</summary>
+internal sealed record GenerationStartBody(
+    string JobId,
+    string Stage,
+    string Level,
+    string Subject,
+    string SubjectKey,
+    int? Grade,
+    string Curriculum,
+    string Format,
+    IReadOnlyList<string> Topics,
+    string? AssessmentTitle,
+    int? TotalMarks,
+    IReadOnlyList<string> AvoidQuestionStems);
+
+/// <summary>Body of GET /v1/generations/{job_id} and of the POST answer.</summary>
+internal sealed record GenerationStatusWire(string? JobId, string? Status, GeneratedPaperWire? Result, UsageSummaryWire? Usage);
+
+internal sealed record GeneratedPaperWire(IReadOnlyList<GeneratedSectionWire>? Sections, int TotalMarks, IReadOnlyList<string>? Dropped);
+
+internal sealed record GeneratedSectionWire(string? Name, IReadOnlyList<GeneratedQuestionWire>? Questions);
+
+internal sealed record GeneratedQuestionWire(
+    string? Id,
+    string? Type,
+    string? Topic,
+    string? CognitiveLevel,
+    int Marks,
+    string? Stem,
+    IReadOnlyList<GeneratedOptionWire>? Options,
+    string? Answer,
+    string? Memo,
+    string? Explanation);
+
+internal sealed record GeneratedOptionWire(string? Label, string? Text, bool Correct);
+
+/// <summary>The usage summary the ai service attaches to results; only the cost is kept.</summary>
+internal sealed record UsageSummaryWire(long CostUsdMicros);
+
+/// <summary>Body of POST /v1/grade.</summary>
+internal sealed record GradeBody(string AttemptId, string Level, string Subject, IReadOnlyList<GradeItemWire> Answers);
+
+internal sealed record GradeItemWire(string QuestionId, string Type, string Stem, int Marks, string Memo, string Answer, string StudentAnswer);
+
+internal sealed record GradeResultWire(IReadOnlyList<GradedAnswerWire>? Answers, UsageSummaryWire? Usage);
+
+internal sealed record GradedAnswerWire(
+    string? QuestionId,
+    int Awarded,
+    int MaxMarks,
+    string? Method,
+    bool NeedsReview,
+    double Confidence,
+    string? Feedback);

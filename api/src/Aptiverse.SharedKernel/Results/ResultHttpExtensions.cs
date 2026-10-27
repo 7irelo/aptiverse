@@ -22,7 +22,14 @@ public static class ResultHttpExtensions
             _ => StatusCodes.Status500InternalServerError,
         };
 
-        var extensions = new Dictionary<string, object?> { ["code"] = error.Code };
+        var extensions = new Dictionary<string, object?>();
+        foreach (var (key, value) in error.Extensions ?? new Dictionary<string, object?>())
+        {
+            extensions[key] = value;
+        }
+
+        // Set last so an extension can never overwrite the stable code.
+        extensions["code"] = error.Code;
         if (error.ValidationErrors is not null)
         {
             extensions["errors"] = error.ValidationErrors;

@@ -30,6 +30,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     /// <summary>Daily tutor message limit in tests, low so the limit is cheap to reach.</summary>
     public const int DailyMessageLimit = 3;
 
+    /// <summary>Daily practice generation limit in tests.</summary>
+    public const int DailyGenerationLimit = 4;
+
     /// <summary>The running host, for Wolverine message tracking in tests.</summary>
     public IHost AppHost => _host ?? throw new InvalidOperationException("The host has not been created yet.");
 
@@ -100,6 +103,15 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("AiService:DailyMessageLimit", DailyMessageLimit.ToString(System.Globalization.CultureInfo.InvariantCulture));
         builder.UseSetting("AiService:SendMessagePermitLimit", "1000");
         builder.UseSetting("Academics:WritePermitLimit", "10000");
+        builder.UseSetting("Practice:DailyGenerationLimit", DailyGenerationLimit.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        builder.UseSetting("Practice:GeneratePermitLimit", "10000");
+        builder.UseSetting("Practice:SubmitPermitLimit", "10000");
+        builder.UseSetting("Practice:AutosavePermitLimit", "10000");
+        builder.UseSetting("Practice:FocusPermitLimit", "10000");
+
+        // Tests drive polls and retries by hand; the scheduled ones must not race them.
+        builder.UseSetting("Practice:GenerationPollSeconds", "3600");
+        builder.UseSetting("Practice:RetryBaseSeconds", "3600");
 
         // Outside Development the signing key is required; service tokens need it even though tests sign in with the test scheme.
         using (var key = ECDsa.Create(ECCurve.NamedCurves.nistP256))
