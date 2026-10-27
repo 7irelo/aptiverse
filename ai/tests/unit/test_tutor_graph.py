@@ -172,3 +172,16 @@ async def test_check_math_tool() -> None:
     ctx = ToolContext(user_id="u", stage="high_school", allow_private_notes=False)
     assert (await tool.call({"mode": "equivalent", "a": "2(x+1)", "b": "2x+2"}, ctx)).text.startswith("equivalent")
     assert (await tool.call({"mode": "solve", "a": "x^2 = 9"}, ctx)).text == "solutions: -3, 3"
+
+
+async def test_model_flagged_distress_gets_support_without_an_agent_turn() -> None:
+    def responder(r: ModelRequest, m: str) -> FakeReply:
+        if r.use_case == "tutor.route":
+            return FakeReply(parsed={"intent": "study_help", "graded_work": False, "distress": True})
+        raise AssertionError("no agent turn should run")
+
+    graph, provider = make(responder, {})
+    events = await collect(graph, "nobody would notice if I was gone")
+    assert "0800 567 567" in "".join(e.get("text", "") for e in events)
+    assert events[-1]["route"] == "support"
+    assert [c[0].use_case for c in provider.calls] == ["tutor.route"]

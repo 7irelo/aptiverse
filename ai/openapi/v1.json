@@ -1,0 +1,1000 @@
+{
+  "components": {
+    "schemas": {
+      "AnswerItem": {
+        "properties": {
+          "answer": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Answer",
+            "type": "string"
+          },
+          "marks": {
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Marks",
+            "type": "integer"
+          },
+          "memo": {
+            "maxLength": 6000,
+            "title": "Memo",
+            "type": "string"
+          },
+          "question_id": {
+            "maxLength": 64,
+            "title": "Question Id",
+            "type": "string"
+          },
+          "stem": {
+            "maxLength": 4000,
+            "title": "Stem",
+            "type": "string"
+          },
+          "student_answer": {
+            "default": "",
+            "maxLength": 20000,
+            "title": "Student Answer",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "mcq",
+              "short",
+              "numeric",
+              "long",
+              "flashcard",
+              "essay"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question_id",
+          "type",
+          "stem",
+          "marks",
+          "memo"
+        ],
+        "title": "AnswerItem",
+        "type": "object"
+      },
+      "GenerationRequest": {
+        "properties": {
+          "assessment_title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessment Title"
+          },
+          "avoid_question_stems": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Avoid Question Stems",
+            "type": "array"
+          },
+          "curriculum": {
+            "default": "caps",
+            "maxLength": 20,
+            "title": "Curriculum",
+            "type": "string"
+          },
+          "format": {
+            "enum": [
+              "quiz",
+              "exam_paper",
+              "reading",
+              "flashcards",
+              "essay"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "maximum": 12.0,
+                "minimum": 8.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "job_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Job Id",
+            "type": "string"
+          },
+          "level": {
+            "description": "Grade (for example 'Grade 11') or university year and course level",
+            "maxLength": 80,
+            "title": "Level",
+            "type": "string"
+          },
+          "stage": {
+            "enum": [
+              "high_school",
+              "university"
+            ],
+            "title": "Stage",
+            "type": "string"
+          },
+          "subject": {
+            "maxLength": 80,
+            "title": "Subject",
+            "type": "string"
+          },
+          "subject_key": {
+            "description": "catalog key, for example life_sciences",
+            "maxLength": 80,
+            "title": "Subject Key",
+            "type": "string"
+          },
+          "topics": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Topics",
+            "type": "array"
+          },
+          "total_marks": {
+            "anyOf": [
+              {
+                "maximum": 300.0,
+                "minimum": 5.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Marks"
+          }
+        },
+        "required": [
+          "job_id",
+          "stage",
+          "level",
+          "subject",
+          "subject_key",
+          "format",
+          "topics"
+        ],
+        "title": "GenerationRequest",
+        "type": "object"
+      },
+      "GenerationStatus": {
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "review": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review"
+          },
+          "status": {
+            "enum": [
+              "running",
+              "review",
+              "completed",
+              "failed",
+              "not_found"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usage"
+          }
+        },
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "title": "GenerationStatus",
+        "type": "object"
+      },
+      "GradeRequest": {
+        "properties": {
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/AnswerItem"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Answers",
+            "type": "array"
+          },
+          "attempt_id": {
+            "maxLength": 64,
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "level": {
+            "maxLength": 80,
+            "title": "Level",
+            "type": "string"
+          },
+          "subject": {
+            "maxLength": 80,
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attempt_id",
+          "level",
+          "subject",
+          "answers"
+        ],
+        "title": "GradeRequest",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HistoryTurn": {
+        "properties": {
+          "content": {
+            "maxLength": 12000,
+            "title": "Content",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "HistoryTurn",
+        "type": "object"
+      },
+      "NoteBody": {
+        "properties": {
+          "text": {
+            "maxLength": 400000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "text"
+        ],
+        "title": "NoteBody",
+        "type": "object"
+      },
+      "RetrieveRequest": {
+        "properties": {
+          "grade": {
+            "anyOf": [
+              {
+                "maximum": 12.0,
+                "minimum": 8.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "include_private": {
+            "default": false,
+            "title": "Include Private",
+            "type": "boolean"
+          },
+          "query": {
+            "maxLength": 300,
+            "minLength": 2,
+            "title": "Query",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "top_k": {
+            "default": 8,
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "RetrieveRequest",
+        "type": "object"
+      },
+      "ReviewDecision": {
+        "properties": {
+          "action": {
+            "enum": [
+              "approve",
+              "drop",
+              "edit"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "ReviewDecision",
+        "type": "object"
+      },
+      "StudentContext": {
+        "description": "Built server-side by .NET from the student's own records; never from client fields.",
+        "properties": {
+          "curriculum": {
+            "default": "caps",
+            "maxLength": 20,
+            "title": "Curriculum",
+            "type": "string"
+          },
+          "level": {
+            "maxLength": 80,
+            "title": "Level",
+            "type": "string"
+          },
+          "open_assessments": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Open Assessments",
+            "type": "array"
+          },
+          "stage": {
+            "enum": [
+              "high_school",
+              "university"
+            ],
+            "title": "Stage",
+            "type": "string"
+          },
+          "subjects": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Subjects",
+            "type": "array"
+          },
+          "weakest_topics": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Weakest Topics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "stage",
+          "level"
+        ],
+        "title": "StudentContext",
+        "type": "object"
+      },
+      "SummariseRequest": {
+        "properties": {
+          "previous_summary": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Summary"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryTurn"
+            },
+            "maxItems": 60,
+            "minItems": 1,
+            "title": "Turns",
+            "type": "array"
+          }
+        },
+        "required": [
+          "turns"
+        ],
+        "title": "SummariseRequest",
+        "type": "object"
+      },
+      "TutorTurnRequest": {
+        "properties": {
+          "allow_private_notes": {
+            "default": false,
+            "title": "Allow Private Notes",
+            "type": "boolean"
+          },
+          "confirmed_action": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed Action"
+          },
+          "context": {
+            "$ref": "#/components/schemas/StudentContext"
+          },
+          "conversation_id": {
+            "maxLength": 64,
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryTurn"
+            },
+            "maxItems": 40,
+            "title": "History",
+            "type": "array"
+          },
+          "message": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "mode": {
+            "default": "standard",
+            "enum": [
+              "standard",
+              "deep"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "required": [
+          "conversation_id",
+          "message",
+          "context"
+        ],
+        "title": "TutorTurnRequest",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Aptiverse AI",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/v1/generations": {
+      "post": {
+        "operationId": "startGeneration",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Generation"
+      }
+    },
+    "/v1/generations/{job_id}": {
+      "get": {
+        "operationId": "getGeneration",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Generation"
+      }
+    },
+    "/v1/generations/{job_id}/review": {
+      "post": {
+        "operationId": "reviewGeneration",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/ReviewDecision"
+                },
+                "title": "Decisions",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Review Generation"
+      }
+    },
+    "/v1/grade": {
+      "post": {
+        "operationId": "grade",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GradeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Grade",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Grade"
+      }
+    },
+    "/v1/notes/{note_id}": {
+      "delete": {
+        "operationId": "deleteNote",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "title": "Note Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Note"
+      },
+      "put": {
+        "operationId": "putNote",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "title": "Note Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Putnote",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Note"
+      }
+    },
+    "/v1/retrieve": {
+      "post": {
+        "operationId": "retrieve",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetrieveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Retrieve",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retrieve"
+      }
+    },
+    "/v1/tutor/summarise": {
+      "post": {
+        "operationId": "summariseConversation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SummariseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Summariseconversation",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Summarise"
+      }
+    },
+    "/v1/tutor/turn": {
+      "post": {
+        "operationId": "tutorTurn",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TutorTurnRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tutor Turn"
+      }
+    },
+    "/v1/users/me/data": {
+      "delete": {
+        "description": "Called by .NET when an account is deleted: removes the user's notes and embeddings.",
+        "operationId": "deleteMyData",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Delete My Data"
+      }
+    }
+  }
+}

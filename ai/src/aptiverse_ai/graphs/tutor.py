@@ -79,6 +79,9 @@ class RouteDecision(BaseModel):
     intent: Intent
     graded_work: bool
     language: Literal["english", "afrikaans", "other"] = "english"
+    # The model's second opinion behind the keyword floor in the guard node. It rides on the routing call,
+    # so it costs nothing extra.
+    distress: bool = False
 
 
 _TOOLS_BY_INTENT: dict[str, set[str]] = {
@@ -156,6 +159,12 @@ def build_graph(deps: TutorDeps) -> Any:
             decision.graded_work = True
         if req.confirmed_action and req.confirmed_action.get("tool") == "create_practice_quiz":
             decision.intent = "quiz_me"
+        if decision.distress:
+            writer = get_stream_writer()
+            writer({"type": "token", "text": SUPPORT_REPLY})
+            cost = sum(int(u["cost_usd_micros"]) for u in usage)
+            writer({"type": "done", "route": "support", "usage": usage, "cost_usd_micros": cost, "citations": []})
+            return {"route": {"intent": "support"}, "final": SUPPORT_REPLY, "usage": state["usage"] + usage}
         get_stream_writer()({"type": "route", "intent": decision.intent, "graded_work": decision.graded_work})
         history = [{"role": t.role, "content": t.content} for t in req.history]
         user = wrap("student_message", req.message)
@@ -295,7 +304,7 @@ def build_graph(deps: TutorDeps) -> Any:
     graph.add_node("tools", run_tools)
     graph.add_edge(START, "guard")
     graph.add_conditional_edges("guard", lambda s: END if s.get("final") else "route", ["route", END])
-    graph.add_edge("route", "agent")
+    graph.add_conditional_edges("route", lambda s: END if s.get("final") else "agent", ["agent", END])
     graph.add_conditional_edges("agent", after_agent, ["tools", END])
     graph.add_edge("tools", "agent")
     return graph.compile()

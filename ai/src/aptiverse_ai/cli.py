@@ -145,6 +145,46 @@ async def _grant_graph(conn: object, role: str) -> None:
     await conn.execute(row[0])
 
 
+async def _purge_checkpoints(days: int) -> int:
+    """Deletes LangGraph checkpoints whose last write is older than `days` (AI-89). Finished runs are already
+    stored in .NET; checkpoints are working state and must not become a second copy of student data."""
+    from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+    from psycopg import AsyncConnection
+
+    from aptiverse_ai.settings import DatabaseSettings
+
+    url = DatabaseSettings.model_validate(_database_env()).dsn()
+    async with await AsyncConnection.connect(
+        url, autocommit=True, prepare_threshold=0, options="-c search_path=graph"
+    ) as conn:
+        rows = await (
+            await conn.execute(
+                "select thread_id from graph.checkpoints group by thread_id "
+                "having max((checkpoint->>'ts')::timestamptz) < now() - make_interval(days => %s)",
+                [days],
+            )
+        ).fetchall()
+        saver = AsyncPostgresSaver(conn)  # pyright: ignore[reportArgumentType]
+        for (thread_id,) in rows:
+            await saver.adelete_thread(thread_id)
+    print(f"purged {len(rows)} checkpoint threads older than {days} days")
+    return len(rows)
+
+
+def _openapi() -> None:
+    """Prints the ai service's OpenAPI document; CI compares it with the committed ai/openapi/v1.json."""
+    from aptiverse_ai.app import create_app
+    from aptiverse_ai.settings import AuthSettings, DatabaseSettings, GatewaySettings, Settings
+
+    settings = Settings(
+        environment="test",
+        auth=AuthSettings(jwks_url="https://example.invalid/jwks.json", issuer="openapi"),
+        gateway=GatewaySettings(providers=["fake"]),
+        database=DatabaseSettings(url="postgresql://unused"),  # pyright: ignore[reportArgumentType]
+    )
+    print(json.dumps(create_app(settings).openapi(), indent=2, sort_keys=True))
+
+
 async def _ingest(args: argparse.Namespace) -> None:
     import yaml
 
@@ -234,6 +274,9 @@ def main() -> None:
     s.add_argument("--host", default="0.0.0.0")  # noqa: S104 - container port, reachable only inside the VPC
     s.add_argument("--port", type=int, default=8080)
     sub.add_parser("migrate")
+    sub.add_parser("openapi")
+    pc = sub.add_parser("purge-checkpoints")
+    pc.add_argument("--days", type=int, default=7)
     i = sub.add_parser("ingest")
     i.add_argument("--register", required=True)
     i.add_argument("--key", required=True)
@@ -247,6 +290,10 @@ def main() -> None:
         serve(args)
     elif args.command == "migrate":
         asyncio.run(_migrate())
+    elif args.command == "openapi":
+        _openapi()
+    elif args.command == "purge-checkpoints":
+        asyncio.run(_purge_checkpoints(args.days))
     elif args.command == "ingest":
         asyncio.run(_ingest(args))
     else:

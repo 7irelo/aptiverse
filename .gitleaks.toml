@@ -1,0 +1,11 @@
+[extend]
+useDefault = true
+
+# Narrow allowlist for known false positives. Each pattern matches one exact construct, never a value class.
+[allowlist]
+description = "Known non-secret values that trip the generic-api-key rule"
+regexTarget = "line"
+regexes = [
+  # ACM certificate key algorithm name, not a credential.
+  '''key_algorithm\s*=\s*"EC_prime256v1"''',
+]

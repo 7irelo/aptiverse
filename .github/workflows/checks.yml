@@ -118,6 +118,7 @@ jobs:
         with:
           scan-type: config
           scan-ref: infra
+          trivyignores: infra/.trivyignore.yaml
           severity: CRITICAL,HIGH
           exit-code: "1"
 

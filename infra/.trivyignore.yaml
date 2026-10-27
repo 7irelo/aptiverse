@@ -1,0 +1,26 @@
+# Accepted findings. Each entry is scoped to the exact files and carries the reason and the compensating
+# controls. Anything not listed here fails CI. Review this file whenever the network design changes.
+misconfigurations:
+  - id: AWS-0104
+    paths:
+      - modules/service/main.tf
+    statement: >-
+      HTTPS (443) egress to 0.0.0.0/0 for app tasks. The api, worker and ai services call Anthropic, OpenAI,
+      Paystack, Sentry and Grafana, which publish no fixed IP ranges, so the rule cannot name destinations.
+      Compensating controls: egress is 443 only (Postgres egress is VPC-only), no inbound from the internet
+      except the ALB, secrets come from Secrets Manager by task role, and AWS APIs go through VPC endpoints.
+      Planned for prod: a domain-allowlisting egress firewall (AWS Network Firewall), decided with its cost.
+  - id: AWS-0053
+    paths:
+      - modules/alb/main.tf
+    statement: >-
+      The ALB is the API's public entry point by design. Its security group admits only Cloudflare's published
+      IP ranges on 443 (infra/CLAUDE.md rule 8), TLS is Full (strict), and Cloudflare WAF and rate limits sit
+      in front of it.
+  - id: AWS-0132
+    paths:
+      - bootstrap/main.tf
+    statement: >-
+      Terraform state bucket uses SSE-S3, with versioning, a full public access block and a TLS-only bucket
+      policy, and holds no secret values (infra/CLAUDE.md rule 3). Moving it to a customer managed KMS key
+      needs kms grants on the CI roles, which lands with the proven infra-apply policy (INF-74).

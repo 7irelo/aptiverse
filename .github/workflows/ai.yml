@@ -43,6 +43,10 @@ jobs:
       - name: Dependency audit
         run: uvx pip-audit --strict --progress-spinner off -r <(uv export --frozen --no-dev --no-hashes --no-emit-project)
         shell: bash
+      - name: OpenAPI contract is up to date
+        run: |
+          uv run aptiverse-ai openapi > openapi/v1.json
+          git diff --exit-code -- openapi/v1.json
       - name: Unit, integration and offline eval gates
         run: uv run pytest -q
       - name: Secrets scan
