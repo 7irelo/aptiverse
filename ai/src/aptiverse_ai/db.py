@@ -29,7 +29,7 @@ async def configure_connection(conn: AsyncConnection[Any]) -> None:
 
 def create_pool(settings: DatabaseSettings) -> Pool:
     return AsyncConnectionPool(
-        settings.url.get_secret_value(),
+        settings.dsn(),
         connection_class=AsyncConnection[DictRow],
         min_size=settings.pool_min,
         max_size=settings.pool_max,

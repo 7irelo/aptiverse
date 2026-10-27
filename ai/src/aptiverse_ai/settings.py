@@ -81,9 +81,41 @@ class GatewaySettings(BaseModel):
 
 
 class DatabaseSettings(BaseModel):
-    url: SecretStr
+    """Either a full `url` (local, tests) or parts, which is how ECS injects them: host, port and name as
+    plain config and the credentials from Secrets Manager. TLS is required unless the URL says otherwise."""
+
+    url: SecretStr | None = None
+    host: str | None = None
+    port: int = 5432
+    name: str = "aptiverse"
+    username: str | None = None
+    password: SecretStr | None = None
+    sslmode: str = "require"
+    runtime_username: str | None = None
+    runtime_password: SecretStr | None = None
     pool_min: int = 1
     pool_max: int = 10
+
+    @model_validator(mode="after")
+    def _url_or_parts(self) -> DatabaseSettings:
+        if self.url is None and not (self.host and self.username and self.password):
+            raise ValueError("database needs url, or host, username and password")
+        return self
+
+    def dsn(self) -> str:
+        if self.url is not None:
+            return self.url.get_secret_value()
+        from psycopg.conninfo import make_conninfo
+
+        assert self.password is not None
+        return make_conninfo(
+            host=self.host,
+            port=self.port,
+            dbname=self.name,
+            user=self.username,
+            password=self.password.get_secret_value(),
+            sslmode=self.sslmode,
+        )
 
 
 class EmbeddingSettings(BaseModel):

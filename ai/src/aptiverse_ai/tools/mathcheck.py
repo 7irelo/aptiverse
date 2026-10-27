@@ -133,12 +133,15 @@ def _equations_equivalent(a: Any, b: Any) -> Check:
         sa = set(sympy.solveset(a, symbols[0], domain=sympy.S.Complexes))  # type: ignore[arg-type]
         sb = set(sympy.solveset(b, symbols[0], domain=sympy.S.Complexes))  # type: ignore[arg-type]
         return Check(sa == sb, "same solution set" if sa == sb else "different solution sets")
-    da = sympy.simplify(a.lhs - a.rhs)
-    db = sympy.simplify(b.lhs - b.rhs)
+    ea: Any = a
+    eb: Any = b
+    da: Any = sympy.simplify(ea.lhs - ea.rhs)
+    db: Any = sympy.simplify(eb.lhs - eb.rhs)
     if da == 0 or db == 0:
         return Check(da == db, "identity")
-    ratio = sympy.simplify(da / db)
-    return Check(not ratio.free_symbols and ratio != 0, "proportional" if not ratio.free_symbols else "not proportional")
+    ratio: Any = sympy.simplify(da / db)
+    constant = not getattr(ratio, "free_symbols", set())
+    return Check(constant and ratio != 0, "proportional" if constant else "not proportional")
 
 
 def solve(equation: str, variable: str = "x") -> Check | list[str]:

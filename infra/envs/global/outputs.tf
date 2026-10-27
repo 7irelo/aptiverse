@@ -37,3 +37,13 @@ output "api_repository_arn" {
   description = "ARN of the shared api image repository."
   value       = module.ecr.repository_arns["api"]
 }
+
+output "ai_repository_url" {
+  description = "ECR repository for the ai service image, shared by every environment."
+  value       = module.ecr.repository_urls["ai"]
+}
+
+output "ai_repository_arn" {
+  description = "ARN of the shared ai image repository."
+  value       = module.ecr.repository_arns["ai"]
+}

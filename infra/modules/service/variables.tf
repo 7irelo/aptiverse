@@ -4,12 +4,12 @@ variable "name" {
 }
 
 variable "role" {
-  description = "Application role the shared image runs in (api or worker). Exposed to the container as APP_ROLE."
+  description = "Application role: api or worker (the shared .NET image) or ai (the Python AI service). Exposed as APP_ROLE."
   type        = string
 
   validation {
-    condition     = contains(["api", "worker"], var.role)
-    error_message = "The role must be api or worker."
+    condition     = contains(["api", "worker", "ai"], var.role)
+    error_message = "The role must be api, worker or ai."
   }
 }
 
@@ -84,6 +84,30 @@ variable "ingress_security_group_id" {
   description = "Security group (the ALB) allowed to reach container_port. Ignored when container_port is null."
   type        = string
   default     = null
+}
+
+variable "ingress_security_group_ids" {
+  description = "Extra security groups allowed to reach container_port directly (service to service, no load balancer)."
+  type        = list(string)
+  default     = []
+}
+
+variable "egress_vpc_ports" {
+  description = "TCP ports these tasks may open to other tasks inside the VPC (for example the ai service port)."
+  type        = list(number)
+  default     = []
+}
+
+variable "service_connect" {
+  description = "ECS Service Connect: the namespace to join and, for a service other tasks call, the name and port it is reachable on."
+  type = object({
+    namespace = string
+    server = optional(object({
+      port_name      = string
+      discovery_name = string
+    }))
+  })
+  default = null
 }
 
 variable "target_group_arn" {

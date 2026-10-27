@@ -1,0 +1,58 @@
+# Seed corpus for the retrieval suite. Synthetic passages written for this repo in the style of CAPS
+# documents and NSC papers (not copied from any source), so the suite runs anywhere with no licensing
+# question. The real suite (AI-54) labels queries against the licensed corpus; numbers from this seed set
+# are a pipeline check, never a published result.
+label_source: synthetic
+documents:
+  - key: ls-g11-caps
+    title: Life Sciences Grade 11 (seed)
+    doc_type: caps
+    subject: life_sciences
+    grade: 11
+    text: |
+      TOPIC: PHOTOSYNTHESIS
+      1.1 The process of photosynthesis
+      Green plants trap light energy with chlorophyll in the chloroplasts and use it to combine carbon dioxide
+      and water into glucose. Oxygen is released as a by-product.
+      1.2 Limiting factors
+      The rate of photosynthesis is limited by light intensity, carbon dioxide concentration and temperature.
+      Greenhouse farmers raise carbon dioxide levels to increase yield.
+      TOPIC: CELLULAR RESPIRATION
+      2.1 Aerobic respiration
+      In the mitochondria, glucose is broken down using oxygen to release energy stored as ATP.
+      2.2 Anaerobic respiration
+      Without oxygen, yeast produces ethanol and carbon dioxide, and muscle cells produce lactic acid.
+      TOPIC: ANIMAL NUTRITION
+      3.1 Human digestive system
+      Enzymes such as amylase, protease and lipase break large food molecules into small soluble molecules.
+  - key: maths-g11-caps
+    title: Mathematics Grade 11 (seed)
+    doc_type: caps
+    subject: mathematics
+    grade: 11
+    text: |
+      TOPIC: ALGEBRA
+      1.1 Quadratic equations
+      Solve quadratic equations by factorisation, completing the square or the quadratic formula.
+      1.2 The nature of roots
+      The discriminant b^{2} - 4ac shows whether the roots are real, equal or non-real.
+      TOPIC: FUNCTIONS
+      2.1 The parabola
+      The graph of y = a(x - p)^{2} + q has its turning point at (p; q) and axis of symmetry x = p.
+      2.2 The hyperbola
+      The graph of y = a/(x - p) + q has asymptotes x = p and y = q.
+      TOPIC: TRIGONOMETRY
+      3.1 Identities
+      sin^{2} x + cos^{2} x = 1 and tan x = sin x / cos x for all x where cos x is not zero.
+  - key: phys-g12-paper
+    title: Physical Sciences P1 Grade 12 (seed)
+    doc_type: exam_paper
+    subject: physical_sciences
+    grade: 12
+    text: |
+      QUESTION 1
+      1.1 State Newton's second law of motion in words. (2)
+      1.2 A 2 kg trolley accelerates at 3 m.s^{-2}. Calculate the net force on the trolley. (3)
+      QUESTION 2
+      2.1 Define momentum. (2)
+      2.2 Explain why a padded dashboard reduces injury in a collision, using impulse. (3)

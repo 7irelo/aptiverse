@@ -1,0 +1,69 @@
+# Seed grading cases. `reference_mark` values were set by the author against the memo for pipeline checks
+# only (label_source: synthetic). The calibration set that gates releases (AI-98) is marked by qualified
+# teachers and stored without student names; replace this file's role with it when it exists.
+label_source: synthetic
+level: Grade 11
+subject: Life Sciences
+cases:
+  - id: g01
+    stem: Describe the role of chlorophyll in photosynthesis.
+    marks: 2
+    memo: |
+      chlorophyll absorbs light energy
+      the energy is used to make glucose
+    student_answer: Chlorophyll absorbs light energy, which the plant uses to make glucose.
+    reference_mark: 2
+  - id: g02
+    stem: Describe the role of chlorophyll in photosynthesis.
+    marks: 2
+    memo: |
+      chlorophyll absorbs light energy
+      the energy is used to make glucose
+    student_answer: Chlorophyll is green.
+    reference_mark: 0
+  - id: g03
+    stem: Name two products of anaerobic respiration in yeast.
+    marks: 2
+    memo: |
+      ethanol
+      carbon dioxide
+    student_answer: Alcohol and CO2
+    reference_mark: 2
+  - id: g04
+    stem: Name two products of anaerobic respiration in yeast.
+    marks: 2
+    memo: |
+      ethanol
+      carbon dioxide
+    student_answer: Lactic acid and carbon dioxide
+    reference_mark: 1
+  - id: g05
+    stem: Explain how increasing carbon dioxide concentration affects the rate of photosynthesis.
+    marks: 3
+    memo: |
+      carbon dioxide is a raw material for photosynthesis
+      more carbon dioxide increases the rate
+      until another factor such as light or temperature becomes limiting
+    student_answer: CO2 is needed to make glucose so more of it makes photosynthesis faster, up to a point where light becomes the limiting factor.
+    reference_mark: 3
+  - id: g06
+    stem: Explain how increasing carbon dioxide concentration affects the rate of photosynthesis.
+    marks: 3
+    memo: |
+      carbon dioxide is a raw material for photosynthesis
+      more carbon dioxide increases the rate
+      until another factor such as light or temperature becomes limiting
+    student_answer: It goes faster.
+    reference_mark: 1
+  - id: g07
+    stem: State the function of amylase.
+    marks: 1
+    memo: breaks down starch into maltose
+    student_answer: It digests protein.
+    reference_mark: 0
+  - id: g08
+    stem: State the function of amylase.
+    marks: 1
+    memo: breaks down starch into maltose
+    student_answer: Amylase breaks starch down into smaller sugars like maltose.
+    reference_mark: 1

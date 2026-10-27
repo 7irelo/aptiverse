@@ -27,6 +27,7 @@ locals {
     api     = ["host/Aptiverse.Host.dll"]
     worker  = ["worker/Aptiverse.Worker.dll"]
     migrate = ["host/Aptiverse.Host.dll", "migrate"]
+    ai      = ["serve"]
   }
 
   container_base = {
@@ -54,8 +55,11 @@ locals {
   }
 
   service_container = merge(local.container_base, {
-    command      = coalesce(var.command, local.default_commands[var.role])
-    portMappings = local.has_port ? [{ containerPort = var.container_port, protocol = "tcp" }] : []
+    command = coalesce(var.command, local.default_commands[var.role])
+    portMappings = local.has_port ? [merge(
+      { containerPort = var.container_port, protocol = "tcp" },
+      try(var.service_connect.server.port_name, null) != null ? { name = var.service_connect.server.port_name, appProtocol = "http" } : {}
+    )] : []
   })
 
   migration_environment = merge(local.environment, { APP_ROLE = "migrate" })
@@ -218,6 +222,28 @@ resource "aws_vpc_security_group_ingress_rule" "from_lb" {
   to_port                      = var.container_port
 }
 
+resource "aws_vpc_security_group_ingress_rule" "from_services" {
+  for_each = local.has_port ? toset(var.ingress_security_group_ids) : toset([])
+
+  security_group_id            = aws_security_group.this.id
+  description                  = "Container port from another service in the VPC"
+  referenced_security_group_id = each.value
+  ip_protocol                  = "tcp"
+  from_port                    = var.container_port
+  to_port                      = var.container_port
+}
+
+resource "aws_vpc_security_group_egress_rule" "vpc_ports" {
+  for_each = toset([for p in var.egress_vpc_ports : tostring(p)])
+
+  security_group_id = aws_security_group.this.id
+  description       = "Service to service inside the VPC"
+  cidr_ipv4         = data.aws_vpc.this.cidr_block
+  ip_protocol       = "tcp"
+  from_port         = tonumber(each.value)
+  to_port           = tonumber(each.value)
+}
+
 # Outbound HTTPS is required for Anthropic, Paystack, Sentry and Grafana.
 resource "aws_vpc_security_group_egress_rule" "https" {
   security_group_id = aws_security_group.this.id
@@ -323,6 +349,26 @@ resource "aws_ecs_service" "this" {
     subnets          = var.subnet_ids
     security_groups  = [aws_security_group.this.id]
     assign_public_ip = var.assign_public_ip
+  }
+
+  dynamic "service_connect_configuration" {
+    for_each = var.service_connect == null ? [] : [var.service_connect]
+    content {
+      enabled   = true
+      namespace = service_connect_configuration.value.namespace
+
+      dynamic "service" {
+        for_each = service_connect_configuration.value.server == null ? [] : [service_connect_configuration.value.server]
+        content {
+          port_name      = service.value.port_name
+          discovery_name = service.value.discovery_name
+          client_alias {
+            port     = var.container_port
+            dns_name = service.value.discovery_name
+          }
+        }
+      }
+    }
   }
 
   dynamic "load_balancer" {

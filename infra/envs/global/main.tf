@@ -28,7 +28,7 @@ module "ecr" {
   source = "../../modules/ecr"
 
   name_prefix  = "aptiverse"
-  repositories = ["api"]
+  repositories = ["api", "ai"]
 }
 
 module "github_oidc" {

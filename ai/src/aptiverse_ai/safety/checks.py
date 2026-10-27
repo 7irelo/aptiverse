@@ -11,8 +11,9 @@ _URL = re.compile(r"https?://[^\s)>\]]+", re.IGNORECASE)
 # this catches the clear cases even when the model is unavailable. Kept short and reviewed with the
 # safeguarding lead, since every false positive interrupts a real study question.
 _DISTRESS = re.compile(
-    r"\b(kill myself|end my life|want to die|suicid\w*|self[- ]harm\w*|cut myself|hurt myself|"
-    r"no reason to live|someone is hurting me|being abused|he touches me|she touches me)\b",
+    r"\b((kill|killing|hurt|hurting|cut|cutting|harm|harming) myself|end it all|end my life|want to die|"
+    r"wanna die|suicid\w*|self[- ]harm\w*|no reason to live|better off dead|"
+    r"someone is (hurting|abusing) me|being abused|(he|she|they) touch(es)? me)\b",
     re.IGNORECASE,
 )
 

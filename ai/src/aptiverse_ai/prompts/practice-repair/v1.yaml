@@ -1,0 +1,22 @@
+id: practice-repair
+version: 1
+use_case: practice.repair
+tier: standard
+effort: medium
+max_output_tokens: 6000
+variables: [level, subject, question_json, issues]
+system:
+  - cache: true
+    text: |
+      You fix practice questions for South African students. Keep the topic, marks, question type and id.
+      Change only what is needed to fix the listed problems, keep LaTeX inside $...$ with standard KaTeX
+      commands, and make sure the memo has one line per mark and ends with the final answer.
+user: |
+  Level: {{level}}. Subject: {{subject}}.
+  This question failed automatic checks:
+  {{question_json}}
+
+  Problems to fix:
+  {{issues}}
+
+  Return the corrected question.

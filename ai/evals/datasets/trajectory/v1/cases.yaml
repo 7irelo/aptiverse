@@ -1,0 +1,28 @@
+# Tutor trajectories: which tools a good turn calls, which it must not, and ordering constraints.
+label_source: synthetic
+cases:
+  - id: t01
+    message: Explain what limits the rate of photosynthesis.
+    context: {stage: high_school, level: Grade 11, subjects: [Life Sciences]}
+    expected: [search_curriculum]
+    forbidden: [create_practice_quiz]
+  - id: t02
+    message: Is (x+2)^2 the same as x^2 + 4? I think it is.
+    context: {stage: high_school, level: Grade 10, subjects: [Mathematics]}
+    expected: [check_math]
+    forbidden: [create_practice_quiz]
+  - id: t03
+    message: What are my weakest topics in maths right now?
+    context: {stage: high_school, level: Grade 12, subjects: [Mathematics]}
+    expected: [get_topic_mastery]
+    forbidden: [create_practice_quiz, search_curriculum]
+  - id: t04
+    message: Quiz me on quadratic equations.
+    context: {stage: high_school, level: Grade 11, subjects: [Mathematics]}
+    expected: [create_practice_quiz]
+    forbidden: []
+  - id: t05
+    message: Help me plan my studying for the next two weeks.
+    context: {stage: university, level: First year BSc, subjects: [CSC1015F]}
+    expected: [list_upcoming_assessments]
+    forbidden: [create_practice_quiz]

@@ -76,6 +76,47 @@ locals {
     Database__Runtime__Password = "${module.secrets.arns["db-app"]}:password::"
   })
 
+  # --- ai service (ADR 0007) ---
+  ai_image = "${local.global.ai_repository_url}:${aws_ssm_parameter.ai_image_tag.insecure_value}"
+
+  # The ai service is internal only: no load balancer, reachable from the api and worker through Service
+  # Connect. It verifies service tokens against the api's JWKS over the same private path.
+  ai_environment = {
+    AI__ENVIRONMENT                      = var.environment == "prod" ? "production" : (var.environment == "staging" ? "staging" : "development")
+    AI__AUTH__JWKS_URL                   = "http://api:${var.api_container_port}/.well-known/jwks.json"
+    AI__AUTH__ISSUER                     = "https://${local.api_fqdn}"
+    AI__DATABASE__HOST                   = module.database.address
+    AI__DATABASE__PORT                   = tostring(module.database.port)
+    AI__DATABASE__NAME                   = module.database.db_name
+    AI__GATEWAY__PROVIDERS               = jsonencode(var.ai_providers)
+    AI__GATEWAY__DAILY_SPEND_CEILING_USD = tostring(var.ai_daily_spend_ceiling_usd)
+    AI__EMBEDDINGS__PROVIDER             = var.ai_embedding_provider
+    AI__EMBEDDINGS__MODEL                = var.ai_embedding_model
+    AI__EMBEDDINGS__DIMENSIONS           = tostring(var.ai_embedding_dimensions)
+    AI__RESULTS_QUEUE_URL                = aws_sqs_queue.ai_results.url
+    AI__APTIVERSE_MCP_URL                = "http://api:${var.api_container_port}/mcp"
+    AI__TELEMETRY__CAPTURE_CONTENT       = "false"
+    OTEL_RESOURCE_ATTRIBUTES             = "deployment.environment=${var.environment}"
+  }
+
+  ai_secrets = {
+    AI__DATABASE__USERNAME         = "${module.secrets.arns["ai-db"]}:username::"
+    AI__DATABASE__PASSWORD         = "${module.secrets.arns["ai-db"]}:password::"
+    AI__GATEWAY__ANTHROPIC_API_KEY = "${module.secrets.arns["anthropic"]}:api_key::"
+    AI__GATEWAY__OPENAI_API_KEY    = "${module.secrets.arns["openai"]}:api_key::"
+    AI__EMBEDDINGS__OPENAI_API_KEY = "${module.secrets.arns["openai"]}:api_key::"
+    AI__TELEMETRY__OTLP_ENDPOINT   = "${module.secrets.arns["grafana-otlp"]}:endpoint::"
+  }
+
+  # Only the ai migration task sees the RDS master login: it creates the vector extension, the rag and
+  # graph schemas and the ai runtime role (from the ai-db secret), then grants that role DML only.
+  ai_migration_secrets = merge(local.ai_secrets, {
+    AI__DATABASE__USERNAME         = "${local.db_secret}:username::"
+    AI__DATABASE__PASSWORD         = "${local.db_secret}:password::"
+    AI__DATABASE__RUNTIME_USERNAME = "${module.secrets.arns["ai-db"]}:username::"
+    AI__DATABASE__RUNTIME_PASSWORD = "${module.secrets.arns["ai-db"]}:password::"
+  })
+
   ses_resources = [
     local.global.ses_identity_arn,
     local.global.ses_configuration_set_arn,
@@ -192,6 +233,64 @@ resource "aws_ecs_cluster" "this" {
   }
 }
 
+resource "aws_ssm_parameter" "ai_image_tag" {
+  name           = "/aptiverse/${var.environment}/ai/image-tag"
+  description    = "ai service image tag (git sha) currently deployed. Written by the ai deploy pipeline."
+  type           = "String"
+  insecure_value = var.initial_image_tag
+
+  lifecycle {
+    ignore_changes = [insecure_value]
+  }
+}
+
+resource "aws_service_discovery_http_namespace" "this" {
+  name        = "${local.name}.internal"
+  description = "Service Connect namespace for private service to service calls"
+}
+
+# Results of long ai runs for the .NET Worker. Encrypted at rest; a message that fails five times moves to
+# the dead letter queue instead of being lost.
+resource "aws_sqs_queue" "ai_results_dlq" {
+  name                      = "${local.name}-ai-results-dlq"
+  message_retention_seconds = 1209600
+  sqs_managed_sse_enabled   = true
+}
+
+resource "aws_sqs_queue" "ai_results" {
+  name                       = "${local.name}-ai-results"
+  visibility_timeout_seconds = 120
+  message_retention_seconds  = 345600
+  sqs_managed_sse_enabled    = true
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.ai_results_dlq.arn
+    maxReceiveCount     = 5
+  })
+}
+
+data "aws_iam_policy_document" "ai_results_tls" {
+  statement {
+    sid       = "DenyInsecureTransport"
+    effect    = "Deny"
+    actions   = ["sqs:*"]
+    resources = [aws_sqs_queue.ai_results.arn]
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
+    }
+  }
+}
+
+resource "aws_sqs_queue_policy" "ai_results" {
+  queue_url = aws_sqs_queue.ai_results.url
+  policy    = data.aws_iam_policy_document.ai_results_tls.json
+}
+
 resource "aws_ssm_parameter" "image_tag" {
   name           = "/aptiverse/${var.environment}/api/image-tag"
   description    = "Image tag (git sha) currently deployed. Written by the api deploy pipeline."
@@ -256,6 +355,31 @@ data "aws_iam_policy_document" "worker" {
     actions   = ["ses:SendEmail"]
     resources = local.ses_resources
   }
+
+  statement {
+    sid       = "ConsumeAiResults"
+    actions   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:ChangeMessageVisibility", "sqs:GetQueueAttributes"]
+    resources = [aws_sqs_queue.ai_results.arn]
+  }
+}
+
+# The ai task may publish results and nothing else in AWS: no S3, no Secrets Manager at runtime, and no
+# Bedrock unless the fallback is switched on after the residency review (ai_bedrock_model_arns).
+data "aws_iam_policy_document" "ai" {
+  statement {
+    sid       = "PublishResults"
+    actions   = ["sqs:SendMessage"]
+    resources = [aws_sqs_queue.ai_results.arn]
+  }
+
+  dynamic "statement" {
+    for_each = length(var.ai_bedrock_model_arns) > 0 ? [1] : []
+    content {
+      sid       = "BedrockFallback"
+      actions   = ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"]
+      resources = var.ai_bedrock_model_arns
+    }
+  }
 }
 
 module "api" {
@@ -289,6 +413,12 @@ module "api" {
 
   create_migration_task = true
   migration_secrets     = local.migration_secrets
+
+  egress_vpc_ports = [var.ai_container_port]
+  service_connect = {
+    namespace = aws_service_discovery_http_namespace.this.arn
+    server    = { port_name = "http", discovery_name = "api" }
+  }
 }
 
 module "worker" {
@@ -315,7 +445,50 @@ module "worker" {
 
   log_retention_days    = var.log_retention_days
   task_role_policy_json = data.aws_iam_policy_document.worker.json
+
+  egress_vpc_ports = [var.ai_container_port]
+  service_connect  = { namespace = aws_service_discovery_http_namespace.this.arn }
 }
+
+module "ai" {
+  source = "../../modules/service"
+
+  name         = "${local.name}-ai"
+  role         = "ai"
+  cluster_arn  = aws_ecs_cluster.this.arn
+  cluster_name = aws_ecs_cluster.this.name
+  image        = local.ai_image
+  cpu          = var.ai_cpu
+  memory       = var.ai_memory
+
+  container_port             = var.ai_container_port
+  ingress_security_group_ids = [module.api.security_group_id, module.worker.security_group_id]
+  egress_vpc_ports           = [var.api_container_port]
+
+  vpc_id           = module.network.vpc_id
+  subnet_ids       = local.task_subnet_ids
+  assign_public_ip = local.assign_public_ip
+
+  environment = merge(local.ai_environment, { OTEL_SERVICE_NAME = "aptiverse-ai" })
+  secrets     = local.ai_secrets
+
+  desired_count = var.ai_desired_count
+  min_capacity  = var.ai_desired_count
+  max_capacity  = var.ai_max_count
+
+  log_retention_days    = var.log_retention_days
+  task_role_policy_json = data.aws_iam_policy_document.ai.json
+
+  create_migration_task = true
+  migration_secrets     = local.ai_migration_secrets
+  migration_command     = ["migrate"]
+
+  service_connect = {
+    namespace = aws_service_discovery_http_namespace.this.arn
+    server    = { port_name = "http", discovery_name = "ai" }
+  }
+}
+
 
 # --- CI access and alerting ---------------------------------------------------
 
@@ -327,8 +500,8 @@ module "github_oidc" {
   allow_main_branch_deploys = var.allow_main_branch_deploys
   state_bucket_name         = var.state_bucket_name
 
-  ecr_repository_arns              = [local.global.api_repository_arn]
-  ecr_push                         = true
+  ecr_repository_arns              = [local.global.api_repository_arn, local.global.ai_repository_arn]
+  ecr_push                         = var.ecr_push
   ecs_cluster_arn                  = aws_ecs_cluster.this.arn
   ecs_service_arns                 = [module.api.service_arn, module.worker.service_arn]
   migration_task_definition_family = module.api.migration_task_definition_family
@@ -342,6 +515,10 @@ module "github_oidc" {
     module.api.migration_execution_role_arn,
     module.worker.task_role_arn,
     module.worker.execution_role_arn,
+    module.ai.task_role_arn,
+    module.ai.execution_role_arn,
+    module.ai.migration_task_role_arn,
+    module.ai.migration_execution_role_arn,
   ]
 }
 

@@ -34,6 +34,10 @@ dependencies = [
   "openai>=3.39.0",
 ]
 
+[project.scripts]
+aptiverse-ai = "aptiverse_ai.cli:main"
+aptiverse-curriculum-mcp = "aptiverse_ai.mcp_curriculum.server:main"
+
 [project.optional-dependencies]
 local-models = ["sentence-transformers"]
 tracing = ["langfuse"]
@@ -62,7 +66,10 @@ src = ["src", "tests", "evals"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "ASYNC", "RUF", "S", "PT"]
-ignore = ["S101", "RUF001", "RUF002", "RUF003"]
+ignore = ["S101", "RUF001", "RUF002", "RUF003", "ASYNC109"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "aptiverse_ai.routes.scoped"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S105", "S106", "S108", "S311"]
@@ -79,6 +86,8 @@ reportUnknownVariableType = false
 reportUnknownArgumentType = false
 reportUnknownParameterType = false
 reportUnknownLambdaType = false
+# LangGraph state is a total=False TypedDict filled in node by node; reads happen after the writing node ran.
+reportTypedDictNotRequiredAccess = false
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -194,3 +194,75 @@ variable "alarm_emails" {
   type        = list(string)
   default     = []
 }
+
+variable "ecr_push" {
+  description = "Let this env's deploy role push images. True only for the env that builds them (dev); later envs promote the same digest."
+  type        = bool
+  default     = false
+}
+
+variable "ai_cpu" {
+  description = "ai service task CPU units."
+  type        = number
+  default     = 512
+}
+
+variable "ai_memory" {
+  description = "ai service task memory (MiB)."
+  type        = number
+  default     = 1024
+}
+
+variable "ai_container_port" {
+  description = "Port the ai service listens on inside the VPC."
+  type        = number
+  default     = 8080
+}
+
+variable "ai_desired_count" {
+  description = "Minimum running ai tasks."
+  type        = number
+  default     = 1
+}
+
+variable "ai_max_count" {
+  description = "Maximum ai tasks under autoscaling."
+  type        = number
+  default     = 4
+}
+
+variable "ai_providers" {
+  description = "Model providers in fallback order (anthropic, openai, bedrock)."
+  type        = list(string)
+  default     = ["anthropic", "openai"]
+}
+
+variable "ai_daily_spend_ceiling_usd" {
+  description = "Daily model spend at which interactive calls drop to the fast tier and offline work stops."
+  type        = number
+  default     = 10
+}
+
+variable "ai_embedding_provider" {
+  description = "Embedding provider for retrieval (openai or sentence-transformers), chosen by the retrieval eval."
+  type        = string
+  default     = "openai"
+}
+
+variable "ai_embedding_model" {
+  description = "Embedding model id."
+  type        = string
+  default     = "text-embedding-3-large"
+}
+
+variable "ai_embedding_dimensions" {
+  description = "Embedding width stored in pgvector. Changing it needs a re-embed migration."
+  type        = number
+  default     = 1024
+}
+
+variable "ai_bedrock_model_arns" {
+  description = "Bedrock model ARNs the ai service may invoke. Empty until the POPIA residency review allows the fallback."
+  type        = list(string)
+  default     = []
+}

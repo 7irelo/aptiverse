@@ -1,0 +1,50 @@
+# Graded relevance: 3 = exactly what was asked, 2 = useful, 1 = related. Targets are named by document key
+# plus a phrase that appears in the target chunk, so labels survive re-chunking.
+label_source: synthetic
+queries:
+  - id: r01
+    query: what stops photosynthesis going faster
+    filters: {subject: life_sciences}
+    relevant:
+      - {doc: ls-g11-caps, contains: Limiting factors, grade: 3}
+      - {doc: ls-g11-caps, contains: The process of photosynthesis, grade: 1}
+  - id: r02
+    query: where is ATP made from glucose
+    filters: {subject: life_sciences}
+    relevant:
+      - {doc: ls-g11-caps, contains: Aerobic respiration, grade: 3}
+  - id: r03
+    query: yeast without oxygen
+    relevant:
+      - {doc: ls-g11-caps, contains: Anaerobic respiration, grade: 3}
+  - id: r04
+    query: enzymes that break down food
+    relevant:
+      - {doc: ls-g11-caps, contains: Human digestive system, grade: 3}
+  - id: r05
+    query: how do I know if a quadratic has real roots
+    filters: {subject: mathematics}
+    relevant:
+      - {doc: maths-g11-caps, contains: The nature of roots, grade: 3}
+      - {doc: maths-g11-caps, contains: Quadratic equations, grade: 1}
+  - id: r06
+    query: turning point of a parabola
+    relevant:
+      - {doc: maths-g11-caps, contains: The parabola, grade: 3}
+  - id: r07
+    query: asymptotes hyperbola
+    relevant:
+      - {doc: maths-g11-caps, contains: The hyperbola, grade: 3}
+  - id: r08
+    query: sin squared plus cos squared identity
+    relevant:
+      - {doc: maths-g11-caps, contains: Identities, grade: 3}
+  - id: r09
+    query: calculate net force from mass and acceleration
+    relevant:
+      - {doc: phys-g12-paper, contains: "1.2", grade: 3}
+      - {doc: phys-g12-paper, contains: "1.1", grade: 2}
+  - id: r10
+    query: impulse and car safety
+    relevant:
+      - {doc: phys-g12-paper, contains: padded dashboard, grade: 3}

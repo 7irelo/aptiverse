@@ -1,0 +1,122 @@
+name: ai
+
+on:
+  push:
+    branches: [main]
+    paths: ["ai/**", ".github/workflows/ai.yml"]
+  pull_request:
+    paths: ["ai/**", ".github/workflows/ai.yml"]
+  schedule:
+    - cron: "0 2 * * *"  # nightly live evals
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: ai
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: ai/uv.lock
+      - run: uv sync --frozen
+      - name: Lint and format
+        run: |
+          uv run ruff check . --output-format github
+          uv run ruff format --check .
+      - name: Type check
+        run: uv run pyright
+      - name: Dependency audit
+        run: uvx pip-audit --strict --progress-spinner off -r <(uv export --frozen --no-dev --no-hashes)
+        shell: bash
+      - name: Unit, integration and offline eval gates
+        run: uv run pytest -q
+      - name: Secrets scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  image:
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ai
+          load: true
+          tags: aptiverse-ai:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Vulnerability scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: aptiverse-ai:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Runs with a read-only root filesystem as a non-root user
+        run: |
+          docker run --rm --read-only --tmpfs /tmp aptiverse-ai:${{ github.sha }} --help
+          test "$(docker run --rm --entrypoint id aptiverse-ai:${{ github.sha }} -u)" = "10001"
+
+  live-evals:
+    # Real models, real money: nightly, or on demand. Uses an eval-only key with its own spend cap.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: evals
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      AI__DATABASE__URL: postgresql://postgres:postgres@localhost:5432/postgres
+      AI__AUTH__JWKS_URL: https://example.invalid/jwks.json
+      AI__AUTH__ISSUER: evals
+      AI__GATEWAY__PROVIDERS: '["anthropic","openai"]'
+      AI__GATEWAY__ANTHROPIC_API_KEY: ${{ secrets.EVAL_ANTHROPIC_API_KEY }}
+      AI__GATEWAY__OPENAI_API_KEY: ${{ secrets.EVAL_OPENAI_API_KEY }}
+      AI__GATEWAY__DAILY_SPEND_CEILING_USD: "5"
+      AI__EMBEDDINGS__DIMENSIONS: "384"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: ai/uv.lock
+      - run: uv sync --frozen
+      - run: uv run aptiverse-ai migrate
+      - run: uv run aptiverse-ai eval retrieval --live
+      - run: uv run aptiverse-ai eval grading --live
+      - run: uv run aptiverse-ai eval trajectory --live
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-reports
+          path: ai/evals/reports/

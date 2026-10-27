@@ -68,7 +68,7 @@ class RenderedPrompt:
         """Builds a request. `messages` (history) go before the rendered user turn."""
         history = list(messages or [])
         return ModelRequest(
-            use_case=self.prompt.use_case,
+            use_case=overrides.pop("use_case", self.prompt.use_case),
             tier=overrides.pop("tier", self.prompt.tier),
             messages=[*history, {"role": "user", "content": self.user}],
             system=self.system,

@@ -1,5 +1,6 @@
 # Local development stack for Aptiverse v2.
-# Postgres 17 (host 5433), Mailpit (SMTP 1025, UI 8025), MinIO (API 9000, console 9001).
+# Postgres 17 with pgvector (host 5433), Mailpit (SMTP 1025, UI 8025), MinIO (API 9000, console 9001),
+# and the Python ai service (8080, profile "ai": `docker compose --profile ai up`).
 # MinIO images come from the pgsty community build because upstream stopped
 # publishing public Docker images in late 2025.
 # Credentials here are local-only defaults and are not used in any cloud environment.
@@ -7,7 +8,7 @@ name: aptiverse-local
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     restart: unless-stopped
     environment:
       POSTGRES_DB: aptiverse
@@ -72,6 +73,41 @@ services:
         mc mb --ignore-existing local/aptiverse-uploads
         mc anonymous set none local/aptiverse-uploads
         echo "bucket aptiverse-uploads ready"
+
+  ai-migrate:
+    profiles: ["ai"]
+    build: ../../ai
+    command: ["migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment: &ai-env
+      AI__ENVIRONMENT: development
+      AI__DATABASE__URL: postgresql://aptiverse:aptiverse@postgres:5432/aptiverse
+      AI__AUTH__JWKS_URL: http://host.docker.internal:5100/.well-known/jwks.json
+      AI__AUTH__ISSUER: http://localhost:5100
+      # The fake provider runs with no key; set AI__GATEWAY__PROVIDERS and the keys in ai/.env for real models.
+      AI__GATEWAY__PROVIDERS: '["fake"]'
+      AI__EMBEDDINGS__DIMENSIONS: "384"
+    restart: "no"
+
+  ai:
+    profiles: ["ai"]
+    build: ../../ai
+    depends_on:
+      ai-migrate:
+        condition: service_completed_successfully
+    environment: *ai-env
+    env_file:
+      - path: ../../ai/.env
+        required: false
+    ports:
+      - "127.0.0.1:8080:8080"
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    extra_hosts: ["host.docker.internal:host-gateway"]
 
 volumes:
   pgdata:
