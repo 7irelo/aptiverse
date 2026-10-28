@@ -98,7 +98,8 @@ public sealed class BillingLedgerTests(ApiFactory factory)
         SkipWithoutDocker();
         await _billing.EnsurePlansSyncedAsync();
         var admin = factory.CreateAdminClient();
-        var plansBefore = _billing.Paystack.Plans.Count;
+        // Other tests may add unsynced prices concurrently, so only the plans that already exist are compared.
+        var plansBefore = _billing.Paystack.Plans.ToDictionary(p => p.Key, p => p.Value);
 
         var dry = await admin.PostAsJsonAsync("/billing/admin/plans/sync", new { dryRun = true }, Ct);
         var again = await admin.PostAsJsonAsync("/billing/admin/plans/sync", new { dryRun = false }, Ct);
@@ -108,7 +109,8 @@ public sealed class BillingLedgerTests(ApiFactory factory)
         var items = report.RootElement.GetProperty("items").EnumerateArray().ToList();
         Assert.Contains(items, i => i.GetProperty("planCode").GetString() == "student.pro" && i.GetProperty("interval").GetString() == "monthly");
         Assert.DoesNotContain(items, i => i.GetProperty("action").GetString() == "create" && i.GetProperty("planCode").GetString() == "student.pro");
-        Assert.Equal(plansBefore, _billing.Paystack.Plans.Count);
+        Assert.All(plansBefore, p => Assert.Equal(p.Value, _billing.Paystack.Plans[p.Key]));
+        Assert.Single(_billing.Paystack.Plans.Values, p => p.Name == "Aptiverse Student Pro (monthly)");
 
         var pro = _billing.Paystack.Plans.Values.Single(p => p.Name == "Aptiverse Student Pro (monthly)");
         Assert.Equal(12_900, pro.Amount);
